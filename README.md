@@ -8,7 +8,9 @@ One dependency-free application combining the meaningful capabilities from all r
 - **Community:** Kovaipudur news, discussions, community events, polls, volunteering, civic tickets, local services and civic guides.
 - **Study:** JEE overview, syllabus Kanban, schedule, tasks, goals, Pomodoro focus sessions and analytics.
 
-Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. Global search, quick add, theme, export/import, reset and responsive navigation work across every workspace. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
+Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. The Aurora Light interface uses translucent operational surfaces over a generated mountain-and-waterfall background, with a separately tested high-contrast dark mode.
+
+The command center includes a date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, context-aware global search, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent navigation preferences, validated backup import, quick add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
 
 Open `index.html` directly or publish the repository root with GitHub Pages. No framework, package installation, server or build step is required.
 
