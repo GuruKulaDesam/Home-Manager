@@ -4,7 +4,7 @@
   const $ = selector => document.querySelector(selector);
   let route = location.hash.slice(2) || 'global/overview';
   let workspace = route.split('/')[0];
-  let activeArea = HM.hierarchy.forRoute(route, D.state.settings.activeArea);
+  let activeGroup = D.state.settings.activeGroup || 'today';
   let lastDeleted = null;
   let toastTimer = null;
   let activeTimerMinutes = 25;
@@ -41,32 +41,24 @@
     }
   }
 
+  function groupForRoute(currentRoute) {
+    if (V.groups[activeGroup]?.items.some(item => item[2] === currentRoute)) return activeGroup;
+    if (currentRoute === 'global/overview') return 'today';
+    return Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
+  }
+
   function renderNav() {
-    activeArea = HM.hierarchy.forRoute(route, activeArea);
-    D.state.settings.activeArea = activeArea;
-    const area = HM.hierarchy.areas[activeArea];
+    activeGroup = groupForRoute(route);
+    D.state.settings.activeGroup = activeGroup;
+    const group = V.groups[activeGroup];
     document.body.classList.remove('workspace-home', 'workspace-community', 'workspace-study');
     document.body.classList.add('workspace-' + workspace);
-    $('#macroNav').innerHTML = Object.entries(HM.hierarchy.areas).map(([key, item]) => `<button type="button" role="tab" aria-controls="subNav" data-area="${key}" class="${key === activeArea ? 'active' : ''}" aria-selected="${key === activeArea}" tabindex="${key === activeArea ? '0' : '-1'}"><i data-lucide="${item.icon}"></i><span>${D.esc(item.shortLabel || item.label)}</span></button>`).join('');
-    $('#subNav').setAttribute('aria-label', `${area.label} sections`);
-    $('#subNav').innerHTML = area.sections.map(section => `<button type="button" data-route="${section.route}" data-area="${activeArea}" class="${route === section.route ? 'active' : ''}" ${route === section.route ? 'aria-current="page"' : ''}>${D.esc(section.label)}</button>`).join('');
-    const matrixCode = route.match(/^matrix\/([1-7]{2,7})$/)?.[1];
-    const branch = matrixCode ? HM.hierarchy.branch(matrixCode) : null;
-    let railLabel = 'Major · Root';
-    let railItems = area.sections;
-    if (branch) {
-      const level = matrixCode.length < 7 ? matrixCode.length + 1 : 7;
-      const prefix = matrixCode.length < 7 ? matrixCode : matrixCode.slice(0, -1);
-      const levelMeta = HM.hierarchy.levels[level];
-      railLabel = `${levelMeta.scale} · ${levelMeta.growth}`;
-      railItems = levelMeta.children.map((child, index) => ({ label: child[0], note: child[1], icon: 'git-branch', route: `matrix/${prefix}${index + 1}` }));
-    }
-    $('#workspaceMenuLabel').innerHTML = `<span><small>7 children</small><b>${D.esc(railLabel)}</b></span><i data-lucide="git-fork"></i>`;
-    $('#nav').innerHTML = railItems.map((section, index) => `<button data-route="${section.route}" data-area="${activeArea}" class="${route === section.route ? 'active' : ''}" ${route === section.route ? 'aria-current="page"' : ''}><span class="section-index">0${index + 1}</span><span class="nav-icon"><i data-lucide="${section.icon}"></i></span><span><b>${D.esc(section.label)}</b><small>${D.esc(section.note)}</small></span></button>`).join('');
-
-    $('#bottomNav').innerHTML = area.sections.slice(0, 3).map(section => {
-      const active = route === section.route;
-      return `<button data-route="${section.route}" data-area="${activeArea}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${section.icon}"></i><span>${D.esc(section.label)}</span></button>`;
+    $('#groupNav').innerHTML = Object.entries(V.groups).map(([key, item]) => `<button type="button" data-group="${key}" class="${key === activeGroup ? 'active' : ''}" aria-pressed="${key === activeGroup}"><i data-lucide="${item.icon}"></i><span>${D.esc(item.label)}</span></button>`).join('');
+    $('#workspaceMenuLabel').innerHTML = `<span><small>Group</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
+    $('#nav').innerHTML = group.items.map(item => { const active = route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
+    $('#bottomNav').innerHTML = group.items.slice(0, 3).map(item => {
+      const active = route === item[2];
+      return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`;
     }).join('') + '<button id="bottomMore"><i data-lucide="ellipsis"></i><span>More</span></button>';
   }
 
@@ -103,10 +95,8 @@
       D.save();
     }
     renderNav();
-    const branch = route.startsWith('matrix/') ? HM.hierarchy.branch(route.split('/')[1]) : null;
-    const currentNode = branch?.nodes[branch.nodes.length - 1];
-    const title = branch ? [currentNode.label, `${branch.area.label} · ${branch.code}`] : V.titles[route] || ['Today', 'Home Manager'];
-    $('#breadcrumb').textContent = HM.hierarchy.areas[activeArea].label;
+    const title = V.titles[route] || ['Today', 'Home Manager'];
+    $('#breadcrumb').textContent = V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
     document.title = title[0] + ' - Home Manager';
     $('#content').innerHTML = V.render(route);
@@ -395,12 +385,12 @@
       if (dialog?.open) dialog.close();
       return;
     }
-    const areaTarget = event.target.closest('[data-area]');
-    if (areaTarget) {
-      activeArea = areaTarget.dataset.area;
-      D.state.settings.activeArea = activeArea;
+    const groupTarget = event.target.closest('[data-group]');
+    if (groupTarget) {
+      activeGroup = groupTarget.dataset.group;
+      D.state.settings.activeGroup = activeGroup;
       D.save();
-      go(areaTarget.dataset.route || HM.hierarchy.areas[activeArea].route);
+      go(V.groups[activeGroup].route);
       return;
     }
     const routeTarget = event.target.closest('[data-route]');
@@ -455,15 +445,6 @@
   $('#backdrop').onclick = () => { document.body.classList.remove('menu-open'); $('#menu').setAttribute('aria-expanded', 'false'); };
   $('#collapse').onclick = () => { D.state.settings.sidebarCollapsed = !D.state.settings.sidebarCollapsed; D.save(); applyTheme(); };
   $('#bottomNav').onclick = event => { if (event.target.closest('#bottomMore')) { document.body.classList.add('menu-open'); $('#menu').setAttribute('aria-expanded', 'true'); } };
-  $('#macroNav').onkeydown = event => {
-    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-    event.preventDefault();
-    const tabs = [...$('#macroNav').querySelectorAll('[role="tab"]')];
-    const current = Math.max(0, tabs.indexOf(document.activeElement));
-    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
-    tabs[next].click();
-    setTimeout(() => $('#macroNav').querySelectorAll('[role="tab"]')[next]?.focus(), 0);
-  };
   window.addEventListener('hashchange', render);
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }

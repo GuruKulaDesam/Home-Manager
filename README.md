@@ -18,12 +18,6 @@ The Life Registry adds reusable, searchable records for 16 areas of Indian famil
 
 Reference fields are intended for masked hints only, such as `ending 1234`. Do not store full Aadhaar or PAN numbers, passwords, banking credentials, medical scans or other secrets. Browser local storage is convenient and private to the device profile, but it is not encrypted. Use the JSON backup controls deliberately and store exported files securely.
 
-## Seven-Level Family Matrix
-
-The primary navigation follows the requirements model in `inputs/Family_Home_Manager_7x7x7x7x7x7x7_Matrix.xlsx`. Seven macro domains appear in the application header, with seven major systems per domain. Selecting a major system opens an on-demand hierarchy explorer for the reusable Minor, Micro, Nano, Pico and Atomic levels.
-
-The matrix contains 823,543 possible atomic paths (`7^7`). These paths are a traceable requirements-coverage universe, not 823,543 claims of implemented functionality. Home Manager generates branches from their numeric node codes and displays an **Open working module** action only when the static application has corresponding functionality.
-
 Open `index.html` directly or publish the repository root with GitHub Pages. No framework, package installation, server or build step is required.
 
 ## Source provenance

@@ -52,6 +52,30 @@
     ]
   };
 
+  const groups = {
+    today: { label: 'Today', icon: 'sparkles', note: 'Your daily command centre', route: 'global/overview', items: [
+      ['Today', 'sparkles', 'global/overview'], ['Home overview', 'layout-dashboard', 'home/overview'], ['Tasks', 'list-checks', 'home/tasks'], ['Calendar', 'calendar-days', 'home/calendar'], ['Life Registry', 'layout-grid', 'home/life']
+    ]},
+    family: { label: 'Family', icon: 'users-round', note: 'People, plans and continuity', route: 'home/family', items: [
+      ['Members', 'users', 'home/family'], ['Family calendar', 'calendar-days', 'home/calendar'], ['Health', 'heart-pulse', 'home/life/health'], ['Documents & IDs', 'folders', 'home/life/documents'], ['Festivals & Functions', 'party-popper', 'home/life/festivals'], ['Travel & Pilgrimage', 'luggage', 'home/life/travel'], ['Nominees & Legacy', 'scroll-text', 'home/life/legacy'], ['Directory', 'contact-round', 'home/directory']
+    ]},
+    home: { label: 'Home', icon: 'house', note: 'Household operations', route: 'home/overview', items: [
+      ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks', 'list-checks', 'home/tasks'], ['Supplies & Meals', 'shopping-basket', 'home/inventory'], ['Property & Utilities', 'building-2', 'home/life/property'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Domestic Help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability'], ['Maintenance & Assets', 'wrench', 'home/assets'], ['Digital Household', 'cloud-cog', 'home/life/digital']
+    ]},
+    money: { label: 'Money', icon: 'indian-rupee', note: 'Finances and protection', route: 'home/finance', items: [
+      ['Expenses', 'wallet-cards', 'home/finance'], ['Bills & Payments', 'receipt-indian-rupee', 'home/life/bills'], ['Insurance', 'shield-check', 'home/life/insurance'], ['Tax & Compliance', 'landmark', 'home/life/tax'], ['Subscriptions', 'repeat-2', 'home/life/subscriptions'], ['Assets', 'gem', 'home/assets']
+    ]},
+    care: { label: 'Care', icon: 'heart-handshake', note: 'Wellbeing and readiness', route: 'home/life/health', items: [
+      ['Family Health', 'heart-pulse', 'home/life/health'], ['Emergency Readiness', 'siren', 'home/life/emergency'], ['Pets & Animals', 'paw-print', 'home/life/pets'], ['Meals & Nutrition', 'salad', 'home/inventory'], ['Family Wellbeing', 'accessibility', 'home/family'], ['Wisdom & Recognition', 'book-heart', 'home/wisdom']
+    ]},
+    learning: { label: 'Learning', icon: 'graduation-cap', note: 'Study and development', route: 'study/overview', items: [
+      ['Overview', 'graduation-cap', 'study/overview'], ['Study Board', 'columns-3', 'study/board'], ['Schedule', 'calendar-clock', 'study/schedule'], ['Tasks', 'list-todo', 'study/tasks'], ['Goals', 'target', 'study/goals'], ['Focus', 'timer', 'study/focus'], ['Analytics', 'chart-spline', 'study/analytics']
+    ]},
+    community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
+      ['Overview', 'map', 'community/overview'], ['News & Forum', 'newspaper', 'community/feed'], ['Events', 'calendar-heart', 'community/events'], ['Polls', 'chart-no-axes-column', 'community/polls'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic Tickets', 'ticket-check', 'community/tickets'], ['Services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
+    ]}
+  };
+
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
     'global/settings': ['Settings', 'Appearance, data and privacy'],
@@ -292,30 +316,6 @@
       <section class="panel life-register">${records.length ? `<table class="table"><thead><tr><th>Record</th><th>Owner</th><th>Provider / reference</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>${records.map(record => { const dueState = lifeDueState(record); return `<tr data-filter-row data-status="${e(record.status)}"><td data-label="Record"><b>${e(record.title)}</b><small>${e(record.category || config.title)}</small></td><td data-label="Owner">${e(record.owner || 'Family')}</td><td data-label="Provider"><span>${e(record.provider || 'Not set')}</span><small>${e(record.reference || '')}</small></td><td data-label="Due"><span class="badge ${dueState === 'overdue' ? 'danger' : dueState === 'soon' ? 'warning' : ''}">${D.date(record.dueDate)}</span></td><td data-label="Amount">${record.amount ? D.money(record.amount) : '-'}</td><td data-label="Status"><button data-life-status="${e(record.id)}">${lifeStatus(record.status)}</button></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(record.title)}" data-edit="life" data-id="${e(record.id)}" data-domain="${domain}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(record.title)}" data-delete="lifeRecords:${e(record.id)}">${icon('trash-2')}</button></span></td></tr>`; }).join('')}</tbody></table>` : empty(`No ${config.title.toLowerCase()} records yet.`, 'life', `Add ${config.noun}`)}</section>`;
   }
 
-  function matrixExplorer(route) {
-    const code = route.split('/')[1] || '11';
-    const branch = HM.hierarchy.branch(code);
-    if (!branch) return `<section class="panel"><h2>Unknown hierarchy branch</h2><p>This code is not part of the seven-level family matrix.</p><button data-route="matrix/11">Open the matrix</button></section>`;
-    const current = branch.nodes[branch.nodes.length - 1];
-    const remainingLeaves = 7 ** (7 - code.length);
-    const path = branch.nodes.map((node, index) => {
-      const nodeCode = code.slice(0, index + 1);
-      const navigable = index > 0;
-      return `<${navigable ? 'button' : 'span'} ${navigable ? `data-route="matrix/${nodeCode}" data-area="${branch.areaKey}"` : ''}><small>${e(node.growth)}</small><b>${e(node.label)}</b></${navigable ? 'button' : 'span'}>`;
-    }).join('<i data-lucide="chevron-right"></i>');
-    const moduleButton = branch.major.moduleRoute ? `<button data-route="${branch.major.moduleRoute}" data-area="${branch.areaKey}">${icon('external-link')}<span>Open working module</span></button>` : '';
-    const children = branch.next ? branch.next.children.map((child, index) => {
-      const childCode = `${code}${index + 1}`;
-      return `<button class="matrix-node" data-route="matrix/${childCode}" data-area="${branch.areaKey}"><span class="matrix-code">${childCode}</span><span class="matrix-node-icon">${icon('git-branch')}</span><span class="grow"><b>${e(child[0])}</b><small>${e(child[1])}</small></span><i data-lucide="arrow-right"></i></button>`;
-    }).join('') : '';
-    const lifecycle = HM.hierarchy.levels[7].children[Number(code[6]) - 1];
-    return `<section class="matrix-hero"><div class="matrix-hero-main"><span class="matrix-seed">${icon(branch.area.icon)}</span><div><small>${e(branch.area.label)} · System ${e(branch.major.code)}</small><h2>${e(branch.major.label)}</h2><p>${e(branch.major.description)}</p></div></div><div class="matrix-actions">${moduleButton}<button data-route="global/overview">${icon('layout-dashboard')}<span>Today</span></button></div></section>
-      <nav class="branch-path" aria-label="Current hierarchy path">${path}</nav>
-      <section class="metrics compact-metrics">${metric('Current level', `${code.length} of 7`, `${current.scale || 'Major'} · ${current.growth}`, 'layers-3')}${metric('Node code', code, 'Traceable requirement key', 'binary')}${metric('Children here', branch.next ? 7 : 0, branch.next ? `${branch.next.scale} · ${branch.next.growth}` : 'Atomic leaf', 'git-fork')}${metric('Leaves below', remainingLeaves.toLocaleString('en-IN'), 'Exact atomic paths', 'network')}</section>
-      ${branch.next ? `<section class="matrix-level-head"><div><span>${e(branch.next.growth)}</span><h2>${e(branch.next.scale)} capabilities</h2><p>${e(branch.next.purpose)}. Select one of the seven child nodes to continue.</p></div><strong>7</strong></section><section class="matrix-grid">${children}</section>` : `<section class="panel atomic-detail"><span class="badge">Atomic requirement ${e(code)}</span><h2>${e(lifecycle[0])}</h2><p>${e(lifecycle[1])}</p><div class="atomic-summary">${branch.nodes.slice(2).map(node => `<div><small>${e(node.scale)}</small><b>${e(node.label)}</b></div>`).join('')}</div><p class="matrix-disclosure">This leaf is a requirements-coverage state, not a claim that an external integration or automated workflow is implemented.</p></section>`}
-      <section class="matrix-disclosure"><b>Coverage model</b><span>The complete workbook defines 823,543 atomic paths. Home Manager generates each branch from its code and shows working modules only where functionality exists.</span></section>`;
-  }
-
   function communityOverview() {
     const s = D.state;
     const events = s.events.filter(x => x.context === 'community' && isoDay(x.startAt) >= today());
@@ -381,7 +381,6 @@
   }
 
   function render(route) {
-    if (route.startsWith('matrix/')) return matrixExplorer(route);
     if (route === 'global/overview') return unified();
     if (route === 'global/settings') return settings();
     if (route === 'home/life') return lifeHub();
@@ -417,6 +416,7 @@
 
   window.HM.views = {
     nav,
+    groups,
     titles,
     render,
     shiftCalendar,
