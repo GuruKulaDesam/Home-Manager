@@ -5,6 +5,7 @@
   let route = location.hash.slice(2) || 'global/overview';
   let workspace = route.split('/')[0];
   let activeGroup = D.state.settings.activeGroup || 'today';
+  let expandedGroup = activeGroup === 'today' ? '' : activeGroup;
   let lastDeleted = null;
   let toastTimer = null;
   let activeTimerMinutes = 25;
@@ -58,7 +59,11 @@
   function renderNav() {
     const activeSettings = settingsSection();
     if (!activeSettings) {
-      activeGroup = groupForRoute(route);
+      const routeGroup = groupForRoute(route);
+      if (routeGroup !== activeGroup) {
+        activeGroup = routeGroup;
+        expandedGroup = activeGroup === 'today' ? '' : activeGroup;
+      }
       D.state.settings.activeGroup = activeGroup;
     }
     const group = V.groups[activeGroup];
@@ -67,10 +72,16 @@
     document.body.classList.add(`group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
     const topRoute = ({ 'home/assets': 'home/property', 'home/life/property': 'home/property', 'community/events': 'community/participate', 'community/polls': 'community/participate' })[route] || route;
-    $('#sectionNav').innerHTML = `<span class="section-nav-label">${D.esc(group.label)} pages</span>` + group.items.map((item, index) => { const active = !activeSettings && topRoute === item[2]; return `<button type="button" data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="tab-tone-${index + 1} ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('');
-    const navItems = Object.entries(V.groups).map(([key, item]) => [item.label, item.icon, item.route, key]);
     $('#workspaceMenuLabel').innerHTML = `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
-    $('#nav').innerHTML = navItems.map(item => { const active = item[3] === activeGroup; return `<button data-group="${item[3]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
+    $('#nav').innerHTML = Object.entries(V.groups).map(([key, item]) => {
+      const active = key === activeGroup;
+      const expanded = expandedGroup === key && key !== 'today';
+      const children = expanded ? `<div id="sectionNav" class="section-nav" role="group" aria-label="${D.esc(item.label)} pages">${item.items.map((child, index) => { const childActive = !activeSettings && topRoute === child[2]; return `<button type="button" data-route="${child[2]}" aria-label="Open ${D.esc(child[0])}" title="${D.esc(child[0])}" class="tab-tone-${index + 1} ${childActive ? 'active' : ''}" ${childActive ? 'aria-current="page"' : ''}><i data-lucide="${child[1]}"></i><span>${D.esc(child[0])}</span></button>`; }).join('')}</div>` : '';
+      const chevron = key === 'today' ? '' : `<i class="nav-chevron" data-lucide="${expanded ? 'chevron-down' : 'chevron-right'}"></i>`;
+      const expansionState = key === 'today' ? '' : ` aria-expanded="${expanded}"`;
+      const parentLabel = key === 'today' ? 'Open Today' : `${expanded ? 'Collapse' : 'Expand'} ${item.label} menu`;
+      return `<div class="nav-tree-item"><button class="nav-parent ${active ? 'active' : ''} ${expanded ? 'expanded' : ''}" data-group="${key}" aria-label="${D.esc(parentLabel)}" title="${D.esc(parentLabel)}"${expansionState}><span class="nav-icon"><i data-lucide="${item.icon}"></i></span><span>${D.esc(item.label)}</span>${chevron}</button>${children}</div>`;
+    }).join('');
     const mobileItems = [['Today', 'sparkles', 'global/overview'], ['Calendar', 'calendar-days', 'home/calendar'], ['Tasks', 'list-checks', 'home/tasks'], ['Food', 'shopping-basket', 'home/inventory']];
     $('#bottomNav').innerHTML = mobileItems.map(item => { const active = route === item[2]; return `<button data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('') + '<button id="bottomMore" aria-label="Open more navigation"><i data-lucide="layout-grid"></i><span>More</span></button>';
     $('#settingsNav').classList.toggle('active', Boolean(activeSettings));
@@ -574,10 +585,15 @@
     }
     const groupTarget = event.target.closest('[data-group]');
     if (groupTarget) {
-      activeGroup = groupTarget.dataset.group;
-      D.state.settings.activeGroup = activeGroup;
-      D.save();
-      go(V.groups[activeGroup].route);
+      const groupKey = groupTarget.dataset.group;
+      if (groupKey === 'today') {
+        expandedGroup = '';
+        go(V.groups.today.route);
+        return;
+      }
+      expandedGroup = expandedGroup === groupKey ? '' : groupKey;
+      renderNav();
+      refreshIcons();
       return;
     }
     const routeTarget = event.target.closest('[data-route]');
