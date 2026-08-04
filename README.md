@@ -2,19 +2,23 @@
 
 One dependency-free application combining the meaningful capabilities from all repositories under `GuruKulaDesam` and `shishyan`.
 
-## Workspaces
+## Product structure
 
-- **Home:** unified overview, tasks, shared calendar, family wellbeing, expenses, inventory, meal planning, maintenance issues, assets, family wisdom, recognition, contacts and a comprehensive family Life Registry.
-- **Community:** Kovaipudur news, discussions, community events, polls, volunteering, civic tickets, local services and civic guides.
-- **Study:** JEE overview, syllabus Kanban, schedule, tasks, goals, Pomodoro focus sessions and analytics.
+Daily and weekly work is organised into seven plain-language groups: **Today, Household, Family, Money, Care, Learning, and Community**. No group exposes more than seven choices. Permanent or rarely changed records live in seven Settings groups: household profile, people and roles, home and services, money setup, health and safety, records and legacy, and app and data.
+
+Today projects recurring work from those permanent records into one agenda. For example, a policy belongs in Settings, but its renewal remains visible on Today; an appliance belongs in the asset register, but a repair remains in Household. Emergency help is always available in the header and links to official Indian helplines without claiming to dispatch assistance.
 
 Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. The colorful Aurora interface uses teal, violet, purple and green accents over a clean `#fafafa` application background, with translucent operational surfaces and a separately tested high-contrast dark mode.
 
-The command center includes a date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, context-aware global search, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent navigation preferences, validated backup import, quick add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
+The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, context-aware search, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent navigation preferences, validated backup import, seven action Quick Add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
 
-## Family Life Registry
+## Household coverage
 
-The Life Registry adds reusable, searchable records for 16 areas of Indian family life: health, identity documents, bills, insurance, tax, property, vehicles, domestic help, subscriptions, travel and pilgrimage, festivals, emergency planning, pets, digital assets, sustainability, and nominations and legacy. Each area supports adding, editing, deleting, filtering and status tracking, with upcoming dates surfaced on the Today dashboard and in notifications.
+Reusable records cover health, identity documents, bills, insurance, tax, property, vehicles, domestic help, subscriptions, travel and pilgrimage, festivals, emergency planning, pets, digital assets, sustainability, and nominations and legacy. Each area supports adding, editing, deleting, filtering and status tracking, with upcoming dates surfaced on Today and in notifications.
+
+The supplied `Family_Home_Manager_7x7x7_Unlock_Model.xlsx` informed this separation. Its 49 stable core records map to Settings, while its recurring records, plans, actions, collaboration, safeguards, insights and automation concepts map to operational views. Maturity stages remain a design model, not navigation labels.
+
+The interaction model also draws on proven patterns from Cozi and FamilyWall for a shared family calendar, lists and meals; Monarch for household money collaboration; and 1Password Families for separating private, shared and recovery information. Indian safety and record links point to official ERSS 112, ABHA and DigiLocker services.
 
 Reference fields are intended for masked hints only, such as `ending 1234`. Do not store full Aadhaar or PAN numbers, passwords, banking credentials, medical scans or other secrets. Browser local storage is convenient and private to the device profile, but it is not encrypted. Use the JSON backup controls deliberately and store exported files securely.
 

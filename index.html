@@ -22,7 +22,7 @@
     <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
     <nav id="nav"></nav>
     <div class="sidebar-bottom">
-      <button type="button" data-route="global/settings"><i data-lucide="settings-2"></i><span>Settings</span></button>
+      <button type="button" id="settingsNav" data-route="settings/household"><i data-lucide="settings-2"></i><span>Settings</span></button>
       <button type="button" id="collapse" class="collapse-button" title="Collapse navigation" aria-label="Collapse navigation"><i data-lucide="panel-left-close"></i></button>
     </div>
   </aside>
@@ -42,6 +42,7 @@
         </button>
         <div class="header-actions">
           <button type="button" id="searchMobile" class="icon-button" title="Search" aria-label="Search"><i data-lucide="search"></i></button>
+          <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i><span>Emergency</span></button>
           <button type="button" id="notifications" class="icon-button has-indicator" title="Open notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
           <button type="button" id="theme" class="icon-button" title="Toggle contrast theme" aria-label="Toggle contrast theme" aria-pressed="false"><i data-lucide="sun-moon"></i></button>
           <button type="button" id="quickAdd" class="primary"><i data-lucide="plus"></i><span>Add</span></button>
@@ -57,6 +58,11 @@
     <div class="panel-heading"><div><small>Attention</small><h2>Household signals</h2></div><button type="button" id="closeNotifications" class="icon-button" aria-label="Close notifications"><i data-lucide="x"></i></button></div>
     <div id="notificationList"></div>
   </aside>
+
+  <dialog id="emergencyDialog" class="emergency-dialog" aria-labelledby="emergencyTitle">
+    <div class="dialog-head"><div><small>INDIA · EXTERNAL HELP</small><h2 id="emergencyTitle">Emergency help</h2><p>Call the appropriate official service. Home Manager does not dispatch assistance.</p></div><button type="button" data-close-dialog="emergencyDialog" aria-label="Close emergency help"><i data-lucide="x"></i></button></div>
+    <div id="emergencyBody"></div>
+  </dialog>
 
   <nav id="bottomNav" aria-label="Mobile navigation"></nav>
 

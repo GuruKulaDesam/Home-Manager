@@ -44,22 +44,32 @@
   function groupForRoute(currentRoute) {
     if (V.groups[activeGroup]?.items.some(item => item[2] === currentRoute)) return activeGroup;
     if (currentRoute === 'global/overview') return 'today';
-    return Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
+    const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'community/events': 'community', 'community/polls': 'community' };
+    return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
+  }
+
+  function settingsSection() {
+    if (route === 'global/settings') return 'app';
+    if (/^settings\/(household|people|home|money|health|records|app)$/.test(route)) return route.split('/')[1];
+    const domain = route.match(/^settings\/life\/([^/]+)$/)?.[1];
+    return ({ property: 'home', vehicles: 'home', help: 'home', bills: 'money', insurance: 'money', tax: 'money', subscriptions: 'money', health: 'health', emergency: 'health', pets: 'health', documents: 'records', digital: 'records', legacy: 'records' })[domain] || '';
   }
 
   function renderNav() {
-    activeGroup = groupForRoute(route);
-    D.state.settings.activeGroup = activeGroup;
+    const activeSettings = settingsSection();
+    if (!activeSettings) {
+      activeGroup = groupForRoute(route);
+      D.state.settings.activeGroup = activeGroup;
+    }
     const group = V.groups[activeGroup];
     document.body.classList.remove('workspace-home', 'workspace-community', 'workspace-study');
     document.body.classList.add('workspace-' + workspace);
-    $('#groupNav').innerHTML = Object.entries(V.groups).map(([key, item]) => `<button type="button" data-group="${key}" class="${key === activeGroup ? 'active' : ''}" aria-pressed="${key === activeGroup}"><i data-lucide="${item.icon}"></i><span>${D.esc(item.label)}</span></button>`).join('');
-    $('#workspaceMenuLabel').innerHTML = `<span><small>Group</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
-    $('#nav').innerHTML = group.items.map(item => { const active = route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
-    $('#bottomNav').innerHTML = group.items.slice(0, 3).map(item => {
-      const active = route === item[2];
-      return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`;
-    }).join('') + '<button id="bottomMore"><i data-lucide="ellipsis"></i><span>More</span></button>';
+    $('#groupNav').innerHTML = Object.entries(V.groups).map(([key, item]) => `<button type="button" data-group="${key}" class="${!activeSettings && key === activeGroup ? 'active' : ''}" aria-pressed="${!activeSettings && key === activeGroup}"><i data-lucide="${item.icon}"></i><span>${D.esc(item.label)}</span></button>`).join('');
+    const navItems = activeSettings ? V.settingsGroups.map(item => [item[1], item[2], `settings/${item[0]}`]) : group.items;
+    $('#workspaceMenuLabel').innerHTML = activeSettings ? `<span><small>Configure once</small><b>Settings</b></span><i data-lucide="settings-2"></i>` : `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
+    $('#nav').innerHTML = navItems.map(item => { const active = activeSettings ? activeSettings === item[2].split('/')[1] : route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
+    $('#bottomNav').innerHTML = navItems.slice(0, 3).map(item => { const active = activeSettings ? activeSettings === item[2].split('/')[1] : route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('') + '<button id="bottomMore"><i data-lucide="ellipsis"></i><span>More</span></button>';
+    $('#settingsNav').classList.toggle('active', Boolean(activeSettings));
   }
 
   function notificationItems() {
@@ -82,7 +92,7 @@
   function renderNotifications() {
     const items = notificationItems();
     $('#notifications').classList.toggle('has-indicator', items.length > 0);
-    $('#notificationList').innerHTML = items.length ? items.slice(0, 12).map(item => `<button class="row notification-item" data-route="${item.route}"><span class="grow"><b>${D.esc(item.title)}</b><small>${D.esc(item.detail)}</small></span><i data-lucide="chevron-right"></i></button>`).join('') : '<div class="empty">Nothing needs attention.</div>';
+    $('#notificationList').innerHTML = items.length ? items.slice(0, 7).map(item => `<button class="row notification-item" data-route="${item.route}"><span class="grow"><b>${D.esc(item.title)}</b><small>${D.esc(item.detail)}</small></span><i data-lucide="chevron-right"></i></button>`).join('') : '<div class="empty">Nothing needs attention.</div>';
   }
 
   function render() {
@@ -96,7 +106,7 @@
     }
     renderNav();
     const title = V.titles[route] || ['Today', 'Home Manager'];
-    $('#breadcrumb').textContent = V.groups[activeGroup].label;
+    $('#breadcrumb').textContent = settingsSection() ? 'Settings' : V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
     document.title = title[0] + ' - Home Manager';
     $('#content').innerHTML = V.render(route);
@@ -141,14 +151,14 @@
     life: () => [field('Title', 'title'), field('Category', 'category'), field('Family member / owner', 'owner'), field('Provider / contact', 'provider', 'text', null, false), field('Masked reference / location', 'reference', 'text', null, false), field('Amount', 'amount', 'number', null, false), field('Due / renewal date', 'dueDate', 'date', null, false), field('Frequency', 'frequency', 'text', ['One time', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'As needed']), field('Status', 'status', 'text', ['planning', 'pending', 'active', 'due', 'paid', 'done']), field('Phone', 'phone', 'tel', null, false), area('Notes', 'notes', false)]
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses', life: 'lifeRecords' };
+  const editCollections = { task: 'tasks', expense: 'expenses', person: 'people', asset: 'assets', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
     if (!schema) return;
     const collection = editCollections[kind];
     const record = source.editId && collection ? D.state[collection].find(x => x.id === source.editId) : null;
-    const routeDomain = route.startsWith('home/life/') ? route.split('/')[2] : '';
+    const routeDomain = route.match(/^(?:home|settings)\/life\/([^/]+)$/)?.[1] || '';
     $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + kind;
     $('#formContext').textContent = String(source.context || record?.context || workspace).toUpperCase();
     $('#formFields').innerHTML = schema(source).join('');
@@ -171,7 +181,10 @@
     const id = D.uid;
     if (meta.editId && editCollections[kind]) {
       const record = state[editCollections[kind]].find(x => x.id === meta.editId);
-      if (record) Object.assign(record, values, kind === 'expense' || kind === 'life' ? { amount: +values.amount || 0 } : {});
+      if (record) Object.assign(record, values,
+        kind === 'expense' || kind === 'life' ? { amount: +values.amount || 0 } :
+        kind === 'asset' ? { value: +values.value || 0 } :
+        kind === 'person' ? { wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) } : {});
       save('Changes saved');
       render();
       return;
@@ -249,6 +262,12 @@
     if ($('#exportData')) $('#exportData').onclick = exportData;
     if ($('#importData')) $('#importData').onchange = importData;
     if ($('#resetData')) $('#resetData').onclick = () => { if (confirm('Reset all local Home Manager data?')) { D.reset(); applyTheme(); render(); toast('Demonstration data restored'); } };
+    if ($('#householdSettings')) $('#householdSettings').onsubmit = event => {
+      event.preventDefault();
+      Object.assign(D.state.settings, Object.fromEntries(new FormData(event.currentTarget)));
+      save('Household settings saved');
+      render();
+    };
     if ($('#timerToggle')) $('#timerToggle').onclick = toggleTimer;
     document.querySelectorAll('[data-timer]').forEach(button => button.onclick = () => setTimer(button.dataset.timer));
   }
@@ -258,7 +277,10 @@
     if (type === 'Event') return record.context === 'study' ? 'study/schedule' : record.context === 'community' ? 'community/events' : 'home/calendar';
     if (type === 'Issue') return record.scope === 'civic' ? 'community/tickets' : 'home/assets';
     if (type === 'Contact') return record.scope === 'community' ? 'community/directory' : 'home/directory';
-    if (type === 'Life record') return `home/life/${record.domain}`;
+    if (type === 'Life record') {
+      const settingsDomains = ['documents', 'digital', 'legacy', 'property', 'vehicles', 'help'];
+      return `${settingsDomains.includes(record.domain) ? 'settings' : 'home'}/life/${record.domain}`;
+    }
     return { Person: 'home/family', Expense: 'home/finance', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/board', Goal: 'study/goals', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
   }
 
@@ -287,7 +309,7 @@
     add(D.state.volunteerOpportunities, 'Volunteer', 'title', 'community');
     add(D.state.guides, 'Guide', 'title', 'community');
     add(D.state.lifeRecords || [], 'Life record', 'title', 'home');
-    return output.slice(0, 30);
+    return output.slice(0, 7);
   }
 
   function showSearch() {
@@ -302,9 +324,25 @@
   }
 
   function quick() {
-    const actions = [['task', 'Task', workspace, 'list-plus', ''], ['event', 'Event', workspace, 'calendar-plus', ''], ['expense', 'Expense', 'home', 'receipt-text', ''], ['life', 'Health record', 'home', 'heart-pulse', 'health'], ['life', 'Document or ID', 'home', 'folders', 'documents'], ['life', 'Bill or payment', 'home', 'receipt-indian-rupee', 'bills'], ['issue', 'Home issue', 'home', 'wrench', ''], ['issue', 'Civic follow-up', 'community', 'ticket-plus', ''], ['topic', 'Study topic', 'study', 'book-plus', ''], ['discussion', 'Forum note', 'community', 'message-square-plus', '']];
-    $('#quickActions').innerHTML = actions.map(item => `<button type="button" data-quick="${item[0]}" data-context="${item[2]}" data-domain="${item[4]}" data-scope="${item[1] === 'Civic follow-up' ? 'civic' : item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>${item[2]} workspace</small></span><i data-lucide="chevron-right"></i></button>`).join('');
+    const actions = [['task', 'Task', 'home', 'list-plus', ''], ['event', 'Calendar event', 'home', 'calendar-plus', ''], ['expense', 'Expense', 'home', 'receipt-text', ''], ['meal', 'Meal', 'home', 'cooking-pot', ''], ['inventory', 'Shopping item', 'home', 'shopping-basket', ''], ['life', 'Health note', 'home', 'heart-pulse', 'health'], ['issue', 'Home repair', 'home', 'wrench', '']];
+    $('#quickActions').innerHTML = actions.map(item => `<button type="button" data-quick="${item[0]}" data-context="${item[2]}" data-domain="${item[4]}" data-scope="${item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>Quick capture</small></span><i data-lucide="chevron-right"></i></button>`).join('');
     $('#quickDialog').showModal();
+    refreshIcons();
+  }
+
+  function showEmergency() {
+    const services = [
+      ['112', 'Emergency', 'Police, fire, medical or immediate danger', 'siren'],
+      ['181', 'Women helpline', 'Support and referral for women in distress', 'shield-alert'],
+      ['1098', 'Child helpline', 'Help for a child in danger or distress', 'baby'],
+      ['14567', 'Elderline', 'Support for senior citizens', 'accessibility'],
+      ['1930', 'Cyber fraud', 'Report financial cyber fraud quickly', 'badge-alert'],
+      ['1906', 'LPG leak', 'All-India LPG emergency helpline', 'flame']
+    ];
+    const emergencyRecords = (D.state.lifeRecords || []).filter(item => ['emergency', 'health'].includes(item.domain)).slice(0, 4);
+    const address = D.state.settings.primaryAddress || 'Add the home address and landmark in Settings.';
+    $('#emergencyBody').innerHTML = `<section class="emergency-services">${services.map(item => `<a href="tel:${item[0]}"><span><i data-lucide="${item[3]}"></i></span><span class="grow"><b>${item[1]}</b><small>${item[2]}</small></span><strong>${item[0]}</strong></a>`).join('')}</section><section class="emergency-card"><div class="section-head"><div><small>HOUSEHOLD CARD</small><h3>${D.esc(D.state.settings.householdName || 'Family')}</h3></div><button data-route="settings/health">Edit plan</button></div><p><b>Home address</b><br>${D.esc(address)}</p>${emergencyRecords.map(item => `<div class="row"><div class="grow"><b>${D.esc(item.title)}</b><small>${D.esc(item.owner || 'Family')} · ${D.esc(item.notes || item.reference || 'Open the record for details')}</small></div></div>`).join('') || '<p>No health or emergency notes configured.</p>'}</section>`;
+    $('#emergencyDialog').showModal();
     refreshIcons();
   }
 
@@ -394,7 +432,7 @@
       return;
     }
     const routeTarget = event.target.closest('[data-route]');
-    if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); toggleNotifications(false); return; }
+    if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); if ($('#emergencyDialog').open) $('#emergencyDialog').close(); toggleNotifications(false); return; }
     const workspaceTarget = event.target.closest('[data-workspace]');
     if (workspaceTarget) { workspace = workspaceTarget.dataset.workspace; go(workspace + '/overview'); return; }
     const create = event.target.closest('[data-create]');
@@ -438,6 +476,7 @@
   $('#searchMobile').onclick = showSearch;
   $('#searchInput').oninput = event => renderSearch(event.target.value);
   $('#quickAdd').onclick = quick;
+  $('#emergency').onclick = showEmergency;
   $('#theme').onclick = toggleTheme;
   $('#notifications').onclick = () => toggleNotifications();
   $('#closeNotifications').onclick = () => toggleNotifications(false);
