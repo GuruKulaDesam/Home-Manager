@@ -159,7 +159,7 @@ test('textbook library and reader fit a phone viewport', async ({ page }) => {
   await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
 });
 
-test('two Google accounts authorize and sync directly without a connector', async ({ page }) => {
+test('four Google accounts authorize and sync directly without a connector', async ({ page }) => {
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => {
     const email = route.request().headers().authorization.replace('Bearer token:', '');
@@ -185,20 +185,30 @@ test('two Google accounts authorize and sync directly without a connector', asyn
     } } };
   });
   await page.locator('#googleClientId').fill('123456789-example.apps.googleusercontent.com');
-  await page.locator('[data-google-account="google-1"] [data-google-email]').fill('father@example.com');
-  await page.locator('[data-google-account="google-1"] [data-google-consent]').check();
-  await page.locator('[data-google-account="google-2"] [data-google-email]').fill('mother@example.com');
-  await page.locator('[data-google-account="google-2"] [data-google-consent]').check();
+  const familyEmails = ['father@example.com', 'mother@example.com', 'ananya@example.com', 'arjun@example.com'];
+  for (let index = 0; index < familyEmails.length; index += 1) {
+    const row = page.locator(`[data-google-account="google-${index + 1}"]`);
+    await row.locator('[data-google-email]').fill(familyEmails[index]);
+    await row.locator('[data-google-consent]').check();
+  }
   await page.locator('#googleSyncSettings button[type="submit"]').click();
-  await page.locator('[data-google-account="google-1"] [data-google-connect]').click();
-  await expect(page.locator('[data-google-account="google-1"]')).toContainText('Active this session');
-  await page.locator('[data-google-account="google-2"] [data-google-connect]').click();
-  await expect(page.locator('#googleSyncSettings')).toContainText('2 active this session');
+  for (let index = 0; index < familyEmails.length; index += 1) {
+    const row = page.locator(`[data-google-account="google-${index + 1}"]`);
+    await row.locator('[data-google-connect]').click();
+    await expect(row).toContainText('Active this session');
+  }
+  await expect(page.locator('#googleSyncSettings')).toContainText('4 active this session');
+  await expect(page.locator('[data-google-sync]')).toContainText('Sync all accounts');
   await page.locator('[data-google-sync]').click();
   await expect(page.locator('.integration-queue')).toContainText('Family train booking');
   await expect(page.locator('.integration-queue')).toContainText('School exam timetable');
   const accounts = await page.evaluate(() => HM.data.state.settings.googleSync.accounts.map(account => ({ personId: account.personId, status: account.status })));
-  expect(accounts).toEqual([{ personId: 'p1', status: 'connected' }, { personId: 'p2', status: 'connected' }]);
+  expect(accounts).toEqual([
+    { personId: 'p1', status: 'connected' },
+    { personId: 'p2', status: 'connected' },
+    { personId: 'p3', status: 'connected' },
+    { personId: 'p4', status: 'connected' }
+  ]);
 });
 
 test('Android SMS backup is analysed locally with OTP exclusion and review apply', async ({ page }) => {
