@@ -65,9 +65,9 @@
   <dialog id="formDialog" class="side-drawer" aria-labelledby="formTitle">
     <form id="entityForm" method="dialog">
       <span class="drawer-accent" aria-hidden="true"></span>
-      <div class="dialog-head"><div><small id="formContext"></small><h2 id="formTitle">Add item</h2><p>Complete the details below. Your data stays in this browser.</p></div><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="dialog-head"><div><small id="formContext"></small><h2 id="formTitle">Add item</h2><p>Complete the details below. Your data stays in this browser.</p></div><button type="button" data-close-dialog="formDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
       <div id="formFields" class="drawer-body"></div>
-      <menu class="drawer-footer"><button value="cancel">Cancel</button><button value="default" class="primary"><i data-lucide="check"></i><span>Save item</span></button></menu>
+      <menu class="drawer-footer"><button type="button" data-close-dialog="formDialog">Cancel</button><button value="default" class="primary"><i data-lucide="check"></i><span>Save item</span></button></menu>
     </form>
   </dialog>
 
@@ -81,7 +81,7 @@
   <dialog id="quickDialog" class="side-drawer quick-drawer" aria-labelledby="quickTitle">
     <form method="dialog">
       <span class="drawer-accent" aria-hidden="true"></span>
-      <div class="dialog-head"><div><small>Create</small><h2 id="quickTitle">Add to Home Manager</h2><p>Choose what you want to organise.</p></div><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="dialog-head"><div><small>Create</small><h2 id="quickTitle">Add to Home Manager</h2><p>Choose what you want to organise.</p></div><button type="button" data-close-dialog="quickDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
       <div id="quickActions" class="quick-grid drawer-body"></div>
     </form>
   </dialog>

@@ -382,6 +382,12 @@
   }
 
   document.addEventListener('click', event => {
+    const closeDialog = event.target.closest('[data-close-dialog]');
+    if (closeDialog) {
+      const dialog = document.getElementById(closeDialog.dataset.closeDialog);
+      if (dialog?.open) dialog.close();
+      return;
+    }
     const routeTarget = event.target.closest('[data-route]');
     if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); toggleNotifications(false); return; }
     const workspaceTarget = event.target.closest('[data-workspace]');
