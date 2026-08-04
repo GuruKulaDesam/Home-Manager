@@ -580,7 +580,7 @@
       const form = $('#googleSyncSettings');
       const refreshConnectionButtons = () => {
         const connectorReady = /^https:\/\//i.test($('#googleConnectorUrl').value.trim());
-        form.querySelectorAll('[data-google-person]').forEach(row => {
+        form.querySelectorAll('[data-google-account]').forEach(row => {
           const ready = connectorReady && row.querySelector('[data-google-email]').value.trim() && row.querySelector('[data-google-consent]').checked;
           row.querySelector('[data-google-connect]').disabled = !ready;
         });
@@ -599,13 +599,14 @@
           autoSync: values.has('autoSync'), calendarSync: values.has('calendarSync'), emailAnalysis: values.has('emailAnalysis'), driveBackup: values.has('driveBackup'),
           reviewPolicy: values.get('reviewPolicy') === 'rules' ? 'rules' : 'review', lookbackDays: +values.get('lookbackDays') || 30,
           categories: values.getAll('syncCategory'),
-          accounts: Array.from(form.querySelectorAll('[data-google-person]')).map(row => {
-            const personId = row.dataset.googlePerson;
-            const existing = (previous.accounts || []).find(account => account.personId === personId) || {};
+          accounts: Array.from(form.querySelectorAll('[data-google-account]')).map((row, index) => {
+            const slotId = row.dataset.googleAccount || `google-${index + 1}`;
+            const personId = row.querySelector('[data-google-owner]').value;
+            const existing = (previous.accounts || []).find(account => account.slotId === slotId) || (previous.accounts || [])[index] || {};
             const email = row.querySelector('[data-google-email]').value.trim();
             const consent = row.querySelector('[data-google-consent]').checked;
             const keepStatus = !connectorChanged && existing.email === email && consent;
-            return { ...existing, personId, email, consent, status: keepStatus ? existing.status || 'pending' : 'pending' };
+            return { ...existing, slotId, personId, email, consent, status: keepStatus ? existing.status || 'pending' : 'pending' };
           }).filter(account => account.email || account.consent)
         };
         save('Google sync preferences saved');
@@ -613,6 +614,24 @@
       };
       form.querySelectorAll('[data-google-connect]').forEach(button => button.onclick = () => startGoogleConnect(button));
       form.querySelector('[data-google-sync]').onclick = runGoogleSync;
+      form.querySelector('[data-google-status]').onclick = checkGoogleStatus;
+    }
+    if ($('#phoneSmsSettings')) {
+      const form = $('#phoneSmsSettings');
+      form.onsubmit = event => {
+        event.preventDefault();
+        const values = new FormData(form);
+        const current = D.state.settings.phoneSms || {};
+        D.state.settings.phoneSms = { ...current, ownerId: String(values.get('smsOwner') || 'p1'), consent: values.has('smsConsent'), categories: values.getAll('smsCategory') };
+        save('Phone SMS settings saved');
+        render();
+      };
+      form.querySelector('#smsImport').onchange = importSmsBackup;
+      form.querySelector('#smsConsent').onchange = event => {
+        const input = form.querySelector('#smsImport');
+        input.disabled = !event.target.checked;
+        input.closest('label').classList.toggle('disabled', !event.target.checked);
+      };
     }
     if ($('#questionQuery')) {
       const updateQuestions = () => {
@@ -631,6 +650,8 @@
     if ($('#timerToggle')) $('#timerToggle').onclick = toggleTimer;
     document.querySelectorAll('[data-timer]').forEach(button => button.onclick = () => setTimer(button.dataset.timer));
     if (document.querySelector('[data-book-card]')) hydrateBookshelf();
+    document.querySelectorAll('[data-sync-apply]').forEach(button => button.onclick = () => applyIntegrationSuggestion(button.dataset.syncApply));
+    document.querySelectorAll('[data-sync-dismiss]').forEach(button => button.onclick = () => dismissIntegrationSuggestion(button.dataset.syncDismiss));
   }
 
   function routeFor(type, record) {
@@ -727,6 +748,130 @@
     refreshIcons();
   }
 
+  const integrationCategories = ['bills', 'travel', 'school', 'health', 'deliveries', 'home', 'government'];
+  const categoryLabels = { bills: 'Bill or payment', travel: 'Travel update', school: 'School update', health: 'Health update', deliveries: 'Delivery update', home: 'Home service', government: 'Government document' };
+
+  function safeMessageSummary(value) {
+    return String(value || '')
+      .replace(/https?:\/\/\S+/gi, '[link removed]')
+      .replace(/\b\d{6,}\b/g, number => `...${number.slice(-4)}`)
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 260);
+  }
+
+  function normalizeMessageDate(value) {
+    if (!value) return '';
+    const numeric = Number(value);
+    const date = Number.isFinite(numeric) && numeric > 0 ? new Date(numeric < 1e11 ? numeric * 1000 : numeric) : new Date(value);
+    return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  }
+
+  async function messageFingerprint(message) {
+    const input = new TextEncoder().encode(`${message.sender}|${message.receivedAt}|${message.body}`);
+    if (crypto.subtle) {
+      const hash = await crypto.subtle.digest('SHA-256', input);
+      return [...new Uint8Array(hash)].map(value => value.toString(16).padStart(2, '0')).join('');
+    }
+    return `${message.sender}-${message.receivedAt}-${message.body.length}`;
+  }
+
+  async function parseSmsBackup(file) {
+    if (file.size > 25 * 1024 * 1024) throw new Error('SMS backup must be 25 MB or smaller.');
+    const text = await file.text();
+    let records;
+    if (file.name.toLowerCase().endsWith('.json') || file.type.includes('json')) {
+      const parsed = JSON.parse(text);
+      records = Array.isArray(parsed) ? parsed : Array.isArray(parsed.messages) ? parsed.messages : [];
+      records = records.map(item => ({ sender: item.address || item.sender || item.from || '', contact: item.contact_name || item.contact || '', receivedAt: normalizeMessageDate(item.date || item.timestamp || item.receivedAt), body: item.body || item.text || item.message || '' }));
+    } else {
+      const documentXml = new DOMParser().parseFromString(text, 'application/xml');
+      if (documentXml.querySelector('parsererror')) throw new Error('The SMS XML file is not valid.');
+      records = [...documentXml.querySelectorAll('sms')].map(item => ({ sender: item.getAttribute('address') || '', contact: item.getAttribute('contact_name') || '', receivedAt: normalizeMessageDate(item.getAttribute('date')), body: item.getAttribute('body') || '' }));
+    }
+    return records.filter(item => item.body && item.sender).slice(0, 10000);
+  }
+
+  async function analyzeSms(message, ownerId, allowedCategories) {
+    const body = String(message.body || '');
+    if (/\b(otp|one[ -]?time password|verification code|login code|auth code)\b/i.test(body)) return null;
+    const rules = [
+      ['bills', /\b(bill|invoice|payment due|due date|electricity|broadband|postpaid|recharge|premium|renewal|debited|credited|upi|transaction)\b/i],
+      ['travel', /\b(pnr|flight|train|bus|boarding|departure|arrival|booking|trip|journey|hotel|cab)\b/i],
+      ['school', /\b(school|class|exam|test|assignment|homework|fee|parent meeting|ptm|student|teacher)\b/i],
+      ['health', /\b(doctor|hospital|clinic|appointment|lab|pharmacy|medicine|vaccin|health|consultation)\b/i],
+      ['deliveries', /\b(delivery|delivered|shipped|dispatch|courier|out for delivery|order)\b/i],
+      ['government', /\b(aadhaar|passport|income tax|pan card|digilocker|government|municipal|certificate|challan)\b/i],
+      ['home', /\b(service|repair|maintenance|technician|pest control|gas cylinder|lpg|water supply)\b/i]
+    ];
+    const match = rules.find(([category, expression]) => allowedCategories.includes(category) && expression.test(body));
+    if (!match) return null;
+    const category = match[0];
+    const amountMatch = body.match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const sourceRef = await messageFingerprint(message);
+    const sender = safeMessageSummary(message.contact && message.contact !== '(Unknown)' ? message.contact : message.sender).slice(0, 100);
+    return { id: D.uid('sg'), source: 'sms', sourceRef, personId: ownerId, category, title: `${categoryLabels[category]}${sender ? ` from ${sender}` : ''}`, summary: safeMessageSummary(body), sender, receivedAt: message.receivedAt, amount: amountMatch ? +amountMatch[1].replace(/,/g, '') || 0 : 0, status: 'pending' };
+  }
+
+  function mergeSuggestions(items, fallbackSource = 'gmail') {
+    D.state.syncSuggestions ||= [];
+    let added = 0;
+    items.slice(0, 500).forEach(item => {
+      const category = integrationCategories.includes(item.category) ? item.category : 'home';
+      const source = ['gmail', 'calendar', 'sms'].includes(item.source) ? item.source : fallbackSource;
+      const sourceRef = String(item.sourceRef || item.externalId || item.id || '').slice(0, 180);
+      if (!sourceRef || D.state.syncSuggestions.some(existing => existing.source === source && existing.sourceRef === sourceRef)) return;
+      D.state.syncSuggestions.push({ id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title: safeMessageSummary(item.title || categoryLabels[category]).slice(0, 160), summary: safeMessageSummary(item.summary || item.snippet || ''), sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt: normalizeMessageDate(item.receivedAt || item.startAt || item.date), amount: Math.max(0, +item.amount || 0), status: 'pending' });
+      added += 1;
+    });
+    return added;
+  }
+
+  async function importSmsBackup(event) {
+    const file = event.currentTarget.files?.[0];
+    if (!file) return;
+    const settings = D.state.settings.phoneSms || {};
+    if (!settings.consent) { toast('Save phone-owner consent before importing messages.'); return; }
+    try {
+      const messages = await parseSmsBackup(file);
+      const suggestions = (await Promise.all(messages.map(message => analyzeSms(message, settings.ownerId, settings.categories || integrationCategories)))).filter(Boolean);
+      const added = mergeSuggestions(suggestions, 'sms');
+      settings.lastImport = new Date().toISOString();
+      settings.importedCount = (settings.importedCount || 0) + messages.length;
+      settings.sourceName = file.name;
+      save(`${messages.length} messages analysed; ${added} new updates need review`);
+      render();
+    } catch (error) {
+      console.error(error);
+      toast(`SMS import failed: ${error.message}`);
+    } finally { event.currentTarget.value = ''; }
+  }
+
+  function applyIntegrationSuggestion(id) {
+    const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
+    if (!item) return;
+    const date = String(item.receivedAt || new Date().toISOString()).slice(0, 10);
+    if (item.category === 'school') {
+      D.state.events.push({ id: D.uid('e'), context: 'study', title: item.title, category: 'School', startAt: `${date}T09:00`, venue: item.sender || '', notes: item.summary });
+    } else if (['bills', 'travel', 'health', 'government'].includes(item.category)) {
+      const domain = { bills: 'bills', travel: 'travel', health: 'appointments', government: 'documents' }[item.category];
+      D.state.lifeRecords.push({ id: D.uid('lr'), domain, title: item.title, category: categoryLabels[item.category], owner: D.state.people.find(person => person.id === item.personId)?.name || 'Family', provider: item.sender, reference: '', amount: item.amount, dueDate: date, frequency: 'Once', status: 'pending', phone: '', notes: item.summary, createdAt: new Date().toISOString() });
+    } else {
+      D.state.tasks.push({ id: D.uid('t'), context: 'home', type: 'reminder', title: item.title, category: item.category === 'deliveries' ? 'Delivery' : 'Home service', assignee: D.state.people.find(person => person.id === item.personId)?.name || 'Family', dueAt: date, frequency: 'Once', priority: 'medium', status: 'todo', notes: item.summary });
+    }
+    item.status = 'applied';
+    save('Imported update added to its family section');
+    render();
+  }
+
+  function dismissIntegrationSuggestion(id) {
+    const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
+    if (!item) return;
+    item.status = 'dismissed';
+    save('Imported update dismissed');
+    render();
+  }
+
   function connectorUrl(path) {
     const base = $('#googleConnectorUrl')?.value || D.state.settings.googleSync?.connectorUrl || '';
     if (!/^https:\/\//i.test(base)) throw new Error('Enter an HTTPS connector URL first.');
@@ -734,18 +879,46 @@
   }
 
   function startGoogleConnect(button) {
-    const row = button.closest('[data-google-person]');
+    const row = button.closest('[data-google-account]');
     const email = row.querySelector('[data-google-email]').value.trim();
     const consent = row.querySelector('[data-google-consent]').checked;
     if (!email || !consent) { toast('Add the account email and owner consent first'); return; }
     try {
       const url = connectorUrl('/oauth/google/start');
-      url.searchParams.set('personId', button.dataset.googleConnect);
+      url.searchParams.set('personId', row.querySelector('[data-google-owner]').value);
+      url.searchParams.set('slotId', button.dataset.googleConnect);
       url.searchParams.set('loginHint', email);
       url.searchParams.set('returnTo', location.href);
       window.open(url, '_blank', 'noopener');
       toast('Google consent opened in a new tab');
     } catch (error) { toast(error.message); }
+  }
+
+  function acceptGoogleConnectorResult(payload) {
+    const sync = D.state.settings.googleSync || {};
+    if (Array.isArray(payload.accounts)) {
+      sync.accounts = (sync.accounts || []).map(account => {
+        const remote = payload.accounts.find(item => String(item.personId) === account.personId || String(item.email || '').toLowerCase() === account.email.toLowerCase());
+        if (!remote) return account;
+        return { ...account, status: ['connected', 'paused', 'error', 'pending'].includes(remote.status) ? remote.status : account.status, lastSync: normalizeMessageDate(remote.lastSync) || account.lastSync };
+      });
+    }
+    return mergeSuggestions(Array.isArray(payload.suggestions) ? payload.suggestions : [], 'gmail');
+  }
+
+  async function checkGoogleStatus() {
+    const button = document.querySelector('[data-google-status]');
+    try {
+      button.disabled = true;
+      button.classList.add('is-syncing');
+      const response = await fetch(connectorUrl('/api/home-manager/status'), { credentials: 'include', headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Connector returned ${response.status}`);
+      const payload = await response.json();
+      const added = acceptGoogleConnectorResult(payload);
+      save(added ? `${added} Google updates need review` : 'Google account status refreshed');
+      render();
+    } catch (error) { toast(`Google status unavailable: ${error.message}`); }
+    finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
   }
 
   async function runGoogleSync() {
@@ -755,7 +928,10 @@
       button.classList.add('is-syncing');
       const response = await fetch(connectorUrl('/api/home-manager/sync'), { method: 'POST', credentials: 'include', headers: { Accept: 'application/json' } });
       if (!response.ok) throw new Error(`Sync service returned ${response.status}`);
-      toast('Google sync started; suggestions will require review');
+      const payload = await response.json().catch(() => ({}));
+      const added = acceptGoogleConnectorResult(payload);
+      save(added ? `${added} Google updates need review` : payload.status === 'queued' ? 'Google sync queued by the connector' : 'Google sync completed with no new updates');
+      render();
     } catch (error) { toast(`Google sync unavailable: ${error.message}`); }
     finally { button.disabled = false; button.classList.remove('is-syncing'); }
   }

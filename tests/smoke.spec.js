@@ -158,3 +158,56 @@ test('textbook library and reader fit a phone viewport', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
 });
+
+test('two Google accounts receive real connector status and review suggestions', async ({ page }) => {
+  await page.route('https://sync.example.in/api/home-manager/status', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      accounts: [
+        { personId: 'p1', email: 'father@example.com', status: 'connected', lastSync: '2026-08-05T10:00:00Z' },
+        { personId: 'p2', email: 'mother@example.com', status: 'connected', lastSync: '2026-08-05T10:01:00Z' }
+      ],
+      suggestions: [{ externalId: 'gmail-1', source: 'gmail', personId: 'p2', category: 'travel', title: 'Train booking confirmed', summary: 'Journey departs on 12 August', sender: 'Rail booking', receivedAt: '2026-08-05T09:00:00Z' }]
+    })
+  }));
+  await page.goto(`${app}#/settings/app`);
+  await page.locator('#googleConnectorUrl').fill('https://sync.example.in');
+  await page.locator('[data-google-account="google-1"] [data-google-email]').fill('father@example.com');
+  await page.locator('[data-google-account="google-1"] [data-google-consent]').check();
+  await page.locator('[data-google-account="google-2"] [data-google-email]').fill('mother@example.com');
+  await page.locator('[data-google-account="google-2"] [data-google-consent]').check();
+  await page.locator('#googleSyncSettings button[type="submit"]').click();
+  await page.locator('[data-google-status]').click();
+  await expect(page.locator('#googleSyncSettings')).toContainText('2 connected');
+  await expect(page.locator('.integration-queue')).toContainText('Train booking confirmed');
+  const accounts = await page.evaluate(() => HM.data.state.settings.googleSync.accounts.map(account => ({ personId: account.personId, status: account.status })));
+  expect(accounts).toEqual([{ personId: 'p1', status: 'connected' }, { personId: 'p2', status: 'connected' }]);
+});
+
+test('Android SMS backup is analysed locally with OTP exclusion and review apply', async ({ page }) => {
+  await page.goto(`${app}#/settings/app`);
+  await page.locator('#smsConsent').check();
+  await page.locator('#phoneSmsSettings button[type="submit"]').click();
+  const smsXml = `<?xml version="1.0" encoding="UTF-8"?><smses count="4">
+    <sms address="TNEB" date="1785920400000" body="Electricity bill Rs. 1,850 due for account 1234567890" contact_name="Power provider" />
+    <sms address="PEEPAL" date="1785924000000" body="School exam timetable is published for Class 7" contact_name="Peepal School" />
+    <sms address="COURIER" date="1785927600000" body="Your order is out for delivery today" contact_name="Courier" />
+    <sms address="BANK" date="1785931200000" body="Your OTP is 874221 and expires in 5 minutes" contact_name="Bank" />
+  </smses>`;
+  await page.locator('#smsImport').setInputFiles({ name: 'phone-sms.xml', mimeType: 'application/xml', buffer: Buffer.from(smsXml) });
+  await expect(page.locator('.integration-queue')).toContainText('3 pending');
+  await expect(page.locator('.integration-queue')).toContainText('Electricity bill');
+  await expect(page.locator('.integration-queue')).not.toContainText('874221');
+  await expect(page.locator('.integration-queue')).toContainText('...7890');
+  const billSuggestion = page.locator('.sync-suggestion').filter({ hasText: 'Electricity bill' });
+  await billSuggestion.getByRole('button', { name: 'Apply' }).click();
+  const imported = await page.evaluate(() => ({
+    sms: HM.data.state.settings.phoneSms.importedCount,
+    bill: HM.data.state.lifeRecords.find(item => item.domain === 'bills' && item.provider === 'Power provider'),
+    pending: HM.data.state.syncSuggestions.filter(item => item.status === 'pending').length
+  }));
+  expect(imported.sms).toBe(4);
+  expect(imported.bill).toMatchObject({ domain: 'bills', amount: 1850, status: 'pending' });
+  expect(imported.pending).toBe(2);
+});

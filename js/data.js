@@ -6,6 +6,7 @@ function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random()
 seed.settings.appBackground='waterfall';
 seed.settings.activeLearnerId='p3';
 seed.settings.googleSync={connectorUrl:'',autoSync:false,calendarSync:true,emailAnalysis:false,driveBackup:false,reviewPolicy:'review',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
+seed.settings.phoneSms={ownerId:'p1',consent:false,lastImport:'',importedCount:0,sourceName:'',categories:['bills','travel','school','health','deliveries','home','government']};
 seed.expenses.forEach(item=>item.domain=item.category==='Food'?'food':'housing');
 seed.expenses.push(
   {id:'x3',title:'Petrol refill',category:'Fuel',domain:'vehicle',amount:3200,date:'2026-08-03'},
@@ -135,7 +136,8 @@ seed.learningReflections=[];
 seed.tutorFeedback=[];
 seed.coCurricularRecords=[];
 seed.readingProgress=[];
-const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','readingProgress','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
+seed.syncSuggestions=[];
+const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','readingProgress','syncSuggestions','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
 function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
@@ -148,8 +150,13 @@ function normalizeGoogleSync(value){
     reviewPolicy:input.reviewPolicy==='rules'?'rules':'review',
     lookbackDays:[7,30,90].includes(+input.lookbackDays)?+input.lookbackDays:30,
     categories:Array.isArray(input.categories)?input.categories.filter(item=>categories.includes(item)):clone(seed.settings.googleSync.categories),
-    accounts:Array.isArray(input.accounts)?input.accounts.filter(item=>item&&typeof item==='object').map(item=>({personId:String(item.personId||''),email:String(item.email||'').trim(),consent:Boolean(item.consent),status:['pending','connected','paused','error'].includes(item.status)?item.status:'pending',lastSync:typeof item.lastSync==='string'?item.lastSync:''})):[]
+    accounts:Array.isArray(input.accounts)?input.accounts.filter(item=>item&&typeof item==='object').slice(0,2).map((item,index)=>({slotId:String(item.slotId||`google-${index+1}`),personId:String(item.personId||''),email:String(item.email||'').trim(),consent:Boolean(item.consent),status:['pending','connected','paused','error'].includes(item.status)?item.status:'pending',lastSync:typeof item.lastSync==='string'?item.lastSync:''})):[]
   };
+}
+function normalizePhoneSms(value){
+  const input=value&&typeof value==='object'?value:{};
+  const categories=['bills','travel','school','health','deliveries','home','government'];
+  return {ownerId:String(input.ownerId||'p1'),consent:Boolean(input.consent),lastImport:typeof input.lastImport==='string'?input.lastImport:'',importedCount:Math.max(0,+input.importedCount||0),sourceName:typeof input.sourceName==='string'?input.sourceName.slice(0,120):'',categories:Array.isArray(input.categories)?input.categories.filter(item=>categories.includes(item)):clone(seed.settings.phoneSms.categories)};
 }
 function normalize(value){
   if(!value||typeof value!=='object'||value.schemaVersion!==1)throw Error('Unsupported backup format');
@@ -169,7 +176,8 @@ function normalize(value){
     primaryAddress:typeof inputSettings.primaryAddress==='string'?inputSettings.primaryAddress:'',
     timezone:typeof inputSettings.timezone==='string'?inputSettings.timezone:'Asia/Kolkata',
     foodPreference:typeof inputSettings.foodPreference==='string'?inputSettings.foodPreference:'',
-    googleSync:normalizeGoogleSync(inputSettings.googleSync)
+    googleSync:normalizeGoogleSync(inputSettings.googleSync),
+    phoneSms:normalizePhoneSms(inputSettings.phoneSms)
   };
   next.schoolProfile={...next.schoolProfile,...(value.schoolProfile&&typeof value.schoolProfile==='object'?clone(value.schoolProfile):{})};
   collections.forEach(key=>{if(Array.isArray(value[key]))next[key]=clone(value[key]).filter(item=>item&&typeof item==='object')});
@@ -192,6 +200,7 @@ function normalize(value){
   next.tutorFeedback.forEach(item=>{item.status=item.status==='done'?'done':'open'});
   next.coCurricularRecords.forEach(item=>{item.status=['active','paused','completed'].includes(item.status)?item.status:'active'});
   next.readingProgress.forEach(item=>{item.currentPage=Math.max(1,+item.currentPage||1);item.totalPages=Math.max(0,+item.totalPages||0);item.status=['not-started','reading','reviewed'].includes(item.status)?item.status:'not-started';item.bookmarks=Array.isArray(item.bookmarks)?[...new Set(item.bookmarks.map(Number).filter(page=>page>0))]:[];item.notes=Array.isArray(item.notes)?item.notes.filter(note=>note&&typeof note==='object').map(note=>({id:String(note.id||uid('rn')),page:Math.max(1,+note.page||1),text:String(note.text||''),createdAt:String(note.createdAt||'')})).filter(note=>note.text):[]});
+  next.syncSuggestions.forEach(item=>{item.id=String(item.id||uid('sg'));item.source=['gmail','calendar','sms'].includes(item.source)?item.source:'gmail';item.category=['bills','travel','school','health','deliveries','home','government'].includes(item.category)?item.category:'home';item.title=String(item.title||'Imported update').slice(0,160);item.summary=String(item.summary||'').slice(0,300);item.sender=String(item.sender||'').slice(0,100);item.receivedAt=String(item.receivedAt||'');item.amount=Math.max(0,+item.amount||0);item.status=['pending','applied','dismissed'].includes(item.status)?item.status:'pending';item.sourceRef=String(item.sourceRef||item.id).slice(0,180);item.personId=String(item.personId||'')});
   next.goals.forEach(item=>{item.target=Math.max(1,+item.target||1);item.progress=Math.max(0,+item.progress||0)});
   next.expenses.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:(String(item.category||'').toLowerCase().includes('food')?'food':String(item.category||'').toLowerCase().match(/health|medical|pharmacy/)?'health':String(item.category||'').toLowerCase().match(/school|education|tuition/)?'learning':'housing')});
   next.budgets.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:'family';item.bucket=['Fixed','Flexible','Non-monthly'].includes(item.bucket)?item.bucket:'Flexible'});
