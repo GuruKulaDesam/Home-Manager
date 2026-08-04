@@ -119,7 +119,6 @@
     const openTasks = s.tasks.filter(x => D.status(x.status) !== 'done');
     const overdue = openTasks.filter(x => x.dueAt && isoDay(x.dueAt) < day);
     const upcomingEvents = s.events.filter(x => isoDay(x.startAt) >= day).sort((a, b) => String(a.startAt).localeCompare(String(b.startAt)));
-    const focus = s.focusSessions.filter(x => x.date >= weekIso).reduce((sum, x) => sum + (+x.minutes || 0), 0);
     const lowStock = s.inventoryItems.filter(x => (+x.quantity || 0) <= 2);
     const month = day.slice(0, 7);
     const monthSpend = s.expenses.filter(x => isoDay(x.date).startsWith(month)).reduce((sum, x) => sum + (+x.amount || 0), 0);
@@ -128,50 +127,67 @@
     const horizon = horizonDate.toISOString().slice(0, 10);
     const lifeDue = lifeRecords.filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status)).sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
     const agenda = [
-      ...openTasks.map(x => ({ date: isoDay(x.dueAt), context: x.context, title: x.title, sub: `${x.category} - ${x.assignee || 'Unassigned'}`, route: taskRoute(x.context), icon: 'circle-check-big' })),
-      ...upcomingEvents.map(x => ({ date: isoDay(x.startAt), context: x.context, title: x.title, sub: `${D.date(x.startAt)} - ${x.venue || 'No venue'}`, route: eventRoute(x.context), icon: 'calendar-clock' })),
-      ...lifeDue.map(x => ({ date: x.dueDate, context: 'home', title: x.title, sub: `${HM.life.domains[x.domain]?.title || 'Family record'} - ${x.status}`, route: `home/life/${x.domain}`, icon: HM.life.domains[x.domain]?.icon || 'folder-clock' }))
+      ...openTasks.map(x => ({ kind: 'task', id: x.id, date: isoDay(x.dueAt), context: x.context, title: x.title, detail: x.category, owner: x.assignee || 'Unassigned', route: taskRoute(x.context) })),
+      ...upcomingEvents.map(x => ({ kind: 'event', date: isoDay(x.startAt), starts: x.startAt, context: x.context, title: x.title, detail: x.venue || 'No venue', owner: 'Family', route: eventRoute(x.context) })),
+      ...lifeDue.map(x => ({ kind: 'due', date: x.dueDate, context: 'home', title: x.title, detail: HM.life.domains[x.domain]?.title || 'Family record', owner: x.owner || 'Family', route: `home/life/${x.domain}` }))
     ].filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 7);
     const issues = s.issues.filter(x => D.status(x.status) !== 'done');
     const mealsToday = s.meals.filter(x => isoDay(x.date) === day);
-    const learningOpen = s.learningTopics.filter(x => x.status !== 'done');
+    const weekDays = Array.from({ length: 7 }, (_, index) => {
+      const value = new Date(`${day}T00:00`);
+      value.setDate(value.getDate() + index);
+      const iso = value.toISOString().slice(0, 10);
+      return { iso, value, count: upcomingEvents.filter(item => isoDay(item.startAt) === iso).length };
+    });
+    const people = s.people.slice(0, 6);
+    const nextMeal = mealsToday[0] || s.meals.filter(x => isoDay(x.date) > day).sort((a, b) => String(a.date).localeCompare(String(b.date)))[0];
+    const ownerClass = owner => `person-${Math.max(0, s.people.findIndex(person => person.name === owner)) % 6}`;
+    const dayLabel = value => value === day ? 'Today' : value === weekDays[1].iso ? 'Tomorrow' : new Date(`${value}T00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
+    const timeLabel = item => item.kind === 'event' && item.starts ? new Date(item.starts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : item.kind === 'due' ? 'Due' : 'Any time';
 
-    return `${intro()}
-      <section class="metrics">
-        ${metric('Open tasks', openTasks.length, overdue.length ? `${overdue.length} overdue` : 'Nothing overdue', 'list-checks')}
-        ${metric('Next events', upcomingEvents.length, 'Shared calendars', 'calendar-range')}
-        ${metric('This month', D.money(monthSpend), `${s.expenses.filter(x => isoDay(x.date).startsWith(month)).length} expenses`, 'wallet-cards')}
-        ${metric('Study focus', `${focus} min`, 'Last 7 days', 'timer-reset')}
+    return `<section class="today-heading">
+        <div><span class="eyebrow">${icon('sunrise')} ${e(new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }))}</span><h2>Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}</h2><p>Here is what the family needs today.</p></div>
+        <button class="primary today-add" data-create="task" data-context="home">${icon('plus')}<span>Add task</span></button>
       </section>
-      <div class="dashboard-grid">
-        <section class="panel">
-          <div class="section-head"><div><h2>Today and next</h2><p>The next seven things the family needs to remember</p></div><button class="primary" data-create="task" data-context="home">${icon('plus')}<span>Task</span></button></div>
-          ${agenda.length ? agenda.map(x => {
-            const date = new Date(`${x.date}T00:00`);
-            return `<button class="row" data-route="${x.route}"><span class="agenda-date"><small>${e(date.toLocaleDateString('en-IN', { month: 'short' }))}</small><b>${date.getDate()}</b></span>${icon(x.icon)}<span class="grow"><b>${e(x.title)}</b><small>${e(x.sub)}</small></span>${badge(x.context)}</button>`;
-          }).join('') : empty('Your agenda is clear. Add a task or event to begin.', 'task', 'Add task')}
+      <section class="family-filter" aria-label="Filter the agenda by family member">
+        <button class="active" data-agenda-person="all" aria-pressed="true"><span class="member-avatar all">${icon('users-round')}</span><span>Everyone</span></button>
+        ${people.map((person, index) => `<button data-agenda-person="${e(person.name.toLowerCase())}" aria-pressed="false"><span class="member-avatar person-${index % 6}">${e(person.name[0])}</span><span>${e(person.name.split(' ')[0])}</span></button>`).join('')}
+      </section>
+      <section class="household-status" aria-label="Household status">
+        <button data-route="home/tasks"><span class="status-icon teal">${icon('list-checks')}</span><span><small>Open tasks</small><b>${openTasks.length}</b></span><em>${overdue.length ? `${overdue.length} overdue` : 'On track'}</em></button>
+        <button data-route="home/calendar"><span class="status-icon violet">${icon('calendar-days')}</span><span><small>Coming up</small><b>${upcomingEvents.length}</b></span><em>Events</em></button>
+        <button data-route="home/inventory"><span class="status-icon green">${icon('shopping-basket')}</span><span><small>Low stock</small><b>${lowStock.length}</b></span><em>Items</em></button>
+        <button data-route="home/finance"><span class="status-icon purple">${icon('indian-rupee')}</span><span><small>This month</small><b>${D.money(monthSpend)}</b></span><em>Spending</em></button>
+      </section>
+      <div class="family-board">
+        <section class="day-plan">
+          <div class="board-heading"><div><span class="section-kicker">THE FAMILY PLAN</span><h2>Today and next</h2></div><button data-route="home/calendar">Open calendar ${icon('arrow-right')}</button></div>
+          <div class="agenda-list">
+            ${agenda.length ? agenda.map(item => `<article class="agenda-item" data-agenda-owner="${e(item.owner.toLowerCase())}">
+              <div class="agenda-when"><b>${e(dayLabel(item.date))}</b><small>${e(timeLabel(item))}</small></div>
+              ${item.kind === 'task' ? `<input type="checkbox" aria-label="Complete ${e(item.title)}" data-complete="task:${e(item.id)}">` : `<span class="agenda-kind ${item.kind}">${icon(item.kind === 'event' ? 'calendar-days' : 'bell-ring')}</span>`}
+              <button class="agenda-content" data-route="${item.route}"><b>${e(item.title)}</b><small>${e(item.detail)}</small></button>
+              <span class="agenda-owner ${ownerClass(item.owner)}" title="${e(item.owner)}">${e(item.owner === 'Unassigned' ? '?' : item.owner[0])}</span>
+            </article>`).join('') : empty('Nothing is scheduled. Add the first family task.', 'task', 'Add task')}
+            <div id="agendaFilterEmpty" class="agenda-filter-empty" hidden>No scheduled items for this person.</div>
+          </div>
+          <button class="inline-add" data-create="task" data-context="home">${icon('plus')} Add another task</button>
         </section>
-        <div class="dashboard-stack">
-          <section class="signal-grid">
-            <article class="card signal ${overdue.length ? 'danger' : ''}"><small>Overdue</small><strong>${overdue.length}</strong><span>${overdue.length ? 'Needs a decision today' : 'All caught up'}</span></article>
-            <article class="card signal warning"><small>Low stock</small><strong>${lowStock.length}</strong><span>${lowStock.length ? lowStock.slice(0, 2).map(x => e(x.name)).join(', ') : 'Supplies look good'}</span></article>
-            <article class="card signal"><small>Home issues</small><strong>${issues.filter(x => x.scope === 'household').length}</strong><span>Maintenance follow-up</span></article>
-            <article class="card signal study"><small>Learning</small><strong>${learningOpen.length}</strong><span>Topics in progress</span></article>
-            <article class="card signal danger"><small>Bills & renewals</small><strong>${lifeDue.length}</strong><span>Due in 30 days</span></article>
-            <article class="card signal warning"><small>Meals today</small><strong>${mealsToday.length}</strong><span>${mealsToday.length ? mealsToday.slice(0, 2).map(x => e(x.name)).join(', ') : 'Nothing planned yet'}</span></article>
+        <aside class="family-brief">
+          <section class="week-glance"><div class="brief-heading"><div><span class="section-kicker">SHARED CALENDAR</span><h3>Next 7 days</h3></div><button class="icon-action" data-route="home/calendar" aria-label="Open calendar">${icon('chevron-right')}</button></div><div class="week-strip">
+            ${weekDays.map((item, index) => `<button data-route="home/calendar" class="${index === 0 ? 'today' : ''}"><small>${e(item.value.toLocaleDateString('en-IN', { weekday: 'narrow' }))}</small><b>${item.value.getDate()}</b>${item.count ? `<i>${item.count}</i>` : '<span></span>'}</button>`).join('')}
+          </div></section>
+          <section class="family-load"><div class="brief-heading"><div><span class="section-kicker">WHO IS DOING WHAT</span><h3>Family handoff</h3></div><button class="icon-action" data-route="home/family" aria-label="Open family pulse">${icon('chevron-right')}</button></div>
+            ${people.slice(0, 5).map((person, index) => { const count = openTasks.filter(task => task.assignee === person.name).length; return `<button data-agenda-person="${e(person.name.toLowerCase())}"><span class="member-avatar person-${index % 6}">${e(person.name[0])}</span><span class="grow"><b>${e(person.name)}</b><small>${e(person.householdRole)}</small></span><strong>${count}<small>tasks</small></strong></button>`; }).join('')}
           </section>
-          <section class="panel"><div class="section-head"><div><h2>Needs attention</h2><p>Only items that need a decision or follow-up</p></div><button data-route="home/calendar">Calendar</button></div>${[...lifeDue.slice(0, 3).map(x => row(x.title, `${HM.life.domains[x.domain]?.title || 'Family'} - ${D.date(x.dueDate)}`, lifeStatus(x.status), 'home')), ...overdue.slice(0, 2).map(x => row(x.title, `Due ${D.date(x.dueAt)}`, status(x.status), x.context)), ...issues.slice(0, 2).map(x => row(x.title, `${x.location} - ${x.priority}`, status(x.status), x.scope === 'civic' ? 'community' : 'home'))].join('') || '<p class="empty">No urgent signals.</p>'}</section>
-        </div>
-      </div>
-      <section><div class="section-head"><div><h2>Common jobs</h2><p>Go straight to the work you do most often</p></div></div><div class="common-jobs">
-        ${settingsLink('Tasks', 'Assign chores and routines', 'home/tasks', 'list-checks')}
-        ${settingsLink('Calendar', 'See family plans together', 'home/calendar', 'calendar-days')}
-        ${settingsLink('Food & supplies', 'Plan meals and shopping', 'home/inventory', 'shopping-basket')}
-        ${settingsLink('Spending', 'Record household expenses', 'home/finance', 'indian-rupee')}
-        ${settingsLink('Health', 'Appointments, medicine and care', 'home/life/health', 'heart-pulse')}
-        ${settingsLink('Repairs', 'Follow up home maintenance', 'home/assets', 'wrench')}
-        ${settingsLink('Learning', 'Schoolwork, skills and focus', 'study/overview', 'graduation-cap')}
-      </div></section>`;
+          <section class="home-brief"><div class="brief-heading"><div><span class="section-kicker">HOME BRIEF</span><h3>Meals, stock and dues</h3></div></div>
+            <button data-route="home/inventory"><span class="brief-icon meal">${icon('cooking-pot')}</span><span class="grow"><small>${nextMeal && isoDay(nextMeal.date) === day ? 'Today\'s meal' : 'Next meal'}</small><b>${e(nextMeal?.name || 'Plan a meal')}</b></span>${icon('chevron-right')}</button>
+            <button data-route="home/inventory"><span class="brief-icon stock">${icon('shopping-basket')}</span><span class="grow"><small>Shopping</small><b>${lowStock.length ? `${lowStock.length} low-stock item${lowStock.length === 1 ? '' : 's'}` : 'Supplies look good'}</b></span>${icon('chevron-right')}</button>
+            <button data-route="home/life/bills"><span class="brief-icon bills">${icon('receipt-indian-rupee')}</span><span class="grow"><small>Bills and renewals</small><b>${lifeDue.length ? `${lifeDue.length} due in 30 days` : 'Nothing due soon'}</b></span>${icon('chevron-right')}</button>
+            <button data-route="home/assets"><span class="brief-icon repair">${icon('wrench')}</span><span class="grow"><small>Repairs</small><b>${issues.filter(x => x.scope === 'household').length ? `${issues.filter(x => x.scope === 'household').length} open` : 'No open repairs'}</b></span>${icon('chevron-right')}</button>
+          </section>
+        </aside>
+      </div>`;
   }
 
   function homeOverview() {

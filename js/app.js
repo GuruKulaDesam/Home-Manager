@@ -68,7 +68,8 @@
     const navItems = activeSettings ? V.settingsGroups.map(item => [item[1], item[2], `settings/${item[0]}`]) : group.items;
     $('#workspaceMenuLabel').innerHTML = activeSettings ? `<span><small>Configure once</small><b>Settings</b></span><i data-lucide="settings-2"></i>` : `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
     $('#nav').innerHTML = navItems.map(item => { const active = activeSettings ? activeSettings === item[2].split('/')[1] : route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
-    $('#bottomNav').innerHTML = navItems.slice(0, 3).map(item => { const active = activeSettings ? activeSettings === item[2].split('/')[1] : route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('') + '<button id="bottomMore"><i data-lucide="ellipsis"></i><span>More</span></button>';
+    const mobileItems = [['Today', 'sparkles', 'global/overview'], ['Calendar', 'calendar-days', 'home/calendar'], ['Tasks', 'list-checks', 'home/tasks'], ['Food', 'shopping-basket', 'home/inventory']];
+    $('#bottomNav').innerHTML = mobileItems.map(item => { const active = route === item[2]; return `<button data-route="${item[2]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('') + '<button id="bottomMore"><i data-lucide="layout-grid"></i><span>More</span></button>';
     $('#settingsNav').classList.toggle('active', Boolean(activeSettings));
   }
 
@@ -433,6 +434,16 @@
     }
     const routeTarget = event.target.closest('[data-route]');
     if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); if ($('#emergencyDialog').open) $('#emergencyDialog').close(); toggleNotifications(false); return; }
+    const agendaPerson = event.target.closest('[data-agenda-person]');
+    if (agendaPerson) {
+      const owner = agendaPerson.dataset.agendaPerson;
+      document.querySelectorAll('.family-filter [data-agenda-person]').forEach(button => { const active = button.dataset.agendaPerson === owner; button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active)); });
+      let visible = 0;
+      document.querySelectorAll('.agenda-item').forEach(item => { item.hidden = owner !== 'all' && item.dataset.agendaOwner !== owner; if (!item.hidden) visible += 1; });
+      const empty = document.querySelector('#agendaFilterEmpty');
+      if (empty) empty.hidden = visible > 0;
+      return;
+    }
     const workspaceTarget = event.target.closest('[data-workspace]');
     if (workspaceTarget) { workspace = workspaceTarget.dataset.workspace; go(workspace + '/overview'); return; }
     const create = event.target.closest('[data-create]');
