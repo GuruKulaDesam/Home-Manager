@@ -3,13 +3,14 @@
   const domains = {
     health: { title: 'Family Health', group: 'People', icon: 'heart-pulse', note: 'Appointments, medicines and preventive care', noun: 'health record' },
     documents: { title: 'Documents & IDs', group: 'Records', icon: 'folders', note: 'Aadhaar, PAN, passports and certificates', noun: 'document' },
-    bills: { title: 'Bills & Payments', group: 'Money', icon: 'receipt-indian-rupee', note: 'Utilities, fees, EMIs and recurring dues', noun: 'bill' },
-    insurance: { title: 'Insurance', group: 'Money', icon: 'shield-check', note: 'Health, life, vehicle and property cover', noun: 'policy' },
-    tax: { title: 'Tax & Compliance', group: 'Money', icon: 'landmark', note: 'ITR, property tax and statutory dates', noun: 'tax record' },
+    bills: { title: 'Bills & Payments', group: 'Household', icon: 'receipt-indian-rupee', note: 'Utilities, fees, EMIs and recurring dues', noun: 'bill' },
+    insurance: { title: 'Family Protection', group: 'Family', icon: 'shield-check', note: 'Life and personal accident cover', noun: 'policy' },
+    tax: { title: 'Tax & Compliance', group: 'Family', icon: 'landmark', note: 'ITR and statutory dates', noun: 'tax record' },
     property: { title: 'Property & Utilities', group: 'Household', icon: 'building-2', note: 'Homes, services, taxes and agreements', noun: 'property record' },
     vehicles: { title: 'Vehicles', group: 'Household', icon: 'car-front', note: 'Service, insurance, PUC and registration', noun: 'vehicle record' },
     help: { title: 'Domestic Help', group: 'Household', icon: 'hand-helping', note: 'Staff, attendance, salary and contacts', noun: 'help record' },
-    subscriptions: { title: 'Subscriptions', group: 'Money', icon: 'repeat-2', note: 'Digital, newspaper, milk and memberships', noun: 'subscription' },
+    subscriptions: { title: 'Subscriptions', group: 'Household', icon: 'repeat-2', note: 'Digital, newspaper, milk and memberships', noun: 'subscription' },
+    education: { title: 'Education Commitments', group: 'Learning', icon: 'school', note: 'Fees, transport, courses and renewals', noun: 'education commitment' },
     travel: { title: 'Travel & Pilgrimage', group: 'Plans', icon: 'luggage', note: 'Trips, bookings, packing and documents', noun: 'travel plan' },
     festivals: { title: 'Festivals & Functions', group: 'Plans', icon: 'party-popper', note: 'Puja, guests, gifting and budgets', noun: 'festival plan' },
     emergency: { title: 'Emergency Readiness', group: 'Care', icon: 'siren', note: 'Contacts, blood groups and urgent instructions', noun: 'emergency record' },
@@ -25,8 +26,8 @@
     { id: 'lr3', domain: 'documents', title: 'Passport renewal - Father', category: 'Passport', owner: 'Father', provider: 'Passport Seva', reference: 'Stored securely', amount: 1500, dueDate: '2027-02-10', frequency: 'As needed', status: 'active', phone: '', notes: 'Number intentionally masked in this planner.' },
     { id: 'lr4', domain: 'documents', title: 'Aadhaar address review', category: 'Aadhaar', owner: 'Family', provider: 'UIDAI', reference: 'Family document file', amount: 0, dueDate: '2026-12-01', frequency: 'Yearly', status: 'pending', phone: '', notes: 'Verify address and linked mobile numbers.' },
     { id: 'lr5', domain: 'bills', title: 'Electricity bill', category: 'Utility', owner: 'Household', provider: 'TANGEDCO', reference: 'Consumer number stored offline', amount: 1850, dueDate: '2026-08-12', frequency: 'Monthly', status: 'due', phone: '', notes: 'Autopay disabled.' },
-    { id: 'lr6', domain: 'bills', title: 'School term fee', category: 'Education', owner: 'Ananya', provider: 'School office', reference: 'Term 2', amount: 32000, dueDate: '2026-09-05', frequency: 'Quarterly', status: 'pending', phone: '', notes: 'Confirm transport fee separately.' },
-    { id: 'lr7', domain: 'insurance', title: 'Family health policy', category: 'Health insurance', owner: 'Family', provider: 'Insurance provider', reference: 'Policy copy in locker', amount: 28500, dueDate: '2026-11-20', frequency: 'Yearly', status: 'active', phone: '', notes: 'Review sum insured and parents coverage.' },
+    { id: 'lr6', domain: 'education', title: 'School term fee', category: 'Education', owner: 'Ananya', provider: 'School office', reference: 'Term 2', amount: 32000, dueDate: '2026-09-05', frequency: 'Quarterly', status: 'pending', phone: '', notes: 'Confirm transport fee separately.' },
+    { id: 'lr7', domain: 'health', title: 'Family health policy', category: 'Health insurance', owner: 'Family', provider: 'Insurance provider', reference: 'Policy copy in locker', amount: 28500, dueDate: '2026-11-20', frequency: 'Yearly', status: 'active', phone: '', notes: 'Review sum insured and parents coverage.' },
     { id: 'lr8', domain: 'tax', title: 'Income tax return', category: 'ITR', owner: 'Father', provider: 'Income Tax Department', reference: 'AY 2026-27', amount: 0, dueDate: '2027-07-31', frequency: 'Yearly', status: 'pending', phone: '', notes: 'Collect Form 16, AIS and investment proofs.' },
     { id: 'lr9', domain: 'property', title: 'Corporation property tax', category: 'Property tax', owner: 'Household', provider: 'Coimbatore Corporation', reference: 'Property file', amount: 8600, dueDate: '2026-10-15', frequency: 'Half-yearly', status: 'pending', phone: '', notes: '' },
     { id: 'lr10', domain: 'vehicles', title: 'Car insurance renewal', category: 'Insurance', owner: 'Father', provider: 'Motor insurer', reference: 'TN registration', amount: 14200, dueDate: '2026-09-18', frequency: 'Yearly', status: 'due', phone: '', notes: 'Compare zero-depreciation renewal options.' },
@@ -45,11 +46,23 @@
       D.state.lifeRecords = D.clone(seedRecords);
       D.save();
     }
+    let migrated = false;
     D.state.lifeRecords.forEach(record => {
-      record.domain = domains[record.domain] ? record.domain : 'documents';
+      if (record.domain === 'bills' && String(record.category || record.title || '').toLowerCase().match(/school|education|tuition|course|exam/)) {
+        record.domain = 'education';
+        migrated = true;
+      }
+      if (record.domain === 'insurance') {
+        const category = String(record.category || record.title || '').toLowerCase();
+        if (category.includes('health') || category.includes('medical')) { record.domain = 'health'; migrated = true; }
+        else if (category.includes('vehicle') || category.includes('motor') || category.includes('car') || category.includes('bike')) { record.domain = 'vehicles'; migrated = true; }
+        else if (category.includes('property') || category.includes('home')) { record.domain = 'property'; migrated = true; }
+      }
+      if (!domains[record.domain]) { record.domain = 'documents'; migrated = true; }
       record.status = String(record.status || 'pending');
       record.amount = Math.max(0, +record.amount || 0);
     });
+    if (migrated) D.save();
     return D.state.lifeRecords;
   }
 

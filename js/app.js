@@ -45,6 +45,13 @@
   function groupForRoute(currentRoute) {
     if (V.groups[activeGroup]?.items.some(item => item[2] === currentRoute)) return activeGroup;
     if (currentRoute === 'global/overview') return 'today';
+    const lifeDomain = currentRoute.match(/^home\/life\/([^/]+)$/)?.[1];
+    const lifeOwners = {
+      property: 'household', bills: 'household', subscriptions: 'household', digital: 'household', help: 'household', sustainability: 'household', vehicles: 'household',
+      travel: 'family', festivals: 'family', documents: 'family', tax: 'family', insurance: 'family', legacy: 'family',
+      health: 'care', emergency: 'care', pets: 'care', education: 'learning'
+    };
+    if (lifeOwners[lifeDomain]) return lifeOwners[lifeDomain];
     const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'community/events': 'community', 'community/polls': 'community' };
     return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
   }
@@ -71,7 +78,11 @@
     document.body.classList.add('workspace-' + workspace);
     document.body.classList.add(`group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
-    const topRoute = ({ 'home/assets': 'home/property', 'home/life/property': 'home/property', 'community/events': 'community/participate', 'community/polls': 'community/participate' })[route] || route;
+    const topRoute = ({
+      'home/assets': 'home/property', 'home/life/property': 'home/property', 'home/life/bills': 'home/property', 'home/life/subscriptions': 'home/property', 'home/life/digital': 'home/property',
+      'home/life/insurance': 'home/family', 'home/life/tax': 'home/family', 'home/life/documents': 'home/family', 'home/life/legacy': 'home/family',
+      'home/life/education': 'study/overview', 'community/events': 'community/participate', 'community/polls': 'community/participate'
+    })[route] || route;
     $('#workspaceMenuLabel').innerHTML = `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
     $('#nav').innerHTML = Object.entries(V.groups).map(([key, item]) => {
       const active = key === activeGroup;
@@ -124,9 +135,10 @@
     let items;
     if (routeDomain) {
       items = [['Records', records.length, route, 'database'], ['Need attention', records.filter(item => item.dueDate && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, route, 'bell-ring'], ['Tracked', D.money(records.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
-    } else if (route === 'home/finance') {
+    } else if (route === 'home/finance' || route.startsWith('home/money/')) {
       const expenses = D.state.expenses.filter(item => String(item.date).startsWith(month));
-      items = [['This month', D.money(expenses.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'wallet-cards'], ['Entries', expenses.length, route, 'receipt-text'], ['Bills due', (D.state.lifeRecords || []).filter(item => item.domain === 'bills' && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, 'home/life/bills', 'calendar-alert']];
+      const planned = (D.state.budgets || []).reduce((sum, item) => sum + (+item.amount || 0), 0);
+      items = [['Budget', D.money(planned), 'home/money/budget', 'chart-pie'], ['Spent', D.money(expenses.reduce((sum, item) => sum + (+item.amount || 0), 0)), 'home/money/spending', 'wallet-cards'], ['Net worth', D.money((D.state.assets || []).reduce((sum, item) => sum + (+item.value || 0), 0) - (D.state.liabilities || []).reduce((sum, item) => sum + (+item.balance || 0), 0)), 'home/money/networth', 'scale']];
     } else if (route === 'home/inventory') {
       items = [['Low stock', lowStock.length, route, 'shopping-basket'], ['Items', D.state.inventoryItems.length, route, 'package-open'], ['Meals', D.state.meals.filter(item => item.date >= day).length, route, 'cooking-pot']];
     } else if (route.startsWith('settings/')) {
@@ -182,7 +194,7 @@
     if (['wellbeing', 'proficiency'].includes(name)) return ' min="0" max="100" step="1"';
     if (name === 'target') return ' min="1" step="1"';
     if (['quantity', 'points', 'plannedHours', 'progress', 'needed'].includes(name)) return ' min="0" step="1"';
-    if (['amount', 'value'].includes(name)) return ' min="0" step="0.01"';
+    if (['amount', 'value', 'balance', 'payment', 'interestRate', 'saved', 'contribution'].includes(name)) return ' min="0" step="0.01"';
     return '';
   }
 
@@ -197,6 +209,10 @@
     person: () => [field('Name', 'name'), field('Household role', 'householdRole'), field('Wellbeing score', 'wellbeing', 'number')],
     points: () => [field('Reason', 'reason'), field('Points', 'points', 'number')],
     expense: () => [field('Expense', 'title'), field('Category', 'category'), field('Amount', 'amount', 'number'), field('Date', 'date', 'date')],
+    budget: () => [field('Budget category', 'category'), field('Monthly budget', 'amount', 'number'), field('Budget type', 'bucket', 'text', ['Fixed', 'Flexible', 'Non-monthly'])],
+    income: () => [field('Income source', 'source'), field('Family member / owner', 'owner'), field('Amount', 'amount', 'number'), field('Frequency', 'frequency', 'text', ['One time', 'Monthly', 'Quarterly', 'Yearly']), field('Received / expected', 'date', 'date')],
+    liability: () => [field('Loan or liability', 'title'), field('Type', 'type'), field('Outstanding balance', 'balance', 'number'), field('Monthly payment', 'payment', 'number'), field('Interest rate %', 'interestRate', 'number')],
+    moneyGoal: () => [field('Savings goal', 'title'), field('Target amount', 'target', 'number'), field('Already saved', 'saved', 'number'), field('Monthly contribution', 'contribution', 'number'), field('Target date', 'dueDate', 'date')],
     inventory: () => [field('Item', 'name'), field('Category', 'category'), field('Quantity', 'quantity', 'number'), field('Unit', 'unit')],
     meal: () => [field('Meal', 'name'), field('Meal type', 'mealType', 'text', ['Breakfast', 'Lunch', 'Dinner', 'Snack']), field('Cook', 'cook'), field('Date', 'date', 'date')],
     issue: () => [field('Issue', 'title'), field('Category', 'category'), field('Location', 'location'), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
@@ -211,7 +227,7 @@
     life: () => [field('Title', 'title'), field('Category', 'category'), field('Family member / owner', 'owner'), field('Provider / contact', 'provider', 'text', null, false), field('Masked reference / location', 'reference', 'text', null, false), field('Amount', 'amount', 'number', null, false), field('Due / renewal date', 'dueDate', 'date', null, false), field('Frequency', 'frequency', 'text', ['One time', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'As needed']), field('Status', 'status', 'text', ['planning', 'pending', 'active', 'due', 'paid', 'done']), field('Phone', 'phone', 'tel', null, false), area('Notes', 'notes', false)]
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses', person: 'people', asset: 'assets', life: 'lifeRecords' };
+  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', asset: 'assets', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
@@ -219,7 +235,8 @@
     const collection = editCollections[kind];
     const record = source.editId && collection ? D.state[collection].find(x => x.id === source.editId) : null;
     const routeDomain = route.match(/^(?:home|settings)\/life\/([^/]+)$/)?.[1] || '';
-    $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + kind;
+    const labels = { moneyGoal: 'savings goal', liability: 'loan or liability', income: 'income source', budget: 'section budget', expense: 'section expense' };
+    $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + (labels[kind] || kind);
     $('#formContext').textContent = String(source.context || record?.context || workspace).toUpperCase();
     $('#formFields').innerHTML = schema(source).join('');
     const form = $('#entityForm');
@@ -242,7 +259,9 @@
     if (meta.editId && editCollections[kind]) {
       const record = state[editCollections[kind]].find(x => x.id === meta.editId);
       if (record) Object.assign(record, values,
-        kind === 'expense' || kind === 'life' ? { amount: +values.amount || 0 } :
+        kind === 'expense' || kind === 'budget' || kind === 'income' || kind === 'life' ? { amount: +values.amount || 0 } :
+        kind === 'liability' ? { balance: +values.balance || 0, payment: +values.payment || 0, interestRate: +values.interestRate || 0 } :
+        kind === 'moneyGoal' ? { target: Math.max(1, +values.target || 1), saved: +values.saved || 0, contribution: +values.contribution || 0 } :
         kind === 'asset' ? { value: +values.value || 0 } :
         kind === 'person' ? { wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) } : {});
       save('Changes saved');
@@ -254,7 +273,11 @@
       case 'event': state.events.push({ id: id('e'), context: values.context, title: values.title, category: values.category, startAt: values.startAt, venue: values.venue }); break;
       case 'person': state.people.push({ id: id('p'), name: values.name, householdRole: values.householdRole, wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) }); break;
       case 'points': state.pointTransactions.push({ id: id('pt'), personId: meta.person, context: 'home', reason: values.reason, points: +values.points || 0, createdAt: new Date().toISOString().slice(0, 10) }); break;
-      case 'expense': state.expenses.push({ id: id('x'), title: values.title, category: values.category, amount: +values.amount || 0, date: values.date }); break;
+      case 'expense': state.expenses.push({ id: id('x'), domain: meta.domain || 'family', title: values.title, category: values.category, amount: +values.amount || 0, date: values.date }); break;
+      case 'budget': state.budgets.push({ id: id('b'), domain: meta.domain || 'family', category: values.category, amount: +values.amount || 0, bucket: values.bucket }); break;
+      case 'income': state.incomes.push({ id: id('in'), domain: meta.domain || 'family', source: values.source, owner: values.owner, amount: +values.amount || 0, frequency: values.frequency, date: values.date }); break;
+      case 'liability': state.liabilities.push({ id: id('db'), domain: meta.domain || 'family', title: values.title, type: values.type, balance: +values.balance || 0, payment: +values.payment || 0, interestRate: +values.interestRate || 0 }); break;
+      case 'moneyGoal': state.moneyGoals.push({ id: id('mg'), domain: meta.domain || 'family', title: values.title, target: Math.max(1, +values.target || 1), saved: +values.saved || 0, contribution: +values.contribution || 0, dueDate: values.dueDate }); break;
       case 'inventory': state.inventoryItems.push({ id: id('n'), name: values.name, category: values.category, quantity: +values.quantity || 0, unit: values.unit }); break;
       case 'meal': state.meals.push({ id: id('m'), name: values.name, mealType: values.mealType, cook: values.cook, date: values.date }); break;
       case 'issue': state.issues.push({ id: id('i'), scope: meta.scope || 'household', ticketNo: meta.scope === 'civic' ? 'LOCAL-' + String(Date.now()).slice(-4) : null, title: values.title, category: values.category, location: values.location, priority: values.priority, status: 'todo', reportedAt: new Date().toISOString().slice(0, 10) }); break;
@@ -398,7 +421,9 @@
     if (type === 'Life record') {
       return `home/life/${record.domain}`;
     }
-    return { Person: 'home/family', Expense: 'home/finance', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/board', Goal: 'study/goals', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
+    const moneySources = { food: 'home/inventory', housing: 'home/property', vehicle: 'home/life/vehicles', health: 'home/life/health', family: 'home/family', learning: 'study/overview', community: 'community/overview' };
+    if (['Expense', 'Budget', 'Income', 'Liability', 'Savings goal'].includes(type)) return moneySources[record.domain] || 'home/family';
+    return { Person: 'home/family', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/board', Goal: 'study/goals', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
   }
 
   function searchItems(query) {
@@ -414,7 +439,12 @@
     add(D.state.people, 'Person', 'name', 'home');
     add(D.state.issues, 'Issue', 'title', x => x.scope === 'civic' ? 'community' : 'home');
     add(D.state.contacts, 'Contact', 'name', x => x.scope === 'community' ? 'community' : 'home');
-    add(D.state.expenses, 'Expense', 'title', 'home');
+    const moneyContext = item => item.domain === 'learning' ? 'study' : item.domain === 'community' ? 'community' : 'home';
+    add(D.state.expenses, 'Expense', 'title', moneyContext);
+    add(D.state.budgets || [], 'Budget', 'category', moneyContext);
+    add(D.state.incomes || [], 'Income', 'source', moneyContext);
+    add(D.state.liabilities || [], 'Liability', 'title', moneyContext);
+    add(D.state.moneyGoals || [], 'Savings goal', 'title', moneyContext);
     add(D.state.inventoryItems, 'Inventory', 'name', 'home');
     add(D.state.meals, 'Meal', 'name', 'home');
     add(D.state.assets, 'Asset', 'name', 'home');
@@ -445,7 +475,7 @@
   }
 
   function quick() {
-    const actions = [['task', 'Task', 'home', 'list-plus', ''], ['event', 'Calendar event', 'home', 'calendar-plus', ''], ['expense', 'Expense', 'home', 'receipt-text', ''], ['meal', 'Meal', 'home', 'cooking-pot', ''], ['inventory', 'Shopping item', 'home', 'shopping-basket', ''], ['life', 'Health note', 'home', 'heart-pulse', 'health'], ['issue', 'Home repair', 'home', 'wrench', '']];
+    const actions = [['task', 'Task', 'home', 'list-plus', ''], ['event', 'Calendar event', 'home', 'calendar-plus', ''], ['contact', 'Family contact', 'home', 'contact-round', ''], ['meal', 'Meal', 'home', 'cooking-pot', ''], ['inventory', 'Shopping item', 'home', 'shopping-basket', ''], ['life', 'Health note', 'home', 'heart-pulse', 'health'], ['issue', 'Home repair', 'home', 'wrench', '']];
     $('#quickActions').innerHTML = actions.map(item => `<button type="button" data-quick="${item[0]}" data-context="${item[2]}" data-domain="${item[4]}" data-scope="${item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>Quick capture</small></span><i data-lucide="chevron-right"></i></button>`).join('');
     $('#quickDialog').showModal();
     refreshIcons();

@@ -5,7 +5,39 @@ function clone(v){return JSON.parse(JSON.stringify(v))}
 function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)}
 seed.settings.appBackground='waterfall';
 seed.settings.googleSync={connectorUrl:'',autoSync:false,calendarSync:true,emailAnalysis:false,driveBackup:false,reviewPolicy:'review',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
-const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
+seed.expenses.forEach(item=>item.domain=item.category==='Food'?'food':'housing');
+seed.expenses.push(
+  {id:'x3',title:'Petrol refill',category:'Fuel',domain:'vehicle',amount:3200,date:'2026-08-03'},
+  {id:'x4',title:'Medicines',category:'Pharmacy',domain:'health',amount:2400,date:'2026-08-03'},
+  {id:'x5',title:'School materials',category:'Education',domain:'learning',amount:1850,date:'2026-08-02'},
+  {id:'x6',title:'Festival advance',category:'Celebration',domain:'family',amount:3000,date:'2026-08-01'},
+  {id:'x7',title:'July groceries',category:'Food',domain:'food',amount:10800,date:'2026-07-15'},
+  {id:'x8',title:'July fuel',category:'Fuel',domain:'vehicle',amount:6100,date:'2026-07-18'},
+  {id:'x9',title:'June groceries',category:'Food',domain:'food',amount:11200,date:'2026-06-15'}
+);
+seed.budgets=[
+  {id:'b1',domain:'food',category:'Food & groceries',amount:15000,bucket:'Flexible'},
+  {id:'b2',domain:'housing',category:'Home & utilities',amount:22000,bucket:'Fixed'},
+  {id:'b3',domain:'vehicle',category:'Vehicles & transport',amount:10000,bucket:'Flexible'},
+  {id:'b4',domain:'health',category:'Health & care',amount:8000,bucket:'Non-monthly'},
+  {id:'b5',domain:'learning',category:'Learning & school',amount:12000,bucket:'Fixed'},
+  {id:'b6',domain:'family',category:'Family & celebrations',amount:10000,bucket:'Non-monthly'},
+  {id:'b7',domain:'community',category:'Community',amount:3000,bucket:'Flexible'}
+];
+seed.incomes=[
+  {id:'in1',domain:'family',source:'Monthly salary',owner:'Father',amount:150000,frequency:'Monthly',date:'2026-08-01'},
+  {id:'in2',domain:'family',source:'Consulting income',owner:'Mother',amount:25000,frequency:'Monthly',date:'2026-08-02'}
+];
+seed.liabilities=[
+  {id:'db1',domain:'housing',title:'Home loan',type:'Mortgage',balance:2400000,payment:28000,interestRate:8.4},
+  {id:'db2',domain:'vehicle',title:'Car loan',type:'Vehicle loan',balance:280000,payment:14500,interestRate:9.1}
+];
+seed.moneyGoals=[
+  {id:'mg1',domain:'family',title:'Emergency fund',target:300000,saved:120000,contribution:10000,dueDate:'2027-08-01'},
+  {id:'mg2',domain:'learning',title:'Higher education fund',target:500000,saved:180000,contribution:8000,dueDate:'2029-06-01'}
+];
+seed.assets.push({id:'a3',name:'Family home',category:'Property',value:3800000,status:'active'});
+const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
 function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
@@ -47,7 +79,11 @@ function normalize(value){
   next.people.forEach(item=>item.wellbeing=Math.min(100,Math.max(0,+item.wellbeing||0)));
   next.learningTopics.forEach(item=>{item.status=['backlog','progress','revision','done'].includes(item.status)?item.status:'backlog';item.proficiency=Math.min(100,Math.max(0,+item.proficiency||0));item.plannedHours=Math.max(0,+item.plannedHours||0)});
   next.goals.forEach(item=>{item.target=Math.max(1,+item.target||1);item.progress=Math.max(0,+item.progress||0)});
-  next.expenses.forEach(item=>item.amount=Math.max(0,+item.amount||0));
+  next.expenses.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:(String(item.category||'').toLowerCase().includes('food')?'food':String(item.category||'').toLowerCase().match(/health|medical|pharmacy/)?'health':String(item.category||'').toLowerCase().match(/school|education|tuition/)?'learning':'housing')});
+  next.budgets.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:'family';item.bucket=['Fixed','Flexible','Non-monthly'].includes(item.bucket)?item.bucket:'Flexible'});
+  next.incomes.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['family','housing','learning'].includes(item.domain)?item.domain:'family'});
+  next.liabilities.forEach(item=>{item.balance=Math.max(0,+item.balance||0);item.payment=Math.max(0,+item.payment||0);item.interestRate=Math.max(0,+item.interestRate||0);item.domain=['housing','vehicle','learning','family'].includes(item.domain)?item.domain:'family'});
+  next.moneyGoals.forEach(item=>{item.target=Math.max(1,+item.target||1);item.saved=Math.max(0,+item.saved||0);item.contribution=Math.max(0,+item.contribution||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:'family'});
   next.inventoryItems.forEach(item=>item.quantity=Math.max(0,+item.quantity||0));
   return next;
 }
