@@ -1,7 +1,8 @@
 :root {
   color-scheme: light;
   --app-bg: #edf7f3;
-  --nature-bg: linear-gradient(145deg, #edf7f3 0%, #f4f1fb 54%, #edf8ef 100%);
+  --nature-image: url("assets/backgrounds/waterfall.jpg");
+  --nature-overlay: rgba(247, 251, 249, .78);
   --shell-bg: rgba(247, 252, 250, .88);
   --band-odd: rgba(229, 246, 241, .64);
   --band-even: rgba(244, 239, 252, .48);
@@ -48,7 +49,10 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background-color: var(--app-bg);
-  background-image: var(--nature-bg);
+  background-image: var(--nature-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
   background-attachment: fixed;
   color: var(--ink);
   font: 14px/1.5 Manrope, "Segoe UI", system-ui, sans-serif;
@@ -56,21 +60,14 @@ body {
   isolation: isolate;
 }
 body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background-image: linear-gradient(rgba(255, 255, 255, .18) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, .14) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: .34;
-  pointer-events: none;
+  content: none;
 }
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   z-index: -1;
-  background: none;
+  background: var(--nature-overlay);
   pointer-events: none;
 }
 
@@ -409,7 +406,7 @@ textarea { min-height: 96px; resize: vertical; }
 .life-domain-card:nth-child(4n) .life-icon { background: var(--green); }
 .life-count { min-width: 27px; height: 27px; display: grid; place-items: center; padding: 0 6px; color: var(--muted); background: #f0f1f4; border-radius: 999px; font-size: 11px; font-weight: 800; }
 .life-count.attention { color: var(--danger); background: rgba(178, 75, 75, .11); }
-.domain-hero { display: flex; align-items: center; gap: 16px; padding: 20px; margin-bottom: 14px; color: var(--ink); background: linear-gradient(105deg, var(--tone-1-soft), var(--tone-2-soft), var(--tone-4-soft)); border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.domain-hero { display: flex; align-items: center; gap: 16px; padding: 20px; margin-bottom: 14px; color: var(--ink); background: var(--glass); border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: var(--radius); box-shadow: var(--shadow-sm); backdrop-filter: blur(14px) saturate(112%); }
 .domain-hero .life-icon.large { width: 50px; height: 50px; flex-basis: 50px; background: var(--accent); }
 .domain-hero small { color: var(--tone-1); text-transform: uppercase; font-size: 10px; font-weight: 800; }
 .domain-hero h2, .domain-hero p { margin: 0; }
@@ -418,7 +415,7 @@ textarea { min-height: 96px; resize: vertical; }
 .compact-metrics .metric { min-height: 102px; }
 .life-register .table td { vertical-align: middle; }
 
-.settings-intro { display: flex; align-items: center; gap: 15px; padding: 19px; margin-bottom: 14px; color: var(--ink); background: linear-gradient(100deg, rgba(15, 159, 143, .11), rgba(124, 58, 237, .09), rgba(34, 169, 90, .08)); border: 1px solid var(--line); border-radius: var(--radius); }
+.settings-intro { display: flex; align-items: center; gap: 15px; padding: 19px; margin-bottom: 14px; color: var(--ink); background: var(--glass-soft); border: 1px solid var(--line); border-left: 5px solid var(--community); border-radius: var(--radius); backdrop-filter: blur(14px) saturate(112%); }
 .settings-intro > span { width: 48px; height: 48px; display: grid; place-items: center; flex: 0 0 48px; color: #fff; background: var(--community); border-radius: 8px; }
 .settings-intro > span svg { width: 23px; height: 23px; }
 .settings-intro small { color: var(--accent); font-size: 10px; font-weight: 800; }
@@ -456,18 +453,21 @@ textarea { min-height: 96px; resize: vertical; }
 .nature-option > svg { position: relative; width: 16px; height: 16px; opacity: 0; color: var(--tone-1); }
 .nature-option:has(input:checked) { border-color: var(--tone-1); box-shadow: 0 0 0 2px var(--tone-1-soft); }
 .nature-option input:checked ~ svg { opacity: 1; }
-.nature-waterfall > span { background: linear-gradient(135deg, #84d5c4, #8ebfe8, #b7a5df); }
-.nature-river > span { background: linear-gradient(135deg, #58b9bd, #9bd9c8, #7caacb); }
-.nature-fern > span { background: linear-gradient(135deg, #5aa66d, #9fca7c, #4c9277); }
-.nature-meadow > span { background: linear-gradient(135deg, #8bcf62, #e8c75c, #5dbb91); }
-.nature-lotus > span { background: linear-gradient(135deg, #d885ad, #6ebca4, #ad82cf); }
-.nature-monsoon > span { background: linear-gradient(135deg, #7195b8, #7dbda8, #9a83b7); }
-.nature-sunrise > span { background: linear-gradient(135deg, #ef9a68, #edc66d, #7fbd7d); }
-.nature-glacier > span { background: linear-gradient(135deg, #75bfd7, #b6e3de, #9caee3); }
-.nature-bamboo > span { background: linear-gradient(135deg, #93b85f, #bed07d, #6ba66b); }
-.nature-sky > span { background: linear-gradient(135deg, #6cb7e5, #a5d7ed, #86c99b); }
-.nature-grove > span { background: linear-gradient(135deg, #5f9d57, #dfa65f, #83bc71); }
-.nature-wildflower > span { background: linear-gradient(135deg, #e483aa, #ad89d5, #74b984); }
+.nature-option > span { background-position: center; background-repeat: no-repeat; background-size: cover; }
+.nature-option > span::after { content: ""; position: absolute; inset: 0; background: rgba(22, 35, 31, .10); }
+.nature-option > span svg { position: relative; z-index: 1; filter: drop-shadow(0 1px 4px rgba(0, 0, 0, .42)); }
+.nature-waterfall > span { background-image: url("assets/backgrounds/waterfall.jpg"); }
+.nature-river > span { background-image: url("assets/backgrounds/river.jpg"); }
+.nature-fern > span { background-image: url("assets/backgrounds/fern.jpg"); }
+.nature-meadow > span { background-image: url("assets/backgrounds/meadow.jpg"); }
+.nature-lotus > span { background-image: url("assets/backgrounds/lotus.jpg"); }
+.nature-monsoon > span { background-image: url("assets/backgrounds/monsoon.jpg"); }
+.nature-sunrise > span { background-image: url("assets/backgrounds/sunrise.jpg"); }
+.nature-glacier > span { background-image: url("assets/backgrounds/glacier.jpg"); }
+.nature-bamboo > span { background-image: url("assets/backgrounds/bamboo.jpg"); }
+.nature-sky > span { background-image: url("assets/backgrounds/sky.jpg"); }
+.nature-grove > span { background-image: url("assets/backgrounds/grove.jpg"); }
+.nature-wildflower > span { background-image: url("assets/backgrounds/wildflower.jpg"); }
 .sync-settings { display: grid; gap: 16px; }
 .sync-state { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 4px 9px; color: var(--muted); background: rgba(111, 118, 132, .10); border-radius: 999px; font-size: 10px; font-weight: 800; white-space: nowrap; }
 .sync-state.connected { color: var(--tone-4); background: var(--tone-4-soft); }
@@ -676,18 +676,18 @@ menu button { min-height: 39px; padding: 8px 14px; border: 1px solid var(--line)
   .detection-groups { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
-body[data-nature="waterfall"] { --app-bg: #edf7f3; --nature-bg: linear-gradient(145deg, #edf7f3, #eef4fb 52%, #f4f1fb); --shell-bg: rgba(247, 252, 250, .88); --band-odd: rgba(221, 244, 238, .65); --band-even: rgba(234, 239, 250, .54); }
-body[data-nature="river"] { --app-bg: #eaf6f6; --nature-bg: linear-gradient(145deg, #eaf6f6, #f2f8f5 48%, #e8f1f7); --shell-bg: rgba(245, 252, 251, .88); --band-odd: rgba(217, 242, 241, .65); --band-even: rgba(229, 240, 248, .54); }
-body[data-nature="fern"] { --app-bg: #edf6ed; --nature-bg: linear-gradient(145deg, #edf6ed, #f6f8ee 50%, #e6f3ec); --shell-bg: rgba(248, 252, 246, .88); --band-odd: rgba(221, 241, 220, .65); --band-even: rgba(237, 246, 226, .58); }
-body[data-nature="meadow"] { --app-bg: #f1f8e9; --nature-bg: linear-gradient(145deg, #f1f8e9, #fff8e9 54%, #e9f6ef); --shell-bg: rgba(251, 253, 246, .89); --band-odd: rgba(229, 244, 211, .64); --band-even: rgba(250, 240, 216, .52); }
-body[data-nature="lotus"] { --app-bg: #f8eef5; --nature-bg: linear-gradient(145deg, #f8eef5, #eef7f3 52%, #f4effa); --shell-bg: rgba(253, 248, 251, .89); --band-odd: rgba(247, 224, 239, .60); --band-even: rgba(224, 243, 236, .58); }
-body[data-nature="monsoon"] { --app-bg: #edf3f8; --nature-bg: linear-gradient(145deg, #edf3f8, #eef7f2 55%, #f4f0f7); --shell-bg: rgba(247, 250, 252, .89); --band-odd: rgba(222, 235, 247, .64); --band-even: rgba(225, 242, 234, .54); }
-body[data-nature="sunrise"] { --app-bg: #fff2e9; --nature-bg: linear-gradient(145deg, #fff2e9, #fff8e6 52%, #edf7ee); --shell-bg: rgba(255, 250, 245, .90); --band-odd: rgba(255, 230, 212, .62); --band-even: rgba(248, 240, 208, .52); }
-body[data-nature="glacier"] { --app-bg: #edf7fa; --nature-bg: linear-gradient(145deg, #edf7fa, #f5fbf8 52%, #eef1fb); --shell-bg: rgba(247, 252, 253, .90); --band-odd: rgba(217, 241, 247, .64); --band-even: rgba(230, 235, 249, .54); }
-body[data-nature="bamboo"] { --app-bg: #f3f7e7; --nature-bg: linear-gradient(145deg, #f3f7e7, #eef7ed 50%, #fff8e7); --shell-bg: rgba(250, 252, 244, .89); --band-odd: rgba(231, 242, 207, .64); --band-even: rgba(223, 241, 220, .56); }
-body[data-nature="sky"] { --app-bg: #eef6fc; --nature-bg: linear-gradient(145deg, #eef6fc, #f5f9fd 55%, #eff8f1); --shell-bg: rgba(248, 252, 254, .90); --band-odd: rgba(220, 238, 251, .64); --band-even: rgba(226, 244, 232, .54); }
-body[data-nature="grove"] { --app-bg: #f0f7eb; --nature-bg: linear-gradient(145deg, #f0f7eb, #fff5e6 52%, #ebf5ec); --shell-bg: rgba(249, 252, 246, .89); --band-odd: rgba(222, 241, 211, .64); --band-even: rgba(250, 234, 210, .52); }
-body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-bg: linear-gradient(145deg, #fff0f5, #f3effb 48%, #eef8ed); --shell-bg: rgba(254, 248, 251, .90); --band-odd: rgba(251, 222, 235, .62); --band-even: rgba(232, 225, 249, .54); }
+body[data-nature="waterfall"] { --app-bg: #edf7f3; --nature-image: url("assets/backgrounds/waterfall.jpg"); --nature-overlay: rgba(247, 251, 249, .78); --shell-bg: rgba(247, 252, 250, .88); --band-odd: rgba(221, 244, 238, .65); --band-even: rgba(234, 239, 250, .54); }
+body[data-nature="river"] { --app-bg: #eaf6f6; --nature-image: url("assets/backgrounds/river.jpg"); --nature-overlay: rgba(246, 251, 250, .78); --shell-bg: rgba(245, 252, 251, .88); --band-odd: rgba(217, 242, 241, .65); --band-even: rgba(229, 240, 248, .54); }
+body[data-nature="fern"] { --app-bg: #edf6ed; --nature-image: url("assets/backgrounds/fern.jpg"); --nature-overlay: rgba(248, 251, 246, .77); --shell-bg: rgba(248, 252, 246, .88); --band-odd: rgba(221, 241, 220, .65); --band-even: rgba(237, 246, 226, .58); }
+body[data-nature="meadow"] { --app-bg: #f1f8e9; --nature-image: url("assets/backgrounds/meadow.jpg"); --nature-overlay: rgba(250, 252, 246, .78); --shell-bg: rgba(251, 253, 246, .89); --band-odd: rgba(229, 244, 211, .64); --band-even: rgba(250, 240, 216, .52); }
+body[data-nature="lotus"] { --app-bg: #f8eef5; --nature-image: url("assets/backgrounds/lotus.jpg"); --nature-overlay: rgba(252, 248, 251, .78); --shell-bg: rgba(253, 248, 251, .89); --band-odd: rgba(247, 224, 239, .60); --band-even: rgba(224, 243, 236, .58); }
+body[data-nature="monsoon"] { --app-bg: #edf3f8; --nature-image: url("assets/backgrounds/monsoon.jpg"); --nature-overlay: rgba(247, 250, 250, .77); --shell-bg: rgba(247, 250, 252, .89); --band-odd: rgba(222, 235, 247, .64); --band-even: rgba(225, 242, 234, .54); }
+body[data-nature="sunrise"] { --app-bg: #fff2e9; --nature-image: url("assets/backgrounds/sunrise.jpg"); --nature-overlay: rgba(253, 249, 245, .77); --shell-bg: rgba(255, 250, 245, .90); --band-odd: rgba(255, 230, 212, .62); --band-even: rgba(248, 240, 208, .52); }
+body[data-nature="glacier"] { --app-bg: #edf7fa; --nature-image: url("assets/backgrounds/glacier.jpg"); --nature-overlay: rgba(247, 251, 252, .77); --shell-bg: rgba(247, 252, 253, .90); --band-odd: rgba(217, 241, 247, .64); --band-even: rgba(230, 235, 249, .54); }
+body[data-nature="bamboo"] { --app-bg: #f3f7e7; --nature-image: url("assets/backgrounds/bamboo.jpg"); --nature-overlay: rgba(249, 251, 244, .77); --shell-bg: rgba(250, 252, 244, .89); --band-odd: rgba(231, 242, 207, .64); --band-even: rgba(223, 241, 220, .56); }
+body[data-nature="sky"] { --app-bg: #eef6fc; --nature-image: url("assets/backgrounds/sky.jpg"); --nature-overlay: rgba(248, 251, 253, .78); --shell-bg: rgba(248, 252, 254, .90); --band-odd: rgba(220, 238, 251, .64); --band-even: rgba(226, 244, 232, .54); }
+body[data-nature="grove"] { --app-bg: #f0f7eb; --nature-image: url("assets/backgrounds/grove.jpg"); --nature-overlay: rgba(249, 251, 246, .77); --shell-bg: rgba(249, 252, 246, .89); --band-odd: rgba(222, 241, 211, .64); --band-even: rgba(250, 234, 210, .52); }
+body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-image: url("assets/backgrounds/wildflower.jpg"); --nature-overlay: rgba(252, 248, 251, .78); --shell-bg: rgba(254, 248, 251, .90); --band-odd: rgba(251, 222, 235, .62); --band-even: rgba(232, 225, 249, .54); }
 
 @media (max-width: 700px) {
   .product-path { grid-template-columns: repeat(2, minmax(0, 1fr)); }

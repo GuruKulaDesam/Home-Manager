@@ -418,7 +418,7 @@
       ['government', 'Government & documents']
     ];
     return `${intro}
-      <section class="panel appearance-panel"><div class="section-head"><div><h2>Nature background</h2><p>Choose a light landscape palette for the entire app.</p></div><span class="context-badge">12 options</span></div>
+      <section class="panel appearance-panel"><div class="section-head"><div><h2>Nature photograph</h2><p>Choose a real landscape photograph for the entire app.</p></div><span class="context-badge">12 photos</span></div>
         <fieldset class="nature-picker"><legend class="sr-only">App background</legend>${natureBackgrounds.map(item => `<label class="nature-option nature-${item[0]}"><input type="radio" name="appBackground" value="${item[0]}" ${settings.appBackground === item[0] ? 'checked' : ''}><span aria-hidden="true">${icon('leaf')}</span><b>${item[1]}</b>${icon('check')}</label>`).join('')}</fieldset>
       </section>
       <form id="googleSyncSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">GOOGLE & AUTOMATION</span><h2>Family account sync</h2><p>Connect each account owner separately and review extracted household updates before applying them.</p></div><span class="sync-state ${connectorReady ? connected ? 'connected' : 'pending' : 'required'}">${connectorReady ? connected ? `${connected} connected` : 'Awaiting accounts' : 'Secure connector required'}</span></div>
