@@ -20,6 +20,12 @@ The curriculum and resource links are based on the official [CBSE 2026-27 curric
 
 Readiness is a planning indicator built from recorded curriculum mastery, completed assessments and practice accuracy. It excludes scheduled exams and is not an official grade prediction. Where no assessment or practice exists, it uses the recorded curriculum mastery instead of assigning a false zero. The parent report identifies support priorities while explicitly discouraging sibling comparison and punitive use of marks.
 
+### Peepal Prodigy integration
+
+Both learner profiles are connected to Peepal Prodigy School in Coimbatore. The Dashboard includes the verified CBSE affiliation number `1930782`, school campus contact, official programme page and parent portal. The Class 7 profile follows the published Grades 6-10 secondary approach; the Class 12 profile records the published G1A-compatible subject set of English, Physics, Chemistry, Mathematics and Computer Science. The app does not claim a tutor assignment, current fee, calendar date or attendance value unless the family enters it from a confirmed school source.
+
+The seven Learning pages now also cover a confirmed school timetable, school calendar, attendance, daily student self-assessment, Student-Parent-Tutor review actions and co-curricular growth. These match Peepal's published emphasis on interdisciplinary and peer learning, hands-on application, learning skills, student-led review, physical education, clubs and activities. School-owned information links to the [Peepal secondary programme](https://www.peepalprodigy.in/secondary-school.html), [senior secondary subject groups](https://www.peepalprodigy.in/senior-secondary-school.html), [parent portal](https://crm.peepalprodigy.cloud/), [mandatory disclosure](https://www.peepalprodigy.in/images/saras.pdf), and the official [CBSE SARAS affiliation record](https://saras.cbse.gov.in/SARAS/AffiliatedList/AfflicationDetails/1930782).
+
 ## Product question audit
 
 Help & Guide checks 250 unique questions that family members commonly ask about the software itself: its purpose, navigation, adding and updating records, everyday workflows, family roles and safety, privacy and recovery, accessibility, feedback and known boundaries. The questions are organised into seven usability areas and seven family roles. Each answer opens the working destination, starts the relevant capture workflow, or states an unsupported capability directly.

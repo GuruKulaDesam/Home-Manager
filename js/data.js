@@ -39,9 +39,20 @@ seed.moneyGoals=[
 ];
 seed.assets.push({id:'a3',name:'Family home',category:'Property',value:3800000,status:'active'});
 seed.academicProfiles=[
-  {id:'ap1',personId:'p3',name:'Ananya',board:'CBSE',grade:12,stream:'Science - PCM',school:'CBSE Senior Secondary School',targetPercent:90,subjects:['English Core','Physics','Chemistry','Mathematics','Computer Science']},
-  {id:'ap2',personId:'p4',name:'Arjun',board:'CBSE',grade:7,stream:'Middle Stage',school:'CBSE School',targetPercent:85,subjects:['English','Hindi','Tamil','Mathematics','Science','Social Science','Kaushal Bodh']}
+  {id:'ap1',personId:'p3',name:'Ananya',board:'CBSE',grade:12,stream:'Science - PCM',school:'Peepal Prodigy School',schoolStage:'Senior Secondary - Grades 11-12',subjectGroup:'G1A - PCM + Computer Science',targetPercent:90,subjects:['English Core','Physics','Chemistry','Mathematics','Computer Science']},
+  {id:'ap2',personId:'p4',name:'Arjun',board:'CBSE',grade:7,stream:'Middle Stage',school:'Peepal Prodigy School',schoolStage:'Secondary - Grades 6-10',subjectGroup:'NCERT secondary programme',targetPercent:85,subjects:['English','Hindi','Tamil','Mathematics','Science','Social Science','Kaushal Bodh']}
 ];
+seed.schoolProfile={
+  name:'Peepal Prodigy School',board:'CBSE',affiliationNo:'1930782',schoolCode:'55677',status:'Senior Secondary',
+  campus:'CBSE School Campus',address:'Milekal, Sugunapuram, Kurichi Village, Coimbatore, Tamil Nadu 641008',
+  email:'ask@peepalprodigy.com',phone:'+91 9585 400 900',principal:'Parvin S',studentTeacherRatio:'1:30',
+  website:'https://www.peepalprodigy.in/',parentPortal:'https://crm.peepalprodigy.cloud/',
+  sarasUrl:'https://saras.cbse.gov.in/SARAS/AffiliatedList/AfflicationDetails/1930782',
+  disclosureUrl:'https://www.peepalprodigy.in/images/saras.pdf',
+  secondaryUrl:'https://www.peepalprodigy.in/secondary-school.html',seniorSecondaryUrl:'https://www.peepalprodigy.in/senior-secondary-school.html',
+  calendarUrl:'https://www.peepalprodigy.in/annual-academic-calender',feesUrl:'https://www.peepalprodigy.in/fee-structure-of-the-school',
+  sourceCheckedAt:'2026-08-04',methods:['Daily self-assessment','Interdisciplinary learning','Peer learning','Hands-on minds-on','Student-Parent-Tutor review','Physical and co-curricular growth']
+};
 const syllabusBlueprints={
   p4:{
     Mathematics:['Large numbers and number sense','Fractions, decimals and rational numbers','Arithmetic expressions','Algebraic expressions','Simple equations','Lines and angles','Triangles and constructions','Comparing quantities','Perimeter and area','Data handling and probability'],
@@ -111,9 +122,19 @@ seed.academicResources=[
   {id:'ar3',audience:'12',title:'CBSE curriculum 2026-27',type:'Official syllabus',url:'https://cbseacademic.nic.in/curriculum_2027.html'},
   {id:'ar4',audience:'12',title:'Class XII question banks',type:'Official practice',url:'https://cbseacademic.nic.in/qbclass12.html'},
   {id:'ar5',audience:'12',title:'Class XII sample papers (2025-26)',type:'Official practice and marking schemes',url:'https://cbseacademic.nic.in/sqp_classxii_2025-26.html'},
-  {id:'ar6',audience:'6-8',title:'Kaushal Bodh curriculum',type:'Skill education',url:'https://cbseacademic.nic.in/skill-education-curriculum.html'}
+  {id:'ar6',audience:'6-8',title:'Kaushal Bodh curriculum',type:'Skill education',url:'https://cbseacademic.nic.in/skill-education-curriculum.html'},
+  {id:'ar7',audience:'6-12',title:'Peepal parent portal',type:'School account',url:'https://crm.peepalprodigy.cloud/'},
+  {id:'ar8',audience:'6-10',title:'Peepal secondary programme',type:'School methodology',url:'https://www.peepalprodigy.in/secondary-school.html'},
+  {id:'ar9',audience:'11-12',title:'Peepal senior secondary groups',type:'School subject groups',url:'https://www.peepalprodigy.in/senior-secondary-school.html'},
+  {id:'ar10',audience:'6-12',title:'CBSE affiliation record - 1930782',type:'Official school record',url:'https://saras.cbse.gov.in/SARAS/AffiliatedList/AfflicationDetails/1930782'}
 ];
-const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
+seed.schoolTimetable=[];
+seed.schoolEvents=[];
+seed.attendanceRecords=[];
+seed.learningReflections=[];
+seed.tutorFeedback=[];
+seed.coCurricularRecords=[];
+const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
 function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
@@ -149,18 +170,26 @@ function normalize(value){
     foodPreference:typeof inputSettings.foodPreference==='string'?inputSettings.foodPreference:'',
     googleSync:normalizeGoogleSync(inputSettings.googleSync)
   };
+  next.schoolProfile={...next.schoolProfile,...(value.schoolProfile&&typeof value.schoolProfile==='object'?clone(value.schoolProfile):{})};
   collections.forEach(key=>{if(Array.isArray(value[key]))next[key]=clone(value[key]).filter(item=>item&&typeof item==='object')});
+  seed.academicResources.forEach(resource=>{if(!next.academicResources.some(item=>item.id===resource.id))next.academicResources.push(clone(resource))});
   next.tasks.forEach(item=>{item.id=String(item.id||uid('t'));item.context=['home','community','study'].includes(item.context)?item.context:'home';item.status=normalizeStatus(item.status);item.priority=['low','medium','high'].includes(item.priority)?item.priority:'medium';item.frequency=['Once','Daily','Weekly','Monthly','Yearly'].includes(item.frequency)?item.frequency:'Once'});
   next.events.forEach(item=>{item.id=String(item.id||uid('e'));item.context=['home','community','study'].includes(item.context)?item.context:'home';item.startAt=typeof item.startAt==='string'?item.startAt:''});
   next.issues.forEach(item=>{item.id=String(item.id||uid('i'));item.scope=item.scope==='civic'?'civic':'household';item.status=normalizeStatus(item.status);item.priority=['low','medium','high'].includes(item.priority)?item.priority:'medium'});
   next.people.forEach(item=>item.wellbeing=Math.min(100,Math.max(0,+item.wellbeing||0)));
   next.learningTopics.forEach(item=>{item.status=['backlog','progress','revision','done'].includes(item.status)?item.status:'backlog';item.proficiency=Math.min(100,Math.max(0,+item.proficiency||0));item.plannedHours=Math.max(0,+item.plannedHours||0)});
-  next.academicProfiles.forEach(item=>{item.grade=Math.min(12,Math.max(6,+item.grade||6));item.targetPercent=Math.min(100,Math.max(33,+item.targetPercent||75));item.subjects=Array.isArray(item.subjects)?item.subjects.map(String):[]});
+  next.academicProfiles.forEach(item=>{item.grade=Math.min(12,Math.max(6,+item.grade||6));item.targetPercent=Math.min(100,Math.max(33,+item.targetPercent||75));item.subjects=Array.isArray(item.subjects)?item.subjects.map(String):[];if(!item.school||['CBSE School','CBSE Senior Secondary School'].includes(item.school))item.school=next.schoolProfile.name;if(!item.schoolStage)item.schoolStage=item.grade>=11?'Senior Secondary - Grades 11-12':'Secondary - Grades 6-10';if(!item.subjectGroup)item.subjectGroup=item.grade===12?'G1A - PCM + Computer Science':'NCERT secondary programme'});
   next.syllabusItems.forEach(item=>{item.mastery=Math.min(100,Math.max(0,+item.mastery||0));item.plannedHours=Math.max(0,+item.plannedHours||0);item.status=['not-started','learning','revision','mastered'].includes(item.status)?item.status:'not-started'});
   next.studyPlans.forEach(item=>{item.minutes=Math.max(5,+item.minutes||30);item.status=['planned','done','missed'].includes(item.status)?item.status:'planned'});
   next.academicDeliverables.forEach(item=>{item.weight=Math.max(0,+item.weight||0);item.status=['todo','progress','submitted','done'].includes(item.status)?item.status:'todo'});
   next.academicAssessments.forEach(item=>{['score','maxScore','target','practicalScore','practicalMax'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.status=item.status==='scheduled'?'scheduled':'completed'});
   next.practiceLogs.forEach(item=>{['attempted','correct','minutes'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.correct=Math.min(item.attempted,item.correct)});
+  next.schoolTimetable.forEach(item=>{item.day=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].includes(item.day)?item.day:'Monday';item.period=Math.max(1,+item.period||1)});
+  next.schoolEvents.forEach(item=>{item.status=['planned','done','cancelled'].includes(item.status)?item.status:'planned'});
+  next.attendanceRecords.forEach(item=>{item.status=['present','absent','leave','late','holiday'].includes(item.status)?item.status:'present'});
+  next.learningReflections.forEach(item=>{['confidence','effort','clarity'].forEach(key=>item[key]=Math.min(5,Math.max(1,+item[key]||3)))});
+  next.tutorFeedback.forEach(item=>{item.status=item.status==='done'?'done':'open'});
+  next.coCurricularRecords.forEach(item=>{item.status=['active','paused','completed'].includes(item.status)?item.status:'active'});
   next.goals.forEach(item=>{item.target=Math.max(1,+item.target||1);item.progress=Math.max(0,+item.progress||0)});
   next.expenses.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:(String(item.category||'').toLowerCase().includes('food')?'food':String(item.category||'').toLowerCase().match(/health|medical|pharmacy/)?'health':String(item.category||'').toLowerCase().match(/school|education|tuition/)?'learning':'housing')});
   next.budgets.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:'family';item.bucket=['Fixed','Flexible','Non-monthly'].includes(item.bucket)?item.bucket:'Flexible'});
