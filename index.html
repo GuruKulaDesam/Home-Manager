@@ -22,7 +22,8 @@
     <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
     <nav id="nav"></nav>
     <div class="sidebar-bottom">
-      <button type="button" id="settingsNav" data-route="settings/household"><i data-lucide="settings-2"></i><span>Settings</span></button>
+      <button type="button" id="helpNav" data-route="global/questions" title="Help and Guide" aria-label="Open Help and Guide"><i data-lucide="circle-help"></i><span>Help & Guide</span></button>
+      <button type="button" id="settingsNav" data-route="settings/household" title="Settings" aria-label="Open Settings"><i data-lucide="settings-2"></i><span>Settings</span></button>
       <button type="button" id="collapse" class="collapse-button" title="Collapse navigation" aria-label="Collapse navigation"><i data-lucide="panel-left-close"></i></button>
     </div>
   </aside>
@@ -38,7 +39,7 @@
           <h1 id="pageTitle">Today</h1>
         </div>
         <button type="button" id="globalSearch" class="search-trigger" aria-label="Search everything">
-          <i data-lucide="search"></i><span>Search everything</span><kbd>Ctrl K</kbd>
+          <i data-lucide="search"></i><span>Find records or help</span><kbd>Ctrl K</kbd>
         </button>
         <div class="header-actions">
           <button type="button" id="searchMobile" class="icon-button" title="Search" aria-label="Search"><i data-lucide="search"></i></button>
@@ -77,7 +78,7 @@
 
   <dialog id="searchDialog" class="search-dialog" aria-label="Search Home Manager">
     <form method="dialog">
-      <div class="search-box"><i data-lucide="search"></i><label class="sr-only" for="searchInput">Ask or search all records</label><input id="searchInput" autocomplete="off" placeholder="Ask a family question or search records"><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="search-box"><i data-lucide="search"></i><label class="sr-only" for="searchInput">Search records or product help</label><input id="searchInput" autocomplete="off" placeholder="Search records or ask how the app works"><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
       <div id="searchResults" aria-live="polite"></div>
     </form>
   </dialog>

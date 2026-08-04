@@ -12,11 +12,13 @@ Tasks, events, issues, contacts and recognition use shared context-aware data in
 
 The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, context-aware search, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent navigation preferences, validated backup import, seven action Quick Add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
 
-## Ask Home Manager
+## Product question audit
 
-The question catalog covers 250 unique questions across seven life areas and seven family roles. Each question resolves to current browser data, a direct setup or capture workflow, an official service, or an explicit privacy/static-app limitation. Ask Home Manager is available under Today and its best matches also appear in global search. Results are intentionally capped at seven.
+Help & Guide checks 250 unique questions that family members commonly ask about the software itself: its purpose, navigation, adding and updating records, everyday workflows, family roles and safety, privacy and recovery, accessibility, feedback and known boundaries. The questions are organised into seven usability areas and seven family roles. Each answer opens the working destination, starts the relevant capture workflow, or states an unsupported capability directly.
 
-The catalog follows shared calendar, meal, shopping and household-list patterns documented by FamilyWall and Cozi, plus assigned family tasks, recurring dates and reminders documented by Todoist. Emergency answers link to the official ERSS 112 service. Home Manager does not claim background reminders, live location, realtime collaboration or emergency dispatch.
+The audit is available from the permanent sidebar Help & Guide action and under Today. Product answers also appear beside household records in global search, with results capped at seven. A seven-step path connects the command centre, family setup, responsibilities, calendar, money, care and backup without requiring the user to understand the internal data model.
+
+The workflows follow shared calendar, meal, shopping and household-list patterns documented by FamilyWall and Cozi, plus assigned family tasks, recurring dates and reminders documented by Todoist. Emergency help links to official Indian services. Home Manager does not claim background reminders, live location, realtime collaboration, access control or emergency dispatch.
 
 ## Household coverage
 

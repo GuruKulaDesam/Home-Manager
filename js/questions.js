@@ -1,272 +1,359 @@
 (function () {
-  const D = HM.data;
   const roles = ['Everyone', 'Home manager', 'Parent', 'Child', 'Student', 'Caregiver', 'Elder'];
+  const group = (intent, role, ...texts) => texts.map(text => [role, text, intent]);
+
   const sets = [
-    { id: 'today', label: 'Today & coordination', icon: 'calendar-check-2', route: 'global/overview', items: [
-      ['Everyone', 'What is happening in the family today?'],
-      ['Everyone', 'Which tasks are due today?'],
-      ['Home manager', 'What is overdue right now?'],
-      ['Everyone', 'Who is doing what today?'],
-      ['Everyone', 'What is the first event today?'],
-      ['Parent', 'What are the school timings today?'],
-      ['Parent', 'Who is handling school pickup today?'],
-      ['Home manager', 'Who is cooking dinner tonight?'],
-      ['Child', 'What are we having for dinner?'],
-      ['Caregiver', 'Are there any appointments today?'],
-      ['Home manager', 'Are any bills due today?'],
-      ['Caregiver', 'Which medicines or care tasks are due today?'],
-      ['Home manager', 'What groceries need to be bought today?'],
-      ['Home manager', 'Which repair needs follow-up today?'],
-      ['Everyone', 'Are any visitors expected today?'],
-      ['Home manager', 'Is a delivery or service visit expected today?'],
-      ['Elder', 'When is the family prayer or pooja today?'],
-      ['Everyone', 'Is exercise or family activity planned today?'],
-      ['Parent', 'What homework must the children finish today?'],
-      ['Student', 'What should I study today?'],
-      ['Caregiver', 'Does an elder need help today?'],
-      ['Home manager', 'Is domestic help coming today?'],
-      ['Parent', 'Who needs the vehicle today?'],
-      ['Everyone', 'What is the weather plan for today?'],
-      ['Home manager', 'Is waste collection or recycling due today?'],
-      ['Parent', 'How much did the family spend today?'],
-      ['Everyone', 'When is everyone free today?'],
-      ['Child', 'Which chores have already been completed?'],
-      ['Everyone', 'What changed in the family plan since yesterday?'],
-      ['Everyone', 'What needs urgent attention now?'],
-      ['Everyone', 'What is planned for tomorrow?'],
-      ['Everyone', 'What is planned for this weekend?'],
-      ['Parent', 'Where are the children right now?'],
-      ['Home manager', 'What is missing from today\'s plan?'],
-      ['Parent', 'Who needs a reminder today?'],
-      ['Everyone', 'How can I quickly add something to the family plan?']
+    { id: 'purpose', label: 'Purpose & first use', icon: 'compass', route: 'global/overview', items: [
+      ...group('purpose', 'Everyone',
+        'What is Home Manager for?',
+        'What family problem does this app solve?',
+        'Why should our family use one shared home app?',
+        'Is this a planner, a record book or both?',
+        'What can I manage from one place?',
+        'How does this make family life less stressful?'),
+      ...group('today', 'Home manager',
+        'What should I look at first every morning?',
+        'How do I know what needs attention now?',
+        'Where can I see the whole family day at a glance?',
+        'Can I see tasks, events, supplies and bills together?',
+        'How do I find the next important family action?',
+        'What does the Today page tell me?'),
+      ...group('audience', 'Parent',
+        'Who in the family is this app designed for?',
+        'Can both parents use the same family structure?',
+        'Can a household manager run daily work here?',
+        'Can children understand their responsibilities?',
+        'Can students manage schoolwork here?',
+        'Can caregivers and elders find relevant information?'),
+      ...group('start', 'Everyone',
+        'Where should a new family start?',
+        'What should I set up before adding daily work?',
+        'What are the minimum details needed to begin?',
+        'Can I explore the app before entering real information?',
+        'Which page helps me understand the app quickly?',
+        'How do I return to the starting point?'),
+      ...group('daily-settings', 'Home manager',
+        'What belongs in the daily sections?',
+        'What belongs in Settings?',
+        'Where should permanent household information go?',
+        'Where should changing tasks and plans go?',
+        'Why are profiles and recurring facts separated from daily work?',
+        'How do stable records create useful reminders?'),
+      ...group('scope', 'Everyone',
+        'Which parts of Indian family life are covered?',
+        'Can this replace separate chore, calendar and shopping lists?',
+        'Does it include money, health, study and community life?',
+        'Can it help during a household emergency?',
+        'Does it keep family records as well as plans?',
+        'Where can I check whether a feature exists?')
     ]},
-    { id: 'household', label: 'Home & food', icon: 'house', route: 'home/overview', items: [
-      ['Home manager', 'What is running low in the pantry?'],
-      ['Child', 'Is there enough milk for tomorrow?'],
-      ['Home manager', 'What is on the shopping list?'],
-      ['Everyone', 'What meals are planned this week?'],
-      ['Home manager', 'Which ingredients are needed for dinner?'],
-      ['Parent', 'Who is responsible for each household chore?'],
-      ['Child', 'What chores do I need to finish?'],
-      ['Home manager', 'When was each room last cleaned?'],
-      ['Home manager', 'Is laundry planned or pending?'],
-      ['Home manager', 'Which household supplies should be reordered?'],
-      ['Everyone', 'Which home repairs are still open?'],
-      ['Home manager', 'Who is handling the current repair?'],
-      ['Parent', 'How much will the current repair cost?'],
-      ['Home manager', 'When is the next appliance service due?'],
-      ['Parent', 'Which appliances are still under warranty?'],
-      ['Home manager', 'Where is the appliance purchase record?'],
-      ['Parent', 'What valuable household assets are recorded?'],
-      ['Home manager', 'When is pest control due?'],
-      ['Home manager', 'When should the water tank be cleaned?'],
-      ['Home manager', 'When is the gas cylinder expected to finish?'],
-      ['Everyone', 'What should we do if there is an LPG leak?'],
-      ['Home manager', 'When is the electricity bill due?'],
-      ['Home manager', 'When is the water bill due?'],
-      ['Parent', 'What is the broadband plan and renewal date?'],
-      ['Home manager', 'Which service providers can we call?'],
-      ['Home manager', 'What is the domestic help schedule?'],
-      ['Home manager', 'Has domestic help salary been paid?'],
-      ['Parent', 'When is the domestic help bonus due?'],
-      ['Parent', 'When is the car service due?'],
-      ['Parent', 'Is the vehicle insurance current?'],
-      ['Parent', 'When does the vehicle PUC expire?'],
-      ['Everyone', 'Is the home ready for monsoon?'],
-      ['Home manager', 'How much electricity are we trying to save?'],
-      ['Child', 'What can I recycle or compost today?'],
-      ['Home manager', 'What is stored in each room?'],
-      ['Everyone', 'Who should be contacted if we are locked out?']
+    { id: 'navigation', label: 'Finding your way', icon: 'signpost', route: 'global/overview', items: [
+      ...group('sidebar', 'Everyone',
+        'What do the seven sidebar groups mean?',
+        'How do I switch between Household, Family and Money?',
+        'Where are Care, Learning and Community?',
+        'How do I return to Today from another section?',
+        'Which navigation is used for daily family work?',
+        'Can I collapse the sidebar when I need more space?'),
+      ...group('section-tabs', 'Everyone',
+        'What do the tabs below the page title do?',
+        'How do I move between pages inside one family area?',
+        'Where are tasks after I choose Household?',
+        'Where are bills after I choose Money?',
+        'Where are health and emergency pages?',
+        'Why do the section tabs change with the sidebar group?'),
+      ...group('search', 'Everyone',
+        'How do I search the whole app?',
+        'Can I search by a task or family member name?',
+        'Can search take me directly to the correct section?',
+        'Where do app-help answers appear in search?',
+        'What should I do when search finds nothing?',
+        'Does search look through every household record?'),
+      ...group('today', 'Home manager',
+        'Where can I see overdue work?',
+        'Where can I see the next seven days?',
+        'How do I filter Today by family member?',
+        'Where can I check low-stock items quickly?',
+        'Where is this month\'s spending total?',
+        'How do I open an item shown on Today?'),
+      ...group('settings', 'Parent',
+        'How do I open Settings?',
+        'Why does Settings have seven groups?',
+        'Where do I edit the household profile?',
+        'Where do I manage people and roles?',
+        'Where are home services and permanent records configured?',
+        'How do I leave Settings and return to daily work?'),
+      ...group('mobile', 'Everyone',
+        'How do I open navigation on a phone?',
+        'Which pages are always available in the mobile bar?',
+        'How do I reach the other sections on mobile?',
+        'Can I use search from a small screen?',
+        'Can I add something without opening the sidebar?',
+        'Will tables and calendars remain usable on mobile?')
     ]},
-    { id: 'family', label: 'Family & relationships', icon: 'users-round', route: 'home/family', items: [
-      ['Everyone', 'Who are the members of this household?'],
-      ['Child', 'What is my role in the family?'],
-      ['Parent', 'How is each family member feeling?'],
-      ['Caregiver', 'Who may need extra support this week?'],
-      ['Everyone', 'When is the next family meeting?'],
-      ['Parent', 'Which family decisions are still open?'],
-      ['Everyone', 'Who agreed to the latest family decision?'],
-      ['Parent', 'What responsibilities belong to each parent?'],
-      ['Child', 'Who can I ask for help?'],
-      ['Elder', 'Who is my primary caregiver?'],
-      ['Caregiver', 'Who can take over if the caregiver is unavailable?'],
-      ['Parent', 'What are the children\'s daily routines?'],
-      ['Parent', 'What screen-time rules has the family agreed?'],
-      ['Parent', 'What pocket-money rule is active?'],
-      ['Child', 'When can I invite friends home?'],
-      ['Home manager', 'Are guests expected this week?'],
-      ['Home manager', 'What should be prepared for visiting relatives?'],
-      ['Everyone', 'Whose birthday is next?'],
-      ['Everyone', 'Which anniversaries are coming up?'],
-      ['Home manager', 'What celebration preparations are pending?'],
-      ['Parent', 'What gifts have already been planned?'],
-      ['Elder', 'Which family traditions are recorded?'],
-      ['Child', 'Where is the family recipe for rasam?'],
-      ['Everyone', 'What did the family appreciate recently?'],
-      ['Parent', 'Are household duties shared fairly?'],
-      ['Caregiver', 'When did we last check on an elderly relative?'],
-      ['Parent', 'Who is the emergency guardian for the children?'],
-      ['Parent', 'Who is authorised to pick up the children?'],
-      ['Everyone', 'Which family contacts are available?'],
-      ['Parent', 'What consent or permission needs renewal?'],
-      ['Caregiver', 'What care instructions should relatives know?'],
-      ['Everyone', 'What pet care is due?'],
-      ['Child', 'When is the pet\'s next vaccination?'],
-      ['Everyone', 'What family trip are we planning?'],
-      ['Elder', 'Is the next trip accessible for elders?'],
-      ['Everyone', 'Where can we preserve an important family memory?']
+    { id: 'actions', label: 'Adding & updating', icon: 'square-pen', route: 'global/overview', items: [
+      ...group('quick-add', 'Everyone',
+        'How do I add something quickly?',
+        'What can the Add button create?',
+        'Can I add a task from any page?',
+        'Can I add an event without opening the calendar first?',
+        'Can I record an expense from the header?',
+        'How do I close the Add panel without saving?'),
+      ...group('tasks', 'Home manager',
+        'How do I create a household task?',
+        'Can I assign a task to a family member?',
+        'Can I set a due date and priority?',
+        'Can a task repeat daily, weekly, monthly or yearly?',
+        'How do I mark a task complete?',
+        'What happens when I complete a recurring task?'),
+      ...group('events', 'Parent',
+        'How do I add a family event?',
+        'Can I record a venue and event category?',
+        'Where does a new event appear?',
+        'Can I browse previous and future months?',
+        'Can school and community events use the same calendar?',
+        'How do I get back to the current month?'),
+      ...group('food', 'Home manager',
+        'How do I add a shopping or pantry item?',
+        'Can I record quantity and unit?',
+        'How do I plan a family meal?',
+        'Can I assign who will cook?',
+        'Where do low-stock items appear?',
+        'Can food and supplies be managed on one page?'),
+      ...group('money', 'Parent',
+        'How do I record a household expense?',
+        'Can I categorise spending?',
+        'Where can I review monthly spending?',
+        'How do I record a bill or renewal date?',
+        'Are bills separate from everyday expenses?',
+        'Can I edit a money record after saving it?'),
+      ...group('record-actions', 'Everyone',
+        'How do I edit an existing record?',
+        'How do I delete something entered by mistake?',
+        'Can I undo an accidental deletion?',
+        'How do I change an item from to-do to in progress?',
+        'Where does the app confirm that my change was saved?',
+        'What happens if browser storage cannot save my change?')
     ]},
-    { id: 'money', label: 'Money & records', icon: 'wallet-cards', route: 'home/finance', items: [
-      ['Parent', 'How much has the family spent this month?'],
-      ['Parent', 'Which expense category is highest?'],
-      ['Home manager', 'How much was spent on groceries?'],
-      ['Parent', 'How much was spent on utilities?'],
-      ['Parent', 'Which bills are due next?'],
-      ['Home manager', 'Has the electricity bill been paid?'],
-      ['Parent', 'Which subscriptions renew this month?'],
-      ['Parent', 'Which subscriptions can be cancelled?'],
-      ['Parent', 'What EMIs or debts are due?'],
-      ['Parent', 'What is the monthly household budget?'],
-      ['Home manager', 'How much budget remains for food?'],
-      ['Parent', 'Are we saving toward a family goal?'],
-      ['Parent', 'How much is available in the emergency fund?'],
-      ['Parent', 'Which insurance policies does the family have?'],
-      ['Caregiver', 'Does health insurance cover the elders?'],
-      ['Parent', 'When does family health insurance renew?'],
-      ['Parent', 'When does vehicle insurance renew?'],
-      ['Parent', 'Where is the property insurance record?'],
-      ['Parent', 'What documents are needed for the next tax filing?'],
-      ['Parent', 'When is the income-tax return due?'],
-      ['Home manager', 'When is property tax due?'],
-      ['Parent', 'Where are investment records referenced?'],
-      ['Parent', 'Are nominees recorded for every account?'],
-      ['Elder', 'Who is the nominee for my accounts?'],
-      ['Parent', 'Where is the family will or succession note?'],
-      ['Parent', 'Which identity documents expire next?'],
-      ['Parent', 'When does each passport expire?'],
-      ['Everyone', 'Where is the Aadhaar reference stored?'],
-      ['Student', 'Where are school certificates recorded?'],
-      ['Parent', 'Where is the property agreement referenced?'],
-      ['Parent', 'Where are vehicle registration details recorded?'],
-      ['Everyone', 'Where are warranty and purchase records kept?'],
-      ['Parent', 'Which financial records are missing?'],
-      ['Parent', 'When was the financial setup last reviewed?'],
-      ['Parent', 'How do I export a secure household backup?'],
-      ['Everyone', 'Which financial secrets must never be stored here?']
+    { id: 'workflows', label: 'Everyday workflows', icon: 'workflow', route: 'global/overview', items: [
+      ...group('day-plan', 'Home manager',
+        'How do I plan the family day?',
+        'How do I see who is responsible for each task?',
+        'Can I combine appointments and chores in one agenda?',
+        'How do I spot work that is already late?',
+        'How do I prepare tomorrow before today ends?',
+        'Can I see only one person\'s responsibilities?'),
+      ...group('calendar', 'Parent',
+        'How do I coordinate school, work and family events?',
+        'Can the calendar show household and study events?',
+        'Where should birthdays and anniversaries be added?',
+        'How do I record a doctor or service appointment?',
+        'Can I keep a location with an event?',
+        'How do I review all events in a month?'),
+      ...group('home-running', 'Home manager',
+        'Where do I manage chores and routines?',
+        'How do I track repairs and maintenance?',
+        'Where do I record appliance or property information?',
+        'How do I manage vehicles and service dates?',
+        'Where is domestic-help information kept?',
+        'Can sustainability goals be tracked?'),
+      ...group('money-workflow', 'Parent',
+        'How do I understand where household money went?',
+        'Where do I track bills that are coming due?',
+        'How do I keep insurance renewal dates visible?',
+        'Where are tax dates and subscriptions?',
+        'Can upcoming financial dates appear on Today?',
+        'How do I separate a payment from a permanent policy record?'),
+      ...group('learning', 'Student',
+        'Where do I manage study topics?',
+        'How do I move work from backlog to mastery?',
+        'Where do I put homework and study deadlines?',
+        'Can I set a learning goal?',
+        'How do I record a focus session?',
+        'Where can I review study progress?'),
+      ...group('community', 'Everyone',
+        'What is the Community area for?',
+        'Where can I save neighbourhood updates?',
+        'How do I track a civic issue?',
+        'Where can I keep local service contacts?',
+        'Can I plan volunteering and community events?',
+        'Are community polls shared online?')
     ]},
-    { id: 'health', label: 'Health & safety', icon: 'heart-pulse', route: 'home/life/health', items: [
-      ['Everyone', 'What is each family member\'s blood group?'],
-      ['Caregiver', 'Who has allergies or important medical conditions?'],
-      ['Caregiver', 'Which medicines are currently being taken?'],
-      ['Caregiver', 'When is the next medicine dose?'],
-      ['Everyone', 'Who is our family doctor?'],
-      ['Caregiver', 'What is the doctor\'s phone number?'],
-      ['Caregiver', 'When is the next medical appointment?'],
-      ['Parent', 'Are annual health checks due?'],
-      ['Parent', 'When is the next dental check?'],
-      ['Parent', 'When is the next eye check?'],
-      ['Parent', 'Which child vaccinations are due?'],
-      ['Caregiver', 'Which elder vaccinations are due?'],
-      ['Caregiver', 'What elder care tasks are pending?'],
-      ['Elder', 'Who should I call if I feel unwell?'],
-      ['Everyone', 'What should we do in a medical emergency?'],
-      ['Everyone', 'What is India\'s single emergency number?'],
-      ['Parent', 'How can a woman request emergency support?'],
-      ['Child', 'What number can a child call for help?'],
-      ['Elder', 'What is the Elderline number?'],
-      ['Parent', 'How do we report financial cyber fraud?'],
-      ['Everyone', 'What should we do during an LPG leak?'],
-      ['Everyone', 'Where is the household emergency card?'],
-      ['Parent', 'Who are the trusted emergency contacts?'],
-      ['Parent', 'What is the emergency meeting point?'],
-      ['Child', 'Who is allowed to collect me during an emergency?'],
-      ['Everyone', 'Where is the first-aid kit?'],
-      ['Home manager', 'Does the first-aid kit need restocking?'],
-      ['Everyone', 'Where are fire extinguishers located?'],
-      ['Everyone', 'When was the emergency plan last reviewed?'],
-      ['Parent', 'Are doors and access keys accounted for?'],
-      ['Parent', 'Is important data backed up?'],
-      ['Parent', 'Who can recover critical digital accounts?'],
-      ['Caregiver', 'What health information can be shared with relatives?'],
-      ['Caregiver', 'Where should official health records be kept?'],
-      ['Everyone', 'Is the family safe to travel today?'],
-      ['Everyone', 'What safety issue needs attention first?']
+    { id: 'family', label: 'People, care & safety', icon: 'users-round', route: 'home/family', items: [
+      ...group('people', 'Everyone',
+        'Where can I see everyone in the household?',
+        'How do I add a family member?',
+        'Can each person have a family role?',
+        'Where can I edit a person\'s profile?',
+        'How is family wellbeing shown?',
+        'Is wellbeing meant to rank family members?'),
+      ...group('responsibility', 'Parent',
+        'How do we make responsibilities clear?',
+        'Can a task be left unassigned?',
+        'How do I check one child\'s tasks?',
+        'Where can I see how work is distributed?',
+        'Can family members share a common calendar?',
+        'How do I hand a task to another person?'),
+      ...group('care', 'Caregiver',
+        'Where should caregiver instructions be recorded?',
+        'How do I track a health appointment?',
+        'Where do I keep a masked doctor reference?',
+        'Can medicine planning be kept with health records?',
+        'How do I make care dates visible on Today?',
+        'Where do I review health and safety setup?'),
+      ...group('student-role', 'Child',
+        'Where can a child see today\'s chores?',
+        'Can a child mark an assigned task complete?',
+        'Where can a student see homework?',
+        'Can a student use the focus timer?',
+        'How can a child find emergency help?',
+        'Can children avoid seeing unnecessary financial details?'),
+      ...group('elder-role', 'Elder',
+        'Can an elder find emergency numbers quickly?',
+        'Where is the household emergency card?',
+        'Can the interface use stronger contrast?',
+        'Can the app be used with keyboard navigation?',
+        'Where can an elder find caregiver information?',
+        'Can important dates appear without opening many pages?'),
+      ...group('emergency', 'Everyone',
+        'How do I open emergency help immediately?',
+        'Which Indian emergency numbers are included?',
+        'Does Home Manager call emergency services for me?',
+        'Where do I add the home address for emergencies?',
+        'Where do I keep trusted emergency contacts?',
+        'What information should be prepared before an emergency?')
     ]},
-    { id: 'learning', label: 'Children & learning', icon: 'graduation-cap', route: 'study/overview', items: [
-      ['Student', 'What classes do I have today?'],
-      ['Student', 'What homework is due next?'],
-      ['Parent', 'Which assignments are overdue?'],
-      ['Student', 'What exam is coming up?'],
-      ['Parent', 'When is the next parent-teacher meeting?'],
-      ['Parent', 'What is the school fee due date?'],
-      ['Parent', 'Has the transport fee been recorded?'],
-      ['Parent', 'What is the child\'s attendance status?'],
-      ['Student', 'Which subject needs the most work?'],
-      ['Student', 'Which topics are still in backlog?'],
-      ['Student', 'Which topics need revision?'],
-      ['Student', 'What have I already mastered?'],
-      ['Student', 'What is my study goal this month?'],
-      ['Student', 'How much progress have I made on my goal?'],
-      ['Student', 'How many focus minutes did I complete this week?'],
-      ['Parent', 'How is study time distributed by subject?'],
-      ['Student', 'When is my next focus session?'],
-      ['Student', 'Where should I record a new study topic?'],
-      ['Parent', 'Who is the current tutor?'],
-      ['Parent', 'When is the tutor payment due?'],
-      ['Student', 'What learning resources are available?'],
-      ['Child', 'Which books should be returned to the library?'],
-      ['Parent', 'Which school documents are recorded?'],
-      ['Student', 'Where are certificates and achievements recorded?'],
-      ['Parent', 'What skills is the child developing outside school?'],
-      ['Child', 'What activity or sport is planned this week?'],
-      ['Parent', 'Is screen time balanced with study and sleep?'],
-      ['Student', 'What can I study during travel?'],
-      ['Parent', 'What accommodation or learning support is needed?'],
-      ['Student', 'Who can help with this subject?'],
-      ['Parent', 'Which education decisions are pending?'],
-      ['Student', 'What should I prepare for tomorrow?'],
-      ['Parent', 'How can the family celebrate learning progress?'],
-      ['Student', 'What is the quickest way to add homework?'],
-      ['Parent', 'What part of the child\'s learning record is missing?']
+    { id: 'privacy', label: 'Privacy, data & recovery', icon: 'shield-check', route: 'settings/app', items: [
+      ...group('local-data', 'Parent',
+        'Where is my family data stored?',
+        'Is household data uploaded to a server?',
+        'Does the app require an account?',
+        'Can another device see these records automatically?',
+        'Does clearing browser data remove the household?',
+        'Is browser storage encrypted?'),
+      ...group('sensitive-data', 'Everyone',
+        'Should I store full Aadhaar or PAN numbers here?',
+        'Should I save passwords, PINs or bank credentials?',
+        'Can I upload medical scans safely?',
+        'What kind of document reference is appropriate?',
+        'How should I record an account number?',
+        'Where should official documents be kept?'),
+      ...group('backup', 'Home manager',
+        'How do I back up the whole household?',
+        'What information is included in an export?',
+        'Where should I keep the exported file?',
+        'How often should the family make a backup?',
+        'Can I move data to another browser?',
+        'How do I know an export was created?'),
+      ...group('restore', 'Parent',
+        'How do I restore a household backup?',
+        'Will import replace the current household?',
+        'Does the app validate an imported file?',
+        'What should I do before importing data?',
+        'Can I recover data without a backup?',
+        'How do I reset the demonstration data?'),
+      ...group('limitations', 'Everyone',
+        'Does the app send background reminders?',
+        'Does it synchronise family changes in real time?',
+        'Can it connect directly to banks or UPI?',
+        'Does it track family members\' live location?',
+        'Can it submit government or municipal forms?',
+        'Does it provide medical or financial advice?'),
+      ...group('data-control', 'Home manager',
+        'How do I control what stays in the app?',
+        'Can I delete individual records?',
+        'Can I export before removing information?',
+        'What happens when I reset the app?',
+        'Where can I read the privacy boundaries?')
     ]},
-    { id: 'community', label: 'Community & life events', icon: 'map-pinned', route: 'community/overview', items: [
-      ['Everyone', 'What community events are coming up?'],
-      ['Everyone', 'What neighbourhood updates were saved recently?'],
-      ['Parent', 'Are there civic issues near the school?'],
-      ['Everyone', 'Which civic follow-ups are still open?'],
-      ['Everyone', 'What is the status of the pothole report?'],
-      ['Home manager', 'Which local services are available?'],
-      ['Caregiver', 'Where is the nearest recorded health centre?'],
-      ['Parent', 'Which local emergency contacts are recorded?'],
-      ['Everyone', 'Are there volunteer activities this week?'],
-      ['Student', 'Can I volunteer for a local learning activity?'],
-      ['Everyone', 'Which community polls need a response?'],
-      ['Parent', 'When is the residents association meeting?'],
-      ['Home manager', 'When is the farmers market?'],
-      ['Everyone', 'What local transport update was recorded?'],
-      ['Parent', 'Where can I find local school or tutor information?'],
-      ['Elder', 'Which accessible local places are recorded?'],
-      ['Child', 'Which parks or outdoor activities are available?'],
-      ['Everyone', 'What festival is the family preparing for?'],
-      ['Home manager', 'What puja supplies are still needed?'],
-      ['Parent', 'What is the festival budget?'],
-      ['Everyone', 'Which relatives are attending the function?'],
-      ['Home manager', 'What travel bookings are pending?'],
-      ['Everyone', 'What should we pack for the next trip?'],
-      ['Caregiver', 'Which medicines are needed for the trip?'],
-      ['Elder', 'Is an accessible room included in the travel plan?'],
-      ['Parent', 'Where are tickets and booking references recorded?'],
-      ['Everyone', 'What is the next pilgrimage plan?'],
-      ['Parent', 'Who is responsible for the house while we travel?'],
-      ['Home manager', 'What deliveries should be paused during travel?'],
-      ['Everyone', 'Which family event needs an RSVP?'],
-      ['Parent', 'What government service should hold official documents?'],
-      ['Caregiver', 'Where can official personal health records be managed?'],
-      ['Everyone', 'What local guide should we read first?'],
-      ['Parent', 'Which community information may be outdated?'],
-      ['Everyone', 'How do I add a new community or travel plan?']
+    { id: 'confidence', label: 'Confidence & accessibility', icon: 'badge-check', route: 'global/questions', items: [
+      ...group('help', 'Everyone',
+        'Where can I get help using the app?',
+        'Can I ask a question in everyday language?',
+        'How do I browse help without knowing a search term?',
+        'Can I filter help for my family role?',
+        'Can I see which product areas have been checked?',
+        'How do I open the correct page from a help answer?'),
+      ...group('empty-states', 'Everyone',
+        'What should I do when a page is empty?',
+        'Does an empty page offer the correct next action?',
+        'How do I know which information is required?',
+        'Can I cancel a form without entering anything?',
+        'Will unsaved form data change my records?',
+        'How do I recognise a successful save?'),
+      ...group('feedback', 'Everyone',
+        'How does the app show overdue or urgent work?',
+        'How are low-stock items highlighted?',
+        'Where do renewal and due-date signals appear?',
+        'How do I know a task is complete?',
+        'What happens after deleting a record?',
+        'Does the app warn me when saving fails?'),
+      ...group('accessibility', 'Elder',
+        'Can I use the app without a mouse?',
+        'Is there a skip link for keyboard users?',
+        'Do icon buttons have accessible names?',
+        'Does focus move into dialogs when they open?',
+        'Can dialogs be closed with Escape?',
+        'Is a higher-contrast theme available?'),
+      ...group('responsive', 'Everyone',
+        'Can the app be used on a phone?',
+        'Does navigation remain available on small screens?',
+        'Will long labels fit without overlapping?',
+        'Can wide tables be read on mobile?',
+        'Does the Add panel fit the full phone height?',
+        'Can emergency help be opened on mobile?'),
+      ...group('boundaries', 'Everyone',
+        'Is every visible feature actually working?',
+        'Which features depend on external official services?',
+        'How can I tell local notes from connected online data?',
+        'Does the app clearly state what it cannot do?',
+        'Where can I verify the app\'s intended purpose?')
     ]}
   ];
+
+  const answers = {
+    purpose: ['One family operating space', 'Home Manager combines the family agenda, household work, money, care, learning, community plans and stable records in one local-first app.', 'global/overview', 'direct'],
+    today: ['Start with Today', 'Today combines urgent tasks, upcoming events, low stock, monthly spending and due records. Select a family member to narrow the agenda.', 'global/overview', 'direct'],
+    audience: ['Seven family perspectives are supported', 'The same household structure serves home managers, parents, children, students, caregivers and elders. Responsibility and relevance come from assigned records and focused sections.', 'home/family', 'direct'],
+    start: ['Set up the family, then run the day', 'Begin in Settings with the household profile and people. Return to Today and use Add for the first task, event, expense or meal.', 'settings/household', 'settings'],
+    'daily-settings': ['Changing work stays outside Settings', 'Tasks, events, shopping, spending and follow-ups belong in the seven daily groups. Profiles, addresses, policies and other stable facts belong in Settings.', 'settings/household', 'settings'],
+    scope: ['Seven areas cover the household', 'Today, Household, Family, Money, Care, Learning and Community cover the operating scope. Help & Guide checks purpose and usability across all seven.', 'global/questions', 'direct'],
+    sidebar: ['Use the left sidebar for the seven life areas', 'Choose one area in the sidebar. Today is the family command centre; the other six group related daily and weekly work. Collapse it with the panel control.', 'global/overview', 'direct'],
+    'section-tabs': ['Use the header tabs within an area', 'After selecting a sidebar area, its header tabs open the related views. Each area contains no more than seven choices.', 'home/overview', 'direct'],
+    search: ['Search records and app guidance together', 'Open Search in the header and type a record name or a plain-language product question. Results are capped at seven and open the relevant destination.', 'global/questions', 'direct'],
+    settings: ['Settings holds stable household facts', 'Open Settings at the bottom of the sidebar. Its seven groups cover household, people, home, money, health, records and app data.', 'settings/household', 'settings'],
+    mobile: ['Use the bottom bar and menu on mobile', 'Today, Calendar, Tasks and Food stay in the bottom bar. More opens the sidebar; Search and Add remain in the header.', 'global/overview', 'direct'],
+    'quick-add': ['Use Add from any page', 'The header Add button opens seven common capture choices. Choose one, complete the drawer, or close it with Cancel, the X button or Escape.', 'global/overview', 'workflow'],
+    tasks: ['Create and assign a task', 'Open Household > Tasks & routines or use Add > Task. Set the owner, date, priority and repeat rule; completing a recurring task advances its due date.', 'home/tasks', 'workflow', { kind: 'task', context: 'home' }],
+    events: ['Use the shared family calendar', 'Open Family > Calendar or use Add > Calendar event. Events carry a date, category and venue and appear in the month view and Today agenda.', 'home/calendar', 'workflow', { kind: 'event', context: 'home' }],
+    food: ['Manage meals and supplies together', 'Open Household > Food & supplies. Add pantry quantities or plan a dated meal with an assigned cook; low stock is surfaced on Today.', 'home/inventory', 'workflow', { kind: 'inventory', context: 'home' }],
+    money: ['Separate transactions from durable records', 'Use Money > Spending for expenses and Money > Bills for due commitments. Permanent policy and tax setup belongs in Settings > Money setup.', 'home/finance', 'workflow', { kind: 'expense', context: 'home' }],
+    'record-actions': ['Use the row actions and save feedback', 'Edit and Delete controls appear with supported records. Saving shows a confirmation toast; deletion offers Undo. A storage failure produces a backup warning.', 'global/overview', 'workflow'],
+    'day-plan': ['Build the plan with assigned tasks and events', 'Today sorts the next seven actionable items by date and can filter them by family member. Add or update work in its owning section.', 'global/overview', 'workflow'],
+    calendar: ['One calendar coordinates family time', 'Family > Calendar combines home, study and community events. Use the month controls to browse, Today to return, and Add event to capture a plan.', 'home/calendar', 'workflow', { kind: 'event', context: 'home' }],
+    'home-running': ['Household contains recurring home operations', 'Tasks & routines, Food & supplies, Property & repairs, Vehicles, Domestic help and Sustainability sit together under Household.', 'home/overview', 'workflow'],
+    'money-workflow': ['Money separates daily spending from commitments', 'Spending shows transactions; Bills, Insurance, Tax dates and Subscriptions track commitments. Dates within 30 days also surface on Today.', 'home/finance', 'workflow'],
+    learning: ['Learning moves work from plan to progress', 'Use the Study Board for topics, Schedule for sessions, Tasks for homework, Goals for targets, Focus for timed work and Analytics for review.', 'study/overview', 'workflow'],
+    community: ['Community is a local personal organiser', 'Save neighbourhood updates, events, volunteer plans, civic follow-ups, service contacts and guides. These records stay in this browser and are not public posts.', 'community/overview', 'workflow'],
+    people: ['Profiles define the household', 'Settings > People & roles manages stable profiles. Family > Family pulse shows the current household and wellbeing without treating it as a score or competition.', 'settings/people', 'settings'],
+    responsibility: ['Assign work by name', 'Tasks can be assigned or left unassigned. Today shows each person\'s workload and the family filter isolates one member\'s agenda.', 'home/tasks', 'workflow', { kind: 'task', context: 'home' }],
+    care: ['Keep care planning separate from official records', 'Use Settings > Health & safety for stable health and emergency setup, and Care for active appointments, care notes and dates. Store only masked references.', 'settings/health', 'settings'],
+    'student-role': ['Children use assigned work and Learning', 'A child can filter Today, complete assigned chores, open Study Tasks and use Focus. Financial access controls require a server and are not provided by this static app.', 'study/overview', 'boundary'],
+    'elder-role': ['Key information stays close to the surface', 'Emergency is always in the header, due dates appear on Today, and the contrast control is beside notifications. Standard keyboard navigation is supported.', 'home/life/emergency', 'direct'],
+    emergency: ['Emergency help is one header action away', 'The Emergency button shows Indian helplines and the household card. Configure the home address and trusted information in Settings > Health & safety. The app does not dispatch help.', 'home/life/emergency', 'workflow'],
+    'local-data': ['Data stays in this browser profile', 'No account or server is used. Records do not synchronise automatically, can be removed by clearing site data, and localStorage is not encrypted.', 'settings/app', 'privacy'],
+    'sensitive-data': ['Store references, never secrets', 'Do not enter full identity numbers, passwords, PINs, credentials or scans. Use masked hints here and keep official documents in trusted official or encrypted services.', 'settings/records', 'privacy'],
+    backup: ['Export a JSON backup deliberately', 'Settings > App & data exports the complete local household. Store that file securely and repeat backups after meaningful changes.', 'settings/app', 'settings'],
+    restore: ['Import only a trusted backup', 'Settings > App & data validates the JSON structure before replacing current data. Export the current household first. Without a backup, cleared browser data cannot be recovered.', 'settings/app', 'settings'],
+    limitations: ['This static app has explicit boundaries', 'It has no background reminders, realtime sync, bank feeds, live location, form submission or professional advice. Connected services require a secure backend or native integration.', 'settings/app', 'boundary'],
+    'data-control': ['You control local records and backups', 'Edit or delete individual records, export before major changes, and use Reset only when you intend to restore demonstration data.', 'settings/app', 'privacy'],
+    help: ['Help & Guide audits the product itself', 'Browse seven usability areas, filter by family role, or search in everyday language. Every answer names the purpose and opens its actual destination.', 'global/questions', 'direct'],
+    'empty-states': ['Empty pages provide a next action', 'Supported empty views show an Add action. Drawers identify required fields and can be dismissed without saving through Cancel, X or Escape.', 'global/overview', 'direct'],
+    feedback: ['Status is visible at the point of work', 'Today and notifications surface overdue, due and low-stock signals. Completion updates the record; save, delete, undo and failure feedback appear as toasts.', 'global/overview', 'direct'],
+    accessibility: ['Core navigation follows browser standards', 'The app includes a skip link, labelled icon buttons, keyboard-focusable controls, native dialogs with Escape support and a stronger-contrast theme.', 'global/questions', 'direct'],
+    responsive: ['The core experience adapts to small screens', 'Mobile navigation, search, Add, emergency help, drawers and alternative calendar layouts remain available without depending on desktop hover.', 'global/overview', 'direct'],
+    boundaries: ['Local and external capabilities are labelled', 'Community content is identified as local, emergency links are external, and unsupported sync, notification, financial, medical and government integrations are stated rather than simulated.', 'settings/app', 'boundary']
+  };
 
   const questions = sets.flatMap(set => set.items.map((item, index) => ({
     id: `${set.id}-${index + 1}`,
@@ -275,183 +362,37 @@
     icon: set.icon,
     defaultRoute: set.route,
     role: item[0],
-    text: item[1]
+    text: item[1],
+    intent: item[2]
   })));
 
-  const lower = value => String(value || '').toLowerCase();
-  const includesAny = (text, terms) => terms.some(term => text.includes(term));
-
-  function routeFor(question) {
-    const text = lower(question.text);
-    const rules = [
-      [['emergency number', 'woman request emergency', 'child call for help', 'elderline', 'cyber fraud', 'lpg leak'], 'home/life/emergency'],
-      [['blood group', 'allerg', 'medicine', 'doctor', 'medical', 'health check', 'dental', 'eye check', 'vaccination', 'elder care'], 'home/life/health'],
-      [['first-aid', 'fire extinguisher', 'safety issue', 'emergency card', 'emergency contact', 'meeting point'], 'home/life/emergency'],
-      [['insurance'], 'home/life/insurance'],
-      [['income-tax', 'tax filing', 'property tax'], 'home/life/tax'],
-      [['bill', 'electricity', 'water bill', 'emi', 'broadband'], 'home/life/bills'],
-      [['subscription'], 'home/life/subscriptions'],
-      [['aadhaar', 'passport', 'certificate', 'identity document', 'school documents'], 'settings/life/documents'],
-      [['nominee', 'will', 'succession', 'inherit'], 'settings/life/legacy'],
-      [['backup', 'digital account', 'financial secrets'], 'settings/life/digital'],
-      [['emergency guardian', 'authorised to pick up', 'allowed to collect', 'care instructions', 'primary caregiver'], 'home/life/emergency'],
-      [['consent or permission'], 'settings/life/documents'],
-      [['vehicle', 'car service', 'puc', 'registration'], 'home/life/vehicles'],
-      [['domestic help', 'maid', 'housekeeping salary', 'bonus due'], 'home/life/help'],
-      [['trip', 'travel', 'pilgrimage', 'booking', 'pack'], 'home/life/travel'],
-      [['festival', 'puja', 'pooja supplies', 'function'], 'home/life/festivals'],
-      [['pet'], 'home/life/pets'],
-      [['repair', 'appliance', 'warranty', 'pest control', 'water tank', 'locked out', 'fire extinguisher'], 'home/assets'],
-      [['pantry', 'milk', 'shopping', 'grocer', 'ingredient', 'meal', 'dinner', 'gas cylinder', 'supplies', 'room'], 'home/inventory'],
-      [['expense', 'spent', 'spending', 'budget', 'saving', 'emergency fund', 'investment', 'money'], 'home/finance'],
-      [['homework', 'assignment'], 'study/tasks'],
-      [['class', 'exam', 'parent-teacher', 'activity or sport'], 'study/schedule'],
-      [['study goal', 'progress have i made'], 'study/goals'],
-      [['focus minute', 'focus session'], 'study/focus'],
-      [['study time distributed', 'proficiency'], 'study/analytics'],
-      [['study', 'subject', 'topic', 'learning', 'tutor', 'library', 'education'], 'study/overview'],
-      [['community event', 'residents association', 'farmers market'], 'community/events'],
-      [['civic', 'pothole'], 'community/tickets'],
-      [['volunteer'], 'community/volunteer'],
-      [['poll'], 'community/polls'],
-      [['local service', 'health centre', 'local emergency contact', 'tutor information'], 'community/directory'],
-      [['neighbourhood update', 'transport update'], 'community/feed'],
-      [['family member', 'family feeling', 'family meeting', 'family decision', 'role in the family', 'caregiver', 'responsibilities', 'screen-time', 'pocket-money', 'family contact', 'guardian', 'authorised'], 'home/family'],
-      [['birthday', 'anniversar', 'visitor', 'guest', 'calendar', 'happening', 'planned for tomorrow', 'planned for this weekend', 'appointment', 'school timings', 'pickup', 'free today', 'activity planned'], 'home/calendar'],
-      [['chore', 'task', 'doing what', 'overdue', 'urgent attention', 'reminder', 'missing from today'], 'home/tasks']
-    ];
-    return rules.find(rule => includesAny(text, rule[0]))?.[1] || question.defaultRoute;
-  }
-
-  function officialAnswer(text) {
-    if (text.includes('single emergency number') || text.includes('medical emergency')) return { headline: 'Call 112', detail: 'ERSS 112 is the pan-India number for police, fire, rescue and medical emergencies.', status: 'official', external: 'https://112.gov.in/' };
-    if (text.includes('woman request emergency')) return { headline: 'Call 112 or 181', detail: 'Use 112 for immediate danger. The women helpline is 181.', status: 'official', external: 'https://112.gov.in/' };
-    if (text.includes('child call for help')) return { headline: 'Call 1098', detail: 'Child Helpline 1098 supports children in danger or distress. Use 112 for immediate danger.', status: 'official', external: 'https://112.gov.in/' };
-    if (text.includes('elderline')) return { headline: 'Call 14567', detail: 'Elderline 14567 provides support for senior citizens. Use 112 for immediate danger.', status: 'official', external: 'https://112.gov.in/' };
-    if (text.includes('cyber fraud')) return { headline: 'Call 1930 quickly', detail: 'Report financial cyber fraud promptly through 1930 and the official cybercrime portal.', status: 'official', external: 'https://cybercrime.gov.in/' };
-    if (text.includes('lpg leak')) return { headline: 'Call 1906 and leave the area', detail: 'Do not operate electrical switches or flames. Ventilate if safe and call the LPG emergency helpline.', status: 'official', external: 'https://www.mylpg.in/' };
-    if (text.includes('weather plan')) return { headline: 'Live weather is not connected', detail: 'Check the official IMD forecast, then add weather-dependent changes to the family calendar.', status: 'external', external: 'https://mausam.imd.gov.in/' };
-    if (text.includes('where are the children right now')) return { headline: 'Live location is not tracked', detail: 'This static app does not monitor people. Record pickup plans and trusted contacts instead.', status: 'limitation' };
-    if (text.includes('government service should hold official documents')) return { headline: 'Use DigiLocker', detail: 'Keep authentic government-issued documents in DigiLocker; store only masked references here.', status: 'official', external: 'https://www.digilocker.gov.in/' };
-    if (text.includes('official personal health records')) return { headline: 'Use ABHA', detail: 'ABHA supports consent-based personal health records. Keep only planning notes in Home Manager.', status: 'official', external: 'https://abdm.gov.in/' };
-    return null;
-  }
-
-  function matching(items, text, fields) {
-    const stop = new Set(['what', 'when', 'where', 'which', 'family', 'today', 'next', 'recorded', 'should', 'there', 'does', 'have', 'this', 'that', 'with', 'each', 'from', 'current']);
-    const words = lower(text).split(/[^a-z0-9]+/).filter(word => word.length > 3 && !stop.has(word));
-    return items.map(item => ({ item, score: words.reduce((score, word) => score + (fields.some(field => lower(item[field]).includes(word)) ? 1 : 0), 0) })).sort((a, b) => b.score - a.score).find(entry => entry.score > 0)?.item;
-  }
-
-  function captureFor(route, text) {
-    if (route === 'home/tasks' || route === 'study/tasks') return { kind: 'task', context: route.startsWith('study') ? 'study' : 'home' };
-    if (route === 'home/calendar' || route === 'community/events' || route === 'study/schedule') return { kind: 'event', context: route.startsWith('community') ? 'community' : route.startsWith('study') ? 'study' : 'home' };
-    if (route === 'home/inventory') return { kind: includesAny(text, ['meal', 'dinner', 'cook']) ? 'meal' : 'inventory', context: 'home' };
-    if (route === 'home/finance') return { kind: 'expense', context: 'home' };
-    if (route === 'home/assets' || route === 'community/tickets') return { kind: 'issue', scope: route.startsWith('community') ? 'civic' : 'household' };
-    if (route.startsWith('study/')) return { kind: includesAny(text, ['goal', 'progress']) ? 'goal' : 'task', context: 'study' };
-    const domain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
-    if (domain) return { kind: 'life', domain };
-    return null;
-  }
-
   function answer(question) {
-    const text = lower(question.text);
-    const official = officialAnswer(text);
-    if (official) return { ...official, route: routeFor(question) };
-    const route = routeFor(question);
-    const state = D.state;
-    const capture = captureFor(route, text);
-    if (route === 'home/tasks' || route === 'study/tasks') {
-      const open = state.tasks.filter(item => D.status(item.status) !== 'done' && (route === 'home/tasks' || item.context === 'study'));
-      const match = matching(open, text, ['title', 'category', 'assignee', 'type']);
-      if (match) return { headline: match.title, detail: `${match.assignee || 'Unassigned'} - due ${D.date(match.dueAt)} - ${D.status(match.status)}`, status: 'live', route, capture };
-      return { headline: `${open.length} open tasks`, detail: open.length ? `Next: ${open[0].title} (${open[0].assignee || 'unassigned'}).` : 'No open tasks are recorded.', status: open.length ? 'live' : 'setup', route, capture };
-    }
-    if (route === 'home/calendar' || route === 'community/events' || route === 'study/schedule') {
-      const events = state.events.filter(item => route === 'home/calendar' || item.context === (route === 'community/events' ? 'community' : 'study')).sort((a, b) => String(a.startAt).localeCompare(String(b.startAt)));
-      const match = matching(events, text, ['title', 'category', 'venue']);
-      const requiresExact = includesAny(text, ['birthday', 'anniversar', 'pickup', 'visitor', 'delivery', 'appointment', 'school timing', 'parent-teacher', 'class', 'exam', 'sport']);
-      const item = match || (!requiresExact && events.find(event => String(event.startAt) >= new Date().toISOString().slice(0, 10)));
-      return item ? { headline: item.title, detail: `${D.date(item.startAt, { weekday: 'short', day: 'numeric', month: 'short' })} - ${item.venue || 'venue not recorded'}`, status: 'live', route, capture } : { headline: 'No matching event recorded', detail: 'Add the date, time, owner and location to the shared calendar.', status: 'setup', route, capture };
-    }
-    if (route === 'home/inventory') {
-      if (includesAny(text, ['meal', 'dinner', 'cook', 'ingredient'])) {
-        const meal = matching(state.meals, text, ['name', 'mealType', 'cook']) || state.meals.slice().sort((a, b) => String(a.date).localeCompare(String(b.date)))[0];
-        return meal ? { headline: meal.name, detail: `${meal.mealType} on ${D.date(meal.date)} - ${meal.cook || 'cook unassigned'}`, status: 'live', route, capture } : { headline: 'No meal is planned', detail: 'Add a meal, date and cook.', status: 'setup', route, capture };
-      }
-      const low = state.inventoryItems.filter(item => (+item.quantity || 0) <= 2);
-      const match = matching(state.inventoryItems, text, ['name', 'category', 'unit']);
-      if (!match && includesAny(text, ['milk', 'gas cylinder', 'ingredient', 'stored in each room'])) return { headline: 'No matching household item recorded', detail: 'Add the item, location, quantity and reorder level.', status: 'setup', route, capture };
-      return match ? { headline: `${match.name}: ${match.quantity} ${match.unit}`, detail: match.quantity <= 2 ? 'This item is low.' : 'Stock is available.', status: 'live', route, capture } : { headline: `${low.length} low-stock items`, detail: low.length ? low.map(item => item.name).slice(0, 3).join(', ') : 'No low-stock items are recorded.', status: 'live', route, capture };
-    }
-    if (route === 'home/finance') {
-      const month = new Date().toISOString().slice(0, 7);
-      const expenses = state.expenses.filter(item => String(item.date).startsWith(month));
-      const match = matching(state.expenses, text, ['title', 'category']);
-      const total = expenses.reduce((sum, item) => sum + (+item.amount || 0), 0);
-      if (!match && includesAny(text, ['budget', 'saving', 'emergency fund', 'investment'])) return { headline: 'No matching financial plan recorded', detail: 'Record the target, current amount, owner and review date without storing account secrets.', status: 'setup', route, capture };
-      return match ? { headline: D.money(match.amount), detail: `${match.title} - ${match.category} - ${D.date(match.date)}`, status: 'live', route, capture } : { headline: `${D.money(total)} this month`, detail: `${expenses.length} expense entries are recorded.`, status: 'live', route, capture };
-    }
-    if (route === 'home/assets' || route === 'community/tickets') {
-      const scope = route === 'community/tickets' ? 'civic' : 'household';
-      const issues = state.issues.filter(item => item.scope === scope && D.status(item.status) !== 'done');
-      const match = matching(issues, text, ['title', 'category', 'location']);
-      const requiresExact = includesAny(text, ['pest control', 'water tank', 'appliance service', 'warranty', 'purchase record', 'locked out', 'fire extinguisher']);
-      const item = match || (!requiresExact && issues[0]);
-      return item ? { headline: item.title, detail: `${item.location} - ${item.priority} priority - ${D.status(item.status)}`, status: 'live', route, capture } : { headline: 'No matching open issue', detail: 'Record the issue, location, priority and owner.', status: 'setup', route, capture };
-    }
-    if (route === 'home/family') {
-      const match = matching(state.people, text, ['name', 'householdRole']);
-      return match ? { headline: match.name, detail: `${match.householdRole} - wellbeing ${match.wellbeing}%`, status: 'live', route } : { headline: `${state.people.length} household members`, detail: state.people.map(person => `${person.name} (${person.householdRole})`).join(', '), status: 'live', route };
-    }
-    if (route === 'study/focus') {
-      const week = new Date(); week.setDate(week.getDate() - 6);
-      const minutes = state.focusSessions.filter(item => item.date >= week.toISOString().slice(0, 10)).reduce((sum, item) => sum + (+item.minutes || 0), 0);
-      return { headline: `${minutes} focus minutes`, detail: 'Total recorded during the last seven days.', status: 'live', route, capture };
-    }
-    if (route === 'study/goals') {
-      const goal = state.goals.find(item => item.context === 'study');
-      return goal ? { headline: goal.title, detail: `${goal.progress}/${goal.target} complete - due ${D.date(goal.dueAt)}`, status: 'live', route, capture } : { headline: 'No study goal recorded', detail: 'Add a measurable target, progress and due date.', status: 'setup', route, capture };
-    }
-    if (route.startsWith('study/')) {
-      const match = matching(state.learningTopics, text, ['title', 'subject', 'chapter', 'status']);
-      const open = state.learningTopics.filter(item => item.status !== 'done');
-      const item = match || open.sort((a, b) => (+a.proficiency || 0) - (+b.proficiency || 0))[0];
-      return item ? { headline: item.title, detail: `${item.subject} - ${item.status} - ${item.proficiency}% proficiency`, status: 'live', route, capture } : { headline: 'No matching learning item', detail: 'Add the topic, subject, due work and owner.', status: 'setup', route, capture };
-    }
-    if (route.startsWith('community/')) {
-      if (route === 'community/polls') {
-        const poll = state.polls[0];
-        return poll ? { headline: poll.title, detail: poll.options.map(option => `${option.name}: ${option.votes}`).join(' - '), status: 'live', route } : { headline: 'No community poll recorded', detail: 'There is no active local preference poll in this browser.', status: 'setup', route };
-      }
-      const source = route === 'community/volunteer' ? state.volunteerOpportunities : route === 'community/feed' ? state.newsItems : route === 'community/directory' ? state.contacts.filter(item => item.scope === 'community') : state.guides;
-      const match = matching(source, text, ['title', 'name', 'category', 'body', 'hours']);
-      const allowLatest = ['community/feed', 'community/volunteer', 'community/overview', 'community/guides'].includes(route);
-      const item = match || (allowLatest ? source.slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))[0] : null);
-      return item ? { headline: item.title || item.name, detail: item.body || item.hours || `${item.category || 'Community'} - ${D.date(item.date)}`, status: 'live', route, capture } : { headline: 'No matching community record', detail: 'Open this section to add or review local information.', status: 'setup', route, capture };
-    }
-    const domain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
-    if (domain) {
-      const records = HM.life.ensure().filter(item => item.domain === domain);
-      const match = matching(records, text, ['title', 'category', 'owner', 'provider', 'notes']);
-      const requiresExact = includesAny(text, ['puc', 'water bill', 'medicine dose', 'dental', 'eye check', 'vaccination', 'meeting point', 'access keys', 'school certificate', 'transport fee', 'attendance', 'tutor payment', 'property insurance', 'purchase record']);
-      const item = match || (!requiresExact && records.slice().sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))[0]);
-      return item ? { headline: item.title, detail: `${item.owner || 'Family'} - ${item.dueDate ? `due ${D.date(item.dueDate)}` : 'no due date'} - ${item.status}`, status: 'live', route, capture } : { headline: `No ${HM.life.domains[domain]?.noun || 'record'} recorded`, detail: 'Add a safe reference, owner, provider, due date and instructions.', status: 'setup', route, capture };
-    }
-    return { headline: 'Open the related family section', detail: 'This question is mapped, but the answer depends on information the household records.', status: 'setup', route, capture };
+    const item = answers[question.intent] || answers.help;
+    return {
+      headline: item[0],
+      detail: item[1],
+      route: item[2] || question.defaultRoute,
+      status: item[3] || 'direct',
+      capture: item[4] || null
+    };
   }
 
   function search(query = '', category = 'all', role = 'all') {
-    const words = lower(query).split(/[^a-z0-9]+/).filter(word => word.length > 1);
+    const terms = String(query).toLowerCase().trim().split(/\s+/).filter(Boolean);
     return questions
-      .filter(item => (category === 'all' || item.category === category) && (role === 'all' || item.role === role))
-      .map((item, index) => ({ item, index, score: words.length ? words.reduce((score, word) => score + (lower(item.text).includes(word) ? 2 : 0) + (lower(item.categoryLabel).includes(word) || lower(item.role).includes(word) ? 1 : 0), 0) : (index % 36 === 0 ? 3 : 1) }))
-      .filter(entry => !words.length || entry.score > 0)
-      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .filter(question => (category === 'all' || question.category === category) && (role === 'all' || question.role === role || question.role === 'Everyone'))
+      .map(question => {
+        const answerText = answers[question.intent]?.slice(0, 2).join(' ') || '';
+        const haystack = `${question.text} ${question.categoryLabel} ${question.role} ${answerText}`.toLowerCase();
+        const score = terms.reduce((total, term) => total + (haystack.includes(term) ? 1 : 0), 0);
+        return { question, score };
+      })
+      .filter(item => !terms.length || item.score > 0)
+      .sort((a, b) => b.score - a.score || a.question.id.localeCompare(b.question.id))
       .slice(0, 7)
-      .map(entry => entry.item);
+      .map(item => item.question);
   }
 
-  window.HM.questions = { roles, sets, questions, routeFor, answer, search };
+  window.HM = window.HM || {};
+  window.HM.questions = { roles, sets, questions, answers, answer, search };
 })();
