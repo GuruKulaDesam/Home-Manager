@@ -4,13 +4,13 @@ One dependency-free application combining the meaningful capabilities from all r
 
 ## Product structure
 
-Daily and weekly work is organised into seven plain-language groups: **Today, Household, Family, Money, Care, Learning, and Community**. No group exposes more than seven choices. Permanent or rarely changed records live in seven Settings groups: household profile, people and roles, home and services, money setup, health and safety, records and legacy, and app and data.
+Daily and weekly work is organised into seven plain-language groups: **Today, Household, Family, Money, Care, Learning, and Community**. No group exposes more than seven choices. The active group opens its pages directly in the main sidebar. Permanent or rarely changed preferences use only three Settings groups: household profile, people and roles, and app and data.
 
-Today projects recurring work from those permanent records into one agenda. For example, a policy belongs in Settings, but its renewal remains visible on Today; an appliance belongs in the asset register, but a repair remains in Household. Emergency help is always available in the header and links to official Indian helplines without claiming to dispatch assistance.
+Today projects recurring work into one agenda. Policies and renewals live under Money, while appliances, property records and repairs live under Household. Health and emergency plans live under Care. Emergency help remains available from the right utility rail and links to official Indian helplines without claiming to dispatch assistance.
 
 Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. The colorful interface uses seven accessible icon and tab tones over twelve locally stored mountain photographs, with highly translucent operational surfaces, alternating table bands and no dark register banners.
 
-The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, icon-triggered context-aware search, route-aware header KPIs, prominent section tabs, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent appearance preferences, validated backup import, seven action Quick Add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
+The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, icon-triggered context-aware search, route-aware header KPIs, sidebar page navigation, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent appearance preferences, validated backup import, seven action Quick Add and responsive navigation. The top identity row and right utility rail have no shell background, leaving the selected mountain photograph visible. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
 
 ## Product question audit
 
@@ -24,7 +24,7 @@ The workflows follow shared calendar, meal, shopping and household-list patterns
 
 Reusable records cover health, identity documents, bills, insurance, tax, property, vehicles, domestic help, subscriptions, travel and pilgrimage, festivals, emergency planning, pets, digital assets, sustainability, and nominations and legacy. Each area supports adding, editing, deleting, filtering and status tracking, with upcoming dates surfaced on Today and in notifications.
 
-The supplied `Family_Home_Manager_7x7x7_Unlock_Model.xlsx` informed this separation. Its 49 stable core records map to Settings, while its recurring records, plans, actions, collaboration, safeguards, insights and automation concepts map to operational views. Maturity stages remain a design model, not navigation labels.
+The supplied `Family_Home_Manager_7x7x7_Unlock_Model.xlsx` informed this separation. Stable household identity, people, consent, sync preferences, appearance, privacy and backup map to Settings. Assets, records, plans, actions, collaboration, safeguards and insights map to the seven operational groups. Maturity stages remain a design model, not navigation labels.
 
 The interaction model also draws on proven patterns from Cozi and FamilyWall for a shared family calendar, lists and meals; Monarch for household money collaboration; and 1Password Families for separating private, shared and recovery information. Indian safety and record links point to official ERSS 112, ABHA and DigiLocker services.
 

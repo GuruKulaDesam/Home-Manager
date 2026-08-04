@@ -7,7 +7,7 @@
       ['Today', 'sparkles', 'global/overview'], ['Help & Guide', 'circle-help', 'global/questions']
     ]},
     household: { label: 'Household', icon: 'house', note: 'Run the home', route: 'home/overview', items: [
-      ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & repairs', 'wrench', 'home/property'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
+      ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
     ]},
     family: { label: 'Family', icon: 'users-round', note: 'Plans and togetherness', route: 'home/calendar', items: [
       ['Calendar', 'calendar-days', 'home/calendar'], ['Family pulse', 'heart-handshake', 'home/family'], ['Travel', 'luggage', 'home/life/travel'], ['Celebrations', 'party-popper', 'home/life/festivals']
@@ -29,10 +29,6 @@
   const settingsGroups = [
     ['household', 'Household profile', 'house', 'Home address, language and family defaults'],
     ['people', 'People & roles', 'users-round', 'Members, caregivers, contacts and consent'],
-    ['home', 'Home & services', 'building-2', 'Property, vehicles, domestic help and providers'],
-    ['money', 'Money setup', 'wallet-cards', 'Policies, tax profiles and recurring commitments'],
-    ['health', 'Health & safety', 'heart-pulse', 'Health profiles, doctors, pets and emergency plan'],
-    ['records', 'Records & legacy', 'folders', 'Documents, digital household and nominees'],
     ['app', 'App & data', 'settings-2', 'Mountain backgrounds, Google sync, privacy and backup']
   ];
 
@@ -53,10 +49,10 @@
     'home/family': ['Family', 'Members, wellbeing and recognition'],
     'home/finance': ['Money', 'Expenses and household totals'],
     'home/inventory': ['Supplies & Meals', 'Inventory and meal planning'],
-    'home/assets': ['Maintenance & Assets', 'Household issues and valuables'],
+    'home/assets': ['Property & Assets', 'Repairs, property records and household assets'],
     'home/wisdom': ['Wisdom & Recognition', 'Family knowledge and points'],
     'home/directory': ['Home Directory', 'Family and service contacts'],
-    'home/property': ['Property & Repairs', 'Maintenance, utilities and home records'],
+    'home/property': ['Property & Assets', 'Repairs, property records and household assets'],
     'community/overview': ['Community Overview', 'Your local personal planner'],
     'community/feed': ['News & Forum', 'Locally stored neighbourhood notes'],
     'community/events': ['Community Events', 'Meetings, markets and local activities'],
@@ -77,7 +73,6 @@
   titles['home/life'] = ['Family Life Registry', 'Every important family record in one place'];
   Object.entries(HM.life.domains).forEach(([key, config]) => {
     titles[`home/life/${key}`] = [config.title, config.note];
-    titles[`settings/life/${key}`] = [config.title, `Settings · ${config.note}`];
   });
   settingsGroups.forEach(item => { titles[`settings/${item[0]}`] = [item[1], item[3]]; });
 
@@ -110,12 +105,6 @@
 
   function empty(message, kind, label) {
     return `<div class="empty"><p>${e(message)}</p>${kind ? `<button class="primary" data-create="${kind}">${icon('plus')}<span>${e(label)}</span></button>` : ''}</div>`;
-  }
-
-  function intro() {
-    const now = new Date();
-    const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 18 ? 'Good afternoon' : 'Good evening';
-    return `<section class="page-intro"><div><span class="eyebrow">${icon('sunrise')} ${e(now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }))}</span><h2>${greeting}</h2><p>See what needs attention across your household, local plans and study goals.</p></div><span class="aurora-rule" aria-hidden="true"><i></i><i></i><i></i><i></i></span></section>`;
   }
 
   function unified() {
@@ -216,7 +205,7 @@
     return `<section class="ask-heading"><div><span class="eyebrow">${icon('badge-check')} PRODUCT CHECK</span><h2>Can every family member understand and use it?</h2><p>Purpose, navigation, common workflows, trust and recovery are answered against the working interface.</p></div><span class="question-count"><b>${Q.questions.length}</b><small>product questions checked</small></span></section>
       <section class="question-coverage" aria-label="Product question coverage"><span><b>${audit.direct || 0}</b><small>direct answers</small></span><span><b>${audit.workflow || 0}</b><small>working workflows</small></span><span><b>${(audit.settings || 0) + (audit.privacy || 0)}</b><small>setup and data answers</small></span><span><b>${audit.boundary || 0}</b><small>honest boundaries</small></span></section>
       <section class="product-path" aria-label="Seven steps through Home Manager">
-        ${[['sparkles', '1', 'See today', 'global/overview'], ['users-round', '2', 'Set up family', 'settings/people'], ['list-checks', '3', 'Assign work', 'home/tasks'], ['calendar-days', '4', 'Plan time', 'home/calendar'], ['wallet-cards', '5', 'Track money', 'home/finance'], ['heart-handshake', '6', 'Prepare care', 'settings/health'], ['database-backup', '7', 'Protect data', 'settings/app']].map(item => `<button data-route="${item[3]}"><span>${icon(item[0])}</span><small>${item[1]}</small><b>${item[2]}</b></button>`).join('')}
+        ${[['sparkles', '1', 'See today', 'global/overview'], ['users-round', '2', 'Set up family', 'settings/people'], ['list-checks', '3', 'Assign work', 'home/tasks'], ['calendar-days', '4', 'Plan time', 'home/calendar'], ['wallet-cards', '5', 'Track money', 'home/finance'], ['heart-handshake', '6', 'Prepare care', 'home/life/health'], ['database-backup', '7', 'Protect data', 'settings/app']].map(item => `<button data-route="${item[3]}"><span>${icon(item[0])}</span><small>${item[1]}</small><b>${item[2]}</b></button>`).join('')}
       </section>
       <section class="question-toolbar">
         <label class="question-search">${icon('search')}<span class="sr-only">Search product help</span><input id="questionQuery" autocomplete="off" placeholder="Try: How do I add a recurring task?"></label>
@@ -264,7 +253,7 @@
 
   function family() {
     const s = D.state;
-    return `<div class="section-head"><div><h2>Family pulse</h2><p>A simple wellbeing check, not a competition.</p></div><button data-route="settings/people">Manage profiles</button></div><div class="cards">${s.people.map(person => `<article class="card"><span class="avatar">${e((person.name || '?')[0])}</span><h3>${e(person.name)}</h3><p>${e(person.householdRole)}</p><div class="row"><div class="grow"><small>Current wellbeing</small><b>${clamp(person.wellbeing)}%</b></div></div></article>`).join('')}</div>`;
+    return `<div class="toolbar"><span>${s.people.length} family members</span><span class="grow"></span><button data-route="settings/people">${icon('users-round')}<span>Manage profiles</span></button></div><div class="cards">${s.people.map(person => `<article class="card"><span class="avatar">${e((person.name || '?')[0])}</span><h3>${e(person.name)}</h3><p>${e(person.householdRole)}</p><div class="row"><div class="grow"><small>Current wellbeing</small><b>${clamp(person.wellbeing)}%</b></div></div></article>`).join('')}</div>`;
   }
 
   function topCategory(items) {
@@ -286,8 +275,7 @@
   }
 
   function assets() {
-    const issues = D.state.issues.filter(x => x.scope === 'household');
-    return `<div class="section-head"><div><h2>Repairs & maintenance</h2><p>Open work, ownership and follow-up.</p></div><span class="row-actions"><button data-route="settings/home">Asset settings</button><button class="primary" data-create="issue" data-scope="household">${icon('plus')}<span>Repair</span></button></span></div><section class="panel">${issues.length ? issues.map(x => row(x.title, `${x.category} - ${x.location}`, `<button data-advance="${e(x.id)}">${status(x.status)}</button>`)).join('') : empty('No maintenance issues.', 'issue', 'Report issue')}</section>`;
+    return propertyHub();
   }
 
   function wisdom() {
@@ -326,15 +314,14 @@
       ${groups.map(group => `<section class="life-section"><div class="section-head"><div><h2>${e(group)}</h2><p>Dedicated registers with shared reminders and search</p></div></div><div class="life-domain-grid">${Object.entries(configs).filter(([, config]) => config.group === group).map(([key, config]) => { const items = records.filter(record => record.domain === key); const alerts = items.filter(record => lifeDueState(record)); return `<button class="card life-domain-card" data-route="home/life/${key}"><span class="life-icon">${icon(config.icon)}</span><span class="grow"><b>${e(config.title)}</b><small>${e(config.note)}</small></span><span class="life-count ${alerts.length ? 'attention' : ''}">${alerts.length || items.length}</span></button>`; }).join('')}</div></section>`).join('')}`;
   }
 
-  function lifeDomain(domain, settingsMode = false) {
+  function lifeDomain(domain) {
     const config = HM.life.domains[domain];
     if (!config) return lifeHub();
     const records = HM.life.ensure().filter(record => record.domain === domain);
     const alerts = records.filter(record => lifeDueState(record));
     const total = records.reduce((sum, record) => sum + (+record.amount || 0), 0);
-    return `<section class="domain-hero"><span class="life-icon large">${icon(config.icon)}</span><div class="grow"><small>${e(config.group)}</small><h2>${e(config.title)}</h2><p>${e(config.note)}</p></div><button class="primary" data-create="life" data-domain="${domain}">${icon('plus')}<span>Add ${e(config.noun)}</span></button></section>
-      <section class="metrics compact-metrics">${metric('Records', records.length, config.title, config.icon)}${metric('Needs attention', alerts.length, 'Due or overdue', 'calendar-warning')}${metric('Tracked value', D.money(total), 'Current records', 'indian-rupee')}${metric('Completed', records.filter(record => ['done', 'paid', 'complete'].includes(record.status)).length, 'Closed items', 'circle-check-big')}</section>
-      <div class="toolbar"><input data-filter aria-label="Search ${e(config.title)}" placeholder="Search ${e(config.title.toLowerCase())}"><select data-status-filter aria-label="Filter by status"><option value="">All statuses</option><option value="planning">Planning</option><option value="pending">Pending</option><option value="active">Active</option><option value="due">Due</option><option value="paid">Paid</option><option value="done">Done</option></select><button data-route="${settingsMode ? 'settings/records' : 'global/overview'}">${settingsMode ? 'Back to settings' : 'Back to Today'}</button></div>
+    return `<section class="metrics compact-metrics">${metric('Records', records.length, config.title, config.icon)}${metric('Needs attention', alerts.length, 'Due or overdue', 'calendar-warning')}${metric('Tracked value', D.money(total), 'Current records', 'indian-rupee')}${metric('Completed', records.filter(record => ['done', 'paid', 'complete'].includes(record.status)).length, 'Closed items', 'circle-check-big')}</section>
+      <div class="toolbar"><input data-filter aria-label="Search ${e(config.title)}" placeholder="Search ${e(config.title.toLowerCase())}"><select data-status-filter aria-label="Filter by status"><option value="">All statuses</option><option value="planning">Planning</option><option value="pending">Pending</option><option value="active">Active</option><option value="due">Due</option><option value="paid">Paid</option><option value="done">Done</option></select><button class="primary" data-create="life" data-domain="${domain}">${icon('plus')}<span>Add ${e(config.noun)}</span></button></div>
       <section class="panel life-register">${records.length ? `<table class="table"><thead><tr><th>Record</th><th>Owner</th><th>Provider / reference</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>${records.map(record => { const dueState = lifeDueState(record); return `<tr data-filter-row data-status="${e(record.status)}"><td data-label="Record"><b>${e(record.title)}</b><small>${e(record.category || config.title)}</small></td><td data-label="Owner">${e(record.owner || 'Family')}</td><td data-label="Provider"><span>${e(record.provider || 'Not set')}</span><small>${e(record.reference || '')}</small></td><td data-label="Due"><span class="badge ${dueState === 'overdue' ? 'danger' : dueState === 'soon' ? 'warning' : ''}">${D.date(record.dueDate)}</span></td><td data-label="Amount">${record.amount ? D.money(record.amount) : '-'}</td><td data-label="Status"><button data-life-status="${e(record.id)}">${lifeStatus(record.status)}</button></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(record.title)}" data-edit="life" data-id="${e(record.id)}" data-domain="${domain}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(record.title)}" data-delete="lifeRecords:${e(record.id)}">${icon('trash-2')}</button></span></td></tr>`; }).join('')}</tbody></table>` : empty(`No ${config.title.toLowerCase()} records yet.`, 'life', `Add ${config.noun}`)}</section>`;
   }
 
@@ -435,43 +422,32 @@
   }
 
   function settingsPage(section = 'household') {
+    if (!['household', 'people', 'app'].includes(section)) section = 'household';
     const settings = D.state.settings;
     const intro = settingsTabs(section);
     if (section === 'household') return `${intro}<form id="householdSettings" class="panel settings-form"><div class="section-head"><div><h2>Home identity</h2><p>Enter once and update only when the household changes.</p></div><button class="primary" type="submit">${icon('save')}<span>Save</span></button></div><div class="form-grid"><label>Household name<input name="householdName" value="${e(settings.householdName || 'Shishyan Family')}"></label><label>Primary language<select name="language"><option ${settings.language === 'English' ? 'selected' : ''}>English</option><option ${settings.language === 'Tamil' ? 'selected' : ''}>Tamil</option><option ${settings.language === 'Hindi' ? 'selected' : ''}>Hindi</option><option ${settings.language === 'Malayalam' ? 'selected' : ''}>Malayalam</option><option ${settings.language === 'Telugu' ? 'selected' : ''}>Telugu</option><option ${settings.language === 'Kannada' ? 'selected' : ''}>Kannada</option></select></label><label class="wide">Home address and landmark<textarea name="primaryAddress" placeholder="Address visible on the emergency card">${e(settings.primaryAddress || '')}</textarea></label><label>Timezone<input name="timezone" value="${e(settings.timezone || 'Asia/Kolkata')}"></label><label>Food preference<input name="foodPreference" value="${e(settings.foodPreference || '')}" placeholder="Vegetarian, allergies, fasting preferences"></label></div></form>`;
     if (section === 'people') return `${intro}<section class="panel"><div class="section-head"><div><h2>Household members</h2><p>Profiles, roles and accessibility needs.</p></div><button class="primary" data-create="person">${icon('user-plus')}<span>Add member</span></button></div>${D.state.people.map(person => `<div class="row"><span class="avatar small-avatar">${e(person.name[0])}</span><div class="grow"><b>${e(person.name)}</b><small>${e(person.householdRole)}</small></div><button class="icon-action" aria-label="Edit ${e(person.name)}" data-edit="person" data-id="${e(person.id)}">${icon('pencil')}</button></div>`).join('')}</section><section class="settings-grid">${settingsLink('Family contacts', 'Doctors, schools, trusted people and providers', 'home/directory', 'contact-round')}${settingsLink('Family knowledge', 'Traditions, recipes and shared memories', 'home/wisdom', 'book-heart')}</section>`;
-    if (section === 'home') return `${intro}
-      <section class="settings-grid">
-        ${settingsLink('Property & utilities', 'Home, occupancy and service references', 'settings/life/property', 'building-2')}
-        ${settingsLink('Vehicles', 'Registration, insurance and service master', 'settings/life/vehicles', 'car-front')}
-        ${settingsLink('Domestic help profiles', 'Roles, agreed schedule and contact details', 'settings/life/help', 'hand-helping')}
-        ${settingsLink('Service directory', 'Vendors, repair contacts and availability', 'home/directory', 'contact-round')}
-      </section>
-      <section class="panel"><div class="section-head"><div><h2>Asset register</h2><p>Appliances, valuables and long-lived household items.</p></div><button class="primary" data-create="asset">${icon('plus')}<span>Add asset</span></button></div>
-        ${D.state.assets.length ? D.state.assets.map(asset => `<div class="row"><span class="asset-icon">${icon('gem')}</span><div class="grow"><b>${e(asset.name)}</b><small>${e(asset.category)} - ${e(asset.status)}</small></div><b>${D.money(asset.value)}</b><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(asset.name)}" data-edit="asset" data-id="${e(asset.id)}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(asset.name)}" data-delete="assets:${e(asset.id)}">${icon('trash-2')}</button></span></div>`).join('') : empty('No assets recorded.', 'asset', 'Add asset')}
-      </section>`;
-    if (section === 'money') return `${intro}<section class="settings-grid">${settingsLink('Insurance policies', 'Provider, masked reference and renewal rule', 'settings/life/insurance', 'shield-check')}${settingsLink('Tax profiles', 'Taxpayer and filing references', 'settings/life/tax', 'landmark')}${settingsLink('Subscriptions', 'Recurring service definitions', 'settings/life/subscriptions', 'repeat-2')}${settingsLink('Bills and payment rules', 'Providers, recurrence and due dates', 'settings/life/bills', 'receipt-indian-rupee')}${settingsLink('Assets and valuables', 'Long-lived household value records', 'settings/home', 'gem')}</section><section class="panel privacy-note"><b>Keep payment secrets out</b><p>Never store UPI PINs, OTPs, CVVs, passwords or full account numbers in Home Manager.</p></section>`;
-    if (section === 'health') return `${intro}<section class="settings-grid">${settingsLink('Health profiles', 'Providers, allergies and preventive care references', 'settings/life/health', 'heart-pulse')}${settingsLink('Emergency plan', 'Trusted contacts, instructions and review dates', 'settings/life/emergency', 'siren')}${settingsLink('Pets and animals', 'Profiles, vaccines and care providers', 'settings/life/pets', 'paw-print')}</section><section class="panel official-links"><div class="section-head"><div><h2>Trusted services</h2><p>Open official services; Home Manager does not copy their sensitive records.</p></div></div><a href="https://112.gov.in/" target="_blank" rel="noopener">India Emergency 112 ${icon('external-link')}</a><a href="https://abdm.gov.in/" target="_blank" rel="noopener">ABHA health records ${icon('external-link')}</a></section>`;
-    if (section === 'records') return `${intro}<section class="settings-grid">${settingsLink('Documents & IDs', 'Masked references, holders, issuers and expiry', 'settings/life/documents', 'folders')}${settingsLink('Digital household', 'Devices, backups and account custody notes', 'settings/life/digital', 'cloud-cog')}${settingsLink('Nominees & legacy', 'Nomination and succession review', 'settings/life/legacy', 'scroll-text')}${settingsLink('Family knowledge', 'Recipes, traditions, manuals and memories', 'home/wisdom', 'library-big')}</section><section class="panel official-links"><div class="section-head"><div><h2>Official document wallet</h2><p>Use DigiLocker for authentic documents. Store only masked references here.</p></div></div><a href="https://www.digilocker.gov.in/" target="_blank" rel="noopener">Open DigiLocker ${icon('external-link')}</a></section>`;
     return appSettings(intro, settings);
   }
 
   function propertyHub() {
-    return `<section class="section-head"><div><h2>Property & repairs</h2><p>Choose the changing work or the stable home record.</p></div></section><section class="choice-grid">${settingsLink('Repairs & maintenance', 'Open issues, contractors, costs and follow-up', 'home/assets', 'wrench')}${settingsLink('Property & utilities', 'Service dates, taxes and occupancy records', 'home/life/property', 'building-2')}</section>`;
+    const issues = D.state.issues.filter(item => item.scope === 'household');
+    const assets = D.state.assets;
+    const total = assets.reduce((sum, item) => sum + (+item.value || 0), 0);
+    return `<section class="metrics compact-metrics">${metric('Assets', assets.length, 'Household register', 'gem')}${metric('Open repairs', issues.filter(item => D.status(item.status) !== 'done').length, 'Needs follow-up', 'wrench')}${metric('Registered value', D.money(total), 'Approximate value', 'indian-rupee')}${metric('Property records', HM.life.ensure().filter(item => item.domain === 'property').length, 'Utilities and occupancy', 'building-2')}</section>
+      <div class="toolbar"><button data-route="home/life/property">${icon('building-2')}<span>Property records</span></button><span class="grow"></span><span class="toolbar-actions"><button class="primary" data-create="issue" data-scope="household">${icon('plus')}<span>Add repair</span></button><button class="primary" data-create="asset">${icon('plus')}<span>Add asset</span></button></span></div>
+      <div class="grid-2"><section class="panel"><div class="section-head"><h2>Repairs</h2></div>${issues.length ? issues.map(item => row(item.title, `${item.category} - ${item.location}`, `<button data-advance="${e(item.id)}">${status(item.status)}</button>`)).join('') : empty('No maintenance issues.', 'issue', 'Report issue')}</section>
+      <section class="panel"><div class="section-head"><h2>Asset register</h2></div>${assets.length ? assets.map(asset => `<div class="row"><span class="asset-icon">${icon('gem')}</span><div class="grow"><b>${e(asset.name)}</b><small>${e(asset.category)} - ${e(asset.status)}</small></div><b>${D.money(asset.value)}</b><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(asset.name)}" data-edit="asset" data-id="${e(asset.id)}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(asset.name)}" data-delete="assets:${e(asset.id)}">${icon('trash-2')}</button></span></div>`).join('') : empty('No assets recorded.', 'asset', 'Add asset')}</section></div>`;
   }
 
   function communityParticipate() {
-    return `<section class="section-head"><div><h2>Events & polls</h2><p>Plan local activities or record a household preference.</p></div></section><section class="choice-grid">${settingsLink('Community events', 'Meetings, markets and neighbourhood activities', 'community/events', 'calendar-heart')}${settingsLink('Community polls', 'Preferences stored only in this browser', 'community/polls', 'chart-no-axes-column')}</section>`;
+    return `<section class="choice-grid">${settingsLink('Community events', 'Meetings, markets and neighbourhood activities', 'community/events', 'calendar-heart')}${settingsLink('Community polls', 'Preferences stored only in this browser', 'community/polls', 'chart-no-axes-column')}</section>`;
   }
 
   function render(route) {
     if (route === 'global/overview') return unified();
     if (route === 'global/questions') return questionHub();
     if (route === 'global/settings') return settingsPage('app');
-    if (route.startsWith('settings/life/')) {
-      const domain = route.split('/')[2];
-      const parent = ({ property: 'home', vehicles: 'home', help: 'home', bills: 'money', insurance: 'money', tax: 'money', subscriptions: 'money', health: 'health', emergency: 'health', pets: 'health', documents: 'records', digital: 'records', legacy: 'records' })[domain] || 'household';
-      return `${settingsTabs(parent)}${lifeDomain(domain, true)}`;
-    }
     if (route.startsWith('settings/')) return settingsPage(route.split('/')[1]);
     if (route === 'home/life') return lifeHub();
     if (route.startsWith('home/life/')) return lifeDomain(route.split('/')[2]);

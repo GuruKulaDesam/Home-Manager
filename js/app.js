@@ -67,7 +67,7 @@
     document.body.classList.add(`group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
     const topRoute = ({ 'home/assets': 'home/property', 'home/life/property': 'home/property', 'community/events': 'community/participate', 'community/polls': 'community/participate' })[route] || route;
-    $('#groupNav').innerHTML = activeSettings ? '' : group.items.map((item, index) => { const active = topRoute === item[2]; return `<button type="button" data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="tab-tone-${index + 1} ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('');
+    $('#sectionNav').innerHTML = `<span class="section-nav-label">${D.esc(group.label)} pages</span>` + group.items.map((item, index) => { const active = !activeSettings && topRoute === item[2]; return `<button type="button" data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="tab-tone-${index + 1} ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('');
     const navItems = Object.entries(V.groups).map(([key, item]) => [item.label, item.icon, item.route, key]);
     $('#workspaceMenuLabel').innerHTML = `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
     $('#nav').innerHTML = navItems.map(item => { const active = item[3] === activeGroup; return `<button data-group="${item[3]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
@@ -130,6 +130,21 @@
   function render() {
     HM.life.ensure();
     route = location.hash.slice(2) || route;
+    const movedLifeRoute = route.match(/^settings\/life\/([^/]+)$/);
+    if (movedLifeRoute) {
+      go(`home/life/${movedLifeRoute[1]}`);
+      return;
+    }
+    const movedSettingsRoute = {
+      'settings/home': 'home/property',
+      'settings/money': 'home/finance',
+      'settings/health': 'home/life/health',
+      'settings/records': 'home/life/documents'
+    }[route];
+    if (movedSettingsRoute) {
+      go(movedSettingsRoute);
+      return;
+    }
     const first = route.split('/')[0];
     if (['home', 'community', 'study'].includes(first)) {
       workspace = first;
@@ -148,7 +163,7 @@
     document.body.classList.remove('menu-open');
     $('#menu').setAttribute('aria-expanded', 'false');
     refreshIcons();
-    requestAnimationFrame(() => $('#groupNav .active')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }));
+    requestAnimationFrame(() => $('#sectionNav .active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
   }
 
   function inputAttributes(name, type) {
@@ -370,8 +385,7 @@
     if (type === 'Issue') return record.scope === 'civic' ? 'community/tickets' : 'home/assets';
     if (type === 'Contact') return record.scope === 'community' ? 'community/directory' : 'home/directory';
     if (type === 'Life record') {
-      const settingsDomains = ['documents', 'digital', 'legacy', 'property', 'vehicles', 'help'];
-      return `${settingsDomains.includes(record.domain) ? 'settings' : 'home'}/life/${record.domain}`;
+      return `home/life/${record.domain}`;
     }
     return { Person: 'home/family', Expense: 'home/finance', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/board', Goal: 'study/goals', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
   }
@@ -437,7 +451,7 @@
     ];
     const emergencyRecords = (D.state.lifeRecords || []).filter(item => ['emergency', 'health'].includes(item.domain)).slice(0, 4);
     const address = D.state.settings.primaryAddress || 'Add the home address and landmark in Settings.';
-    $('#emergencyBody').innerHTML = `<section class="emergency-services">${services.map(item => `<a href="tel:${item[0]}"><span><i data-lucide="${item[3]}"></i></span><span class="grow"><b>${item[1]}</b><small>${item[2]}</small></span><strong>${item[0]}</strong></a>`).join('')}</section><section class="emergency-card"><div class="section-head"><div><small>HOUSEHOLD CARD</small><h3>${D.esc(D.state.settings.householdName || 'Family')}</h3></div><button data-route="settings/health">Edit plan</button></div><p><b>Home address</b><br>${D.esc(address)}</p>${emergencyRecords.map(item => `<div class="row"><div class="grow"><b>${D.esc(item.title)}</b><small>${D.esc(item.owner || 'Family')} · ${D.esc(item.notes || item.reference || 'Open the record for details')}</small></div></div>`).join('') || '<p>No health or emergency notes configured.</p>'}</section>`;
+    $('#emergencyBody').innerHTML = `<section class="emergency-services">${services.map(item => `<a href="tel:${item[0]}"><span><i data-lucide="${item[3]}"></i></span><span class="grow"><b>${item[1]}</b><small>${item[2]}</small></span><strong>${item[0]}</strong></a>`).join('')}</section><section class="emergency-card"><div class="section-head"><div><small>HOUSEHOLD CARD</small><h3>${D.esc(D.state.settings.householdName || 'Family')}</h3></div><button data-route="home/life/emergency">Edit plan</button></div><p><b>Home address</b><br>${D.esc(address)}</p>${emergencyRecords.map(item => `<div class="row"><div class="grow"><b>${D.esc(item.title)}</b><small>${D.esc(item.owner || 'Family')} · ${D.esc(item.notes || item.reference || 'Open the record for details')}</small></div></div>`).join('') || '<p>No health or emergency notes configured.</p>'}</section>`;
     $('#emergencyDialog').showModal();
     refreshIcons();
   }
