@@ -4,6 +4,7 @@
   const $ = selector => document.querySelector(selector);
   let route = location.hash.slice(2) || 'global/overview';
   let workspace = route.split('/')[0];
+  let activeArea = HM.hierarchy.forRoute(route, D.state.settings.activeArea);
   let lastDeleted = null;
   let toastTimer = null;
   let activeTimerMinutes = 25;
@@ -41,43 +42,31 @@
   }
 
   function renderNav() {
+    activeArea = HM.hierarchy.forRoute(route, activeArea);
+    D.state.settings.activeArea = activeArea;
+    const area = HM.hierarchy.areas[activeArea];
     document.body.classList.remove('workspace-home', 'workspace-community', 'workspace-study');
     document.body.classList.add('workspace-' + workspace);
-    document.querySelectorAll('[data-workspace]').forEach(button => {
-      const active = button.dataset.workspace === workspace;
-      button.classList.toggle('active', active);
-      button.setAttribute('aria-selected', String(active));
-      button.tabIndex = active ? 0 : -1;
-    });
-    const workspaceMeta = {
-      home: { title: 'Home menu', note: 'Plan and care', icon: 'house' },
-      community: { title: 'Community menu', note: 'Discover and participate', icon: 'map-pinned' },
-      study: { title: 'Study menu', note: 'Plan and focus', icon: 'book-open' }
-    }[workspace];
-    $('#workspaceMenuLabel').innerHTML = `<span><small>${workspaceMeta.note}</small><b>${workspaceMeta.title}</b></span><i data-lucide="${workspaceMeta.icon}"></i>`;
+    $('#macroNav').innerHTML = Object.entries(HM.hierarchy.areas).map(([key, item]) => `<button type="button" role="tab" aria-controls="subNav" data-area="${key}" class="${key === activeArea ? 'active' : ''}" aria-selected="${key === activeArea}" tabindex="${key === activeArea ? '0' : '-1'}"><i data-lucide="${item.icon}"></i><span>${D.esc(item.shortLabel || item.label)}</span></button>`).join('');
+    $('#subNav').setAttribute('aria-label', `${area.label} sections`);
+    $('#subNav').innerHTML = area.sections.map(section => `<button type="button" data-route="${section.route}" data-area="${activeArea}" class="${route === section.route ? 'active' : ''}" ${route === section.route ? 'aria-current="page"' : ''}>${D.esc(section.label)}</button>`).join('');
+    const matrixCode = route.match(/^matrix\/([1-7]{2,7})$/)?.[1];
+    const branch = matrixCode ? HM.hierarchy.branch(matrixCode) : null;
+    let railLabel = 'Major · Root';
+    let railItems = area.sections;
+    if (branch) {
+      const level = matrixCode.length < 7 ? matrixCode.length + 1 : 7;
+      const prefix = matrixCode.length < 7 ? matrixCode : matrixCode.slice(0, -1);
+      const levelMeta = HM.hierarchy.levels[level];
+      railLabel = `${levelMeta.scale} · ${levelMeta.growth}`;
+      railItems = levelMeta.children.map((child, index) => ({ label: child[0], note: child[1], icon: 'git-branch', route: `matrix/${prefix}${index + 1}` }));
+    }
+    $('#workspaceMenuLabel').innerHTML = `<span><small>7 children</small><b>${D.esc(railLabel)}</b></span><i data-lucide="git-fork"></i>`;
+    $('#nav').innerHTML = railItems.map((section, index) => `<button data-route="${section.route}" data-area="${activeArea}" class="${route === section.route ? 'active' : ''}" ${route === section.route ? 'aria-current="page"' : ''}><span class="section-index">0${index + 1}</span><span class="nav-icon"><i data-lucide="${section.icon}"></i></span><span><b>${D.esc(section.label)}</b><small>${D.esc(section.note)}</small></span></button>`).join('');
 
-    const unifiedActive = route === 'global/overview';
-    const grouped = new Map();
-    (V.nav[workspace] || []).forEach(item => {
-      const group = item[0] || 'Core';
-      if (!grouped.has(group)) grouped.set(group, []);
-      grouped.get(group).push(item);
-    });
-    const groupIcons = { Core: 'compass', Plan: 'calendar-range', Home: 'house', People: 'users', Money: 'wallet-cards', Household: 'sofa', Plans: 'map', Records: 'folders', Care: 'heart-handshake', Discover: 'telescope', Participate: 'hand-heart', Resources: 'library', Focus: 'timer' };
-    const groups = [...grouped.entries()].map(([group, items]) => {
-      const containsActive = items.some(item => route === item[3]);
-      return `<details class="nav-section" ${containsActive || group === 'Core' ? 'open' : ''}><summary><span>${D.esc(group)}</span><i data-lucide="chevron-down"></i></summary><div>${items.map(item => { const active = route === item[3]; return `<button data-route="${item[3]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[2] || groupIcons[group] || 'circle'}"></i></span><span>${D.esc(item[1])}</span></button>`; }).join('')}</div></details>`;
-    }).join('');
-    $('#nav').innerHTML = `<button data-route="global/overview" class="${unifiedActive ? 'active' : ''}" ${unifiedActive ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="sparkles"></i></span><span>Today</span></button>${groups}`;
-
-    const popular = {
-      home: [['home/overview', 'Overview', 'layout-dashboard'], ['home/tasks', 'Tasks', 'list-checks'], ['home/calendar', 'Calendar', 'calendar-days']],
-      community: [['community/overview', 'Overview', 'map'], ['community/feed', 'Feed', 'newspaper'], ['community/tickets', 'Tickets', 'ticket-check']],
-      study: [['study/overview', 'Overview', 'graduation-cap'], ['study/board', 'Board', 'columns-3'], ['study/focus', 'Focus', 'timer']]
-    };
-    $('#bottomNav').innerHTML = (popular[workspace] || popular.home).map(item => {
-      const active = route === item[0];
-      return `<button data-route="${item[0]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[2]}"></i><span>${item[1]}</span></button>`;
+    $('#bottomNav').innerHTML = area.sections.slice(0, 3).map(section => {
+      const active = route === section.route;
+      return `<button data-route="${section.route}" data-area="${activeArea}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${section.icon}"></i><span>${D.esc(section.label)}</span></button>`;
     }).join('') + '<button id="bottomMore"><i data-lucide="ellipsis"></i><span>More</span></button>';
   }
 
@@ -114,8 +103,10 @@
       D.save();
     }
     renderNav();
-    const title = V.titles[route] || ['Today', 'Home Manager'];
-    $('#breadcrumb').textContent = route === 'global/overview' ? 'Home Manager' : workspace[0].toUpperCase() + workspace.slice(1);
+    const branch = route.startsWith('matrix/') ? HM.hierarchy.branch(route.split('/')[1]) : null;
+    const currentNode = branch?.nodes[branch.nodes.length - 1];
+    const title = branch ? [currentNode.label, `${branch.area.label} · ${branch.code}`] : V.titles[route] || ['Today', 'Home Manager'];
+    $('#breadcrumb').textContent = HM.hierarchy.areas[activeArea].label;
     $('#pageTitle').textContent = title[0];
     document.title = title[0] + ' - Home Manager';
     $('#content').innerHTML = V.render(route);
@@ -404,6 +395,14 @@
       if (dialog?.open) dialog.close();
       return;
     }
+    const areaTarget = event.target.closest('[data-area]');
+    if (areaTarget) {
+      activeArea = areaTarget.dataset.area;
+      D.state.settings.activeArea = activeArea;
+      D.save();
+      go(areaTarget.dataset.route || HM.hierarchy.areas[activeArea].route);
+      return;
+    }
     const routeTarget = event.target.closest('[data-route]');
     if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); toggleNotifications(false); return; }
     const workspaceTarget = event.target.closest('[data-workspace]');
@@ -456,6 +455,15 @@
   $('#backdrop').onclick = () => { document.body.classList.remove('menu-open'); $('#menu').setAttribute('aria-expanded', 'false'); };
   $('#collapse').onclick = () => { D.state.settings.sidebarCollapsed = !D.state.settings.sidebarCollapsed; D.save(); applyTheme(); };
   $('#bottomNav').onclick = event => { if (event.target.closest('#bottomMore')) { document.body.classList.add('menu-open'); $('#menu').setAttribute('aria-expanded', 'true'); } };
+  $('#macroNav').onkeydown = event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const tabs = [...$('#macroNav').querySelectorAll('[role="tab"]')];
+    const current = Math.max(0, tabs.indexOf(document.activeElement));
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].click();
+    setTimeout(() => $('#macroNav').querySelectorAll('[role="tab"]')[next]?.focus(), 0);
+  };
   window.addEventListener('hashchange', render);
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }

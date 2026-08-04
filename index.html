@@ -19,11 +19,6 @@
       <span class="brand-mark" aria-hidden="true"><i data-lucide="mountain-snow"></i></span>
       <div><b>Home Manager</b><small>Life, clearly organised</small></div>
     </div>
-    <div class="workspace-switcher" role="tablist" aria-label="Workspace">
-      <button type="button" role="tab" aria-controls="nav" data-workspace="home"><i data-lucide="house"></i><span>Home</span></button>
-      <button type="button" role="tab" aria-controls="nav" data-workspace="community"><i data-lucide="map-pinned"></i><span>Community</span></button>
-      <button type="button" role="tab" aria-controls="nav" data-workspace="study"><i data-lucide="book-open"></i><span>Study</span></button>
-    </div>
     <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
     <nav id="nav"></nav>
     <div class="sidebar-bottom">
@@ -35,22 +30,26 @@
   <button id="backdrop" aria-label="Close navigation"></button>
 
   <div class="app-shell">
-    <header>
-      <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
-      <div class="page-identity">
-        <small id="breadcrumb">Home Manager</small>
-        <h1 id="pageTitle">Today</h1>
+    <header class="app-header">
+      <div class="topbar">
+        <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
+        <div class="page-identity">
+          <small id="breadcrumb">Home Manager</small>
+          <h1 id="pageTitle">Today</h1>
+        </div>
+        <button type="button" id="globalSearch" class="search-trigger" aria-label="Search everything">
+          <i data-lucide="search"></i><span>Search everything</span><kbd>Ctrl K</kbd>
+        </button>
+        <div class="header-actions">
+          <button type="button" id="searchMobile" class="icon-button" title="Search" aria-label="Search"><i data-lucide="search"></i></button>
+          <button type="button" id="notifications" class="icon-button has-indicator" title="Open notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
+          <button type="button" id="theme" class="icon-button" title="Toggle contrast theme" aria-label="Toggle contrast theme" aria-pressed="false"><i data-lucide="sun-moon"></i></button>
+          <button type="button" id="quickAdd" class="primary"><i data-lucide="plus"></i><span>Add</span></button>
+          <span class="avatar" title="Local profile">S</span>
+        </div>
       </div>
-      <button type="button" id="globalSearch" class="search-trigger" aria-label="Search everything">
-        <i data-lucide="search"></i><span>Search everything</span><kbd>Ctrl K</kbd>
-      </button>
-      <div class="header-actions">
-        <button type="button" id="searchMobile" class="icon-button" title="Search" aria-label="Search"><i data-lucide="search"></i></button>
-        <button type="button" id="notifications" class="icon-button has-indicator" title="Open notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
-        <button type="button" id="theme" class="icon-button" title="Toggle contrast theme" aria-label="Toggle contrast theme" aria-pressed="false"><i data-lucide="sun-moon"></i></button>
-        <button type="button" id="quickAdd" class="primary"><i data-lucide="plus"></i><span>Add</span></button>
-        <span class="avatar" title="Local profile">S</span>
-      </div>
+      <nav id="macroNav" class="macro-nav" role="tablist" aria-label="Family life areas"></nav>
+      <nav id="subNav" class="sub-nav" aria-label="Area sections"></nav>
     </header>
     <main id="content" tabindex="-1"></main>
   </div>
@@ -90,6 +89,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="js/data.js"></script>
   <script src="js/life.js"></script>
+  <script src="js/hierarchy.js"></script>
   <script src="js/views.js"></script>
   <script src="js/app.js"></script>
 </body>
