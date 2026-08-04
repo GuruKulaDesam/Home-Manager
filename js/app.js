@@ -67,7 +67,7 @@
     document.body.classList.add(activeSettings ? 'settings-mode' : `group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
     const topRoute = ({ 'home/assets': 'home/property', 'home/life/property': 'home/property', 'community/events': 'community/participate', 'community/polls': 'community/participate' })[route] || route;
-    $('#groupNav').innerHTML = activeSettings ? '' : group.items.map(item => { const active = topRoute === item[2]; return `<button type="button" data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('');
+    $('#groupNav').innerHTML = activeSettings ? '' : group.items.map((item, index) => { const active = topRoute === item[2]; return `<button type="button" data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="tab-tone-${index + 1} ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('');
     const navItems = activeSettings ? V.settingsGroups.map(item => [item[1], item[2], `settings/${item[0]}`]) : Object.entries(V.groups).map(([key, item]) => [item.label, item.icon, item.route, key]);
     $('#workspaceMenuLabel').innerHTML = activeSettings ? `<span><small>Configure once</small><b>Settings</b></span><i data-lucide="settings-2"></i>` : `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
     $('#nav').innerHTML = navItems.map(item => { const active = activeSettings ? activeSettings === item[2].split('/')[1] : item[3] === activeGroup; return `<button ${activeSettings ? `data-route="${item[2]}"` : `data-group="${item[3]}"`} aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
@@ -100,6 +100,33 @@
     $('#notificationList').innerHTML = items.length ? items.slice(0, 7).map(item => `<button class="row notification-item" data-route="${item.route}"><span class="grow"><b>${D.esc(item.title)}</b><small>${D.esc(item.detail)}</small></span><i data-lucide="chevron-right"></i></button>`).join('') : '<div class="empty">Nothing needs attention.</div>';
   }
 
+  function renderHeaderKpis() {
+    const day = new Date().toISOString().slice(0, 10);
+    const month = day.slice(0, 7);
+    const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
+    const weekEnd = nextWeek.toISOString().slice(0, 10);
+    const openTasks = D.state.tasks.filter(item => D.status(item.status) !== 'done');
+    const upcoming = D.state.events.filter(item => item.startAt && item.startAt.slice(0, 10) >= day && item.startAt.slice(0, 10) <= weekEnd);
+    const lowStock = D.state.inventoryItems.filter(item => (+item.quantity || 0) <= 2);
+    const routeDomain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
+    const records = routeDomain ? (D.state.lifeRecords || []).filter(item => item.domain === routeDomain) : [];
+    let items;
+    if (routeDomain) {
+      items = [['Records', records.length, route, 'database'], ['Need attention', records.filter(item => item.dueDate && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, route, 'bell-ring'], ['Tracked', D.money(records.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
+    } else if (route === 'home/finance') {
+      const expenses = D.state.expenses.filter(item => String(item.date).startsWith(month));
+      items = [['This month', D.money(expenses.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'wallet-cards'], ['Entries', expenses.length, route, 'receipt-text'], ['Bills due', (D.state.lifeRecords || []).filter(item => item.domain === 'bills' && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, 'home/life/bills', 'calendar-alert']];
+    } else if (route === 'home/inventory') {
+      items = [['Low stock', lowStock.length, route, 'shopping-basket'], ['Items', D.state.inventoryItems.length, route, 'package-open'], ['Meals', D.state.meals.filter(item => item.date >= day).length, route, 'cooking-pot']];
+    } else if (route.startsWith('settings/')) {
+      const sync = D.state.settings.googleSync || {};
+      items = [['Members', D.state.people.length, 'settings/people', 'users-round'], ['Google', (sync.accounts || []).filter(item => item.status === 'connected').length, 'settings/app', 'cloud'], ['Background', V.natureBackgrounds.find(item => item[0] === D.state.settings.appBackground)?.[1] || 'Waterfall mist', 'settings/app', 'palette']];
+    } else {
+      items = [['Open tasks', openTasks.length, 'home/tasks', 'list-checks'], ['Next 7 days', upcoming.length, 'home/calendar', 'calendar-days'], ['Low stock', lowStock.length, 'home/inventory', 'shopping-basket']];
+    }
+    $('#headerKpis').innerHTML = items.map(item => `<button data-route="${item[2]}" title="Open ${D.esc(item[0])}"><i data-lucide="${item[3]}"></i><span><small>${D.esc(item[0])}</small><b>${D.esc(item[1])}</b></span></button>`).join('');
+  }
+
   function render() {
     HM.life.ensure();
     route = location.hash.slice(2) || route;
@@ -117,9 +144,11 @@
     $('#content').innerHTML = V.render(route);
     bindView();
     renderNotifications();
+    renderHeaderKpis();
     document.body.classList.remove('menu-open');
     $('#menu').setAttribute('aria-expanded', 'false');
     refreshIcons();
+    requestAnimationFrame(() => $('#groupNav .active')?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' }));
   }
 
   function inputAttributes(name, type) {
@@ -263,7 +292,13 @@
       const topic = D.state.learningTopics.find(x => x.id === select.dataset.topicStatus);
       if (topic) { topic.status = select.value; save('Topic moved'); render(); }
     });
-    if ($('#settingsTheme')) $('#settingsTheme').onclick = toggleTheme;
+    document.querySelectorAll('[name="appBackground"]').forEach(input => input.onchange = () => {
+      D.state.settings.appBackground = input.value;
+      save('Nature background updated');
+      applyTheme();
+      renderHeaderKpis();
+      refreshIcons();
+    });
     if ($('#exportData')) $('#exportData').onclick = exportData;
     if ($('#importData')) $('#importData').onchange = importData;
     if ($('#resetData')) $('#resetData').onclick = () => { if (confirm('Reset all local Home Manager data?')) { D.reset(); applyTheme(); render(); toast('Demonstration data restored'); } };
@@ -273,6 +308,44 @@
       save('Household settings saved');
       render();
     };
+    if ($('#googleSyncSettings')) {
+      const form = $('#googleSyncSettings');
+      const refreshConnectionButtons = () => {
+        const connectorReady = /^https:\/\//i.test($('#googleConnectorUrl').value.trim());
+        form.querySelectorAll('[data-google-person]').forEach(row => {
+          const ready = connectorReady && row.querySelector('[data-google-email]').value.trim() && row.querySelector('[data-google-consent]').checked;
+          row.querySelector('[data-google-connect]').disabled = !ready;
+        });
+      };
+      form.querySelectorAll('#googleConnectorUrl, [data-google-email], [data-google-consent]').forEach(control => control.addEventListener('input', refreshConnectionButtons));
+      form.onchange = event => { if (event.target.matches('#googleConnectorUrl, [data-google-email], [data-google-consent]')) refreshConnectionButtons(); };
+      form.onsubmit = event => {
+        event.preventDefault();
+        const values = new FormData(form);
+        const previous = D.state.settings.googleSync || {};
+        const connector = String(values.get('connectorUrl') || '').trim();
+        const connectorChanged = connector !== (previous.connectorUrl || '');
+        D.state.settings.googleSync = {
+          ...previous,
+          connectorUrl: connector,
+          autoSync: values.has('autoSync'), calendarSync: values.has('calendarSync'), emailAnalysis: values.has('emailAnalysis'), driveBackup: values.has('driveBackup'),
+          reviewPolicy: values.get('reviewPolicy') === 'rules' ? 'rules' : 'review', lookbackDays: +values.get('lookbackDays') || 30,
+          categories: values.getAll('syncCategory'),
+          accounts: Array.from(form.querySelectorAll('[data-google-person]')).map(row => {
+            const personId = row.dataset.googlePerson;
+            const existing = (previous.accounts || []).find(account => account.personId === personId) || {};
+            const email = row.querySelector('[data-google-email]').value.trim();
+            const consent = row.querySelector('[data-google-consent]').checked;
+            const keepStatus = !connectorChanged && existing.email === email && consent;
+            return { ...existing, personId, email, consent, status: keepStatus ? existing.status || 'pending' : 'pending' };
+          }).filter(account => account.email || account.consent)
+        };
+        save('Google sync preferences saved');
+        render();
+      };
+      form.querySelectorAll('[data-google-connect]').forEach(button => button.onclick = () => startGoogleConnect(button));
+      form.querySelector('[data-google-sync]').onclick = runGoogleSync;
+    }
     if ($('#questionQuery')) {
       const updateQuestions = () => {
         const query = $('#questionQuery').value;
@@ -369,16 +442,54 @@
     refreshIcons();
   }
 
+  function connectorUrl(path) {
+    const base = $('#googleConnectorUrl')?.value || D.state.settings.googleSync?.connectorUrl || '';
+    if (!/^https:\/\//i.test(base)) throw new Error('Enter an HTTPS connector URL first.');
+    return new URL(path, new URL(base).origin);
+  }
+
+  function startGoogleConnect(button) {
+    const row = button.closest('[data-google-person]');
+    const email = row.querySelector('[data-google-email]').value.trim();
+    const consent = row.querySelector('[data-google-consent]').checked;
+    if (!email || !consent) { toast('Add the account email and owner consent first'); return; }
+    try {
+      const url = connectorUrl('/oauth/google/start');
+      url.searchParams.set('personId', button.dataset.googleConnect);
+      url.searchParams.set('loginHint', email);
+      url.searchParams.set('returnTo', location.href);
+      window.open(url, '_blank', 'noopener');
+      toast('Google consent opened in a new tab');
+    } catch (error) { toast(error.message); }
+  }
+
+  async function runGoogleSync() {
+    const button = document.querySelector('[data-google-sync]');
+    try {
+      button.disabled = true;
+      button.classList.add('is-syncing');
+      const response = await fetch(connectorUrl('/api/home-manager/sync'), { method: 'POST', credentials: 'include', headers: { Accept: 'application/json' } });
+      if (!response.ok) throw new Error(`Sync service returned ${response.status}`);
+      toast('Google sync started; suggestions will require review');
+    } catch (error) { toast(`Google sync unavailable: ${error.message}`); }
+    finally { button.disabled = false; button.classList.remove('is-syncing'); }
+  }
+
   function toggleTheme() {
-    D.state.settings.theme = D.state.settings.theme === 'dark' ? 'light' : 'dark';
-    save('Theme updated');
+    const options = V.natureBackgrounds.map(item => item[0]);
+    const current = options.indexOf(D.state.settings.appBackground);
+    D.state.settings.appBackground = options[(current + 1) % options.length];
+    save(`Background: ${V.natureBackgrounds.find(item => item[0] === D.state.settings.appBackground)[1]}`);
     applyTheme();
+    render();
   }
   function applyTheme() {
-    const dark = D.state.settings.theme === 'dark';
-    document.body.classList.toggle('dark', dark);
+    const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'waterfall';
+    document.body.classList.remove('dark');
+    document.body.dataset.nature = background;
     document.body.classList.toggle('collapsed', Boolean(D.state.settings.sidebarCollapsed));
-    $('#theme').setAttribute('aria-pressed', String(dark));
+    $('#theme').title = `Next nature background (current: ${V.natureBackgrounds.find(item => item[0] === background)[1]})`;
+    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.body).getPropertyValue('--app-bg').trim() || '#edf7f3';
   }
 
   function exportData() {
@@ -527,7 +638,6 @@
     form.reset();
   };
   $('#globalSearch').onclick = showSearch;
-  $('#searchMobile').onclick = showSearch;
   $('#searchInput').oninput = event => renderSearch(event.target.value);
   $('#quickAdd').onclick = quick;
   $('#emergency').onclick = showEmergency;

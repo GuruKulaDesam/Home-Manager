@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#fafafa">
+  <meta name="theme-color" content="#edf7f3">
   <meta name="description" content="A private, local-first command center for home, community and study life.">
   <title>Home Manager</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,14 +38,12 @@
           <small id="breadcrumb">Home Manager</small>
           <h1 id="pageTitle">Today</h1>
         </div>
-        <button type="button" id="globalSearch" class="search-trigger" aria-label="Search everything">
-          <i data-lucide="search"></i><span>Find records or help</span><kbd>Ctrl K</kbd>
-        </button>
+        <div id="headerKpis" class="header-kpis" aria-label="Current household signals"></div>
         <div class="header-actions">
-          <button type="button" id="searchMobile" class="icon-button" title="Search" aria-label="Search"><i data-lucide="search"></i></button>
+          <button type="button" id="globalSearch" class="icon-button" title="Search (Ctrl+K)" aria-label="Search records and help" aria-haspopup="dialog" aria-controls="searchDialog"><i data-lucide="search"></i></button>
           <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i><span>Emergency</span></button>
           <button type="button" id="notifications" class="icon-button has-indicator" title="Open notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
-          <button type="button" id="theme" class="icon-button" title="Toggle contrast theme" aria-label="Toggle contrast theme" aria-pressed="false"><i data-lucide="sun-moon"></i></button>
+          <button type="button" id="theme" class="icon-button" title="Next nature background" aria-label="Choose next nature background"><i data-lucide="palette"></i></button>
           <button type="button" id="quickAdd" class="primary"><i data-lucide="plus"></i><span>Add</span></button>
           <span class="avatar" title="Local profile">S</span>
         </div>

@@ -33,7 +33,14 @@
     ['money', 'Money setup', 'wallet-cards', 'Policies, tax profiles and recurring commitments'],
     ['health', 'Health & safety', 'heart-pulse', 'Health profiles, doctors, pets and emergency plan'],
     ['records', 'Records & legacy', 'folders', 'Documents, digital household and nominees'],
-    ['app', 'App & data', 'settings-2', 'Appearance, privacy, backup and reset']
+    ['app', 'App & data', 'settings-2', 'Nature backgrounds, Google sync, privacy and backup']
+  ];
+
+  const natureBackgrounds = [
+    ['waterfall', 'Waterfall mist'], ['river', 'River glass'], ['fern', 'Fern canopy'],
+    ['meadow', 'Morning meadow'], ['lotus', 'Lotus pond'], ['monsoon', 'Monsoon sky'],
+    ['sunrise', 'Sunrise grove'], ['glacier', 'Glacier lake'], ['bamboo', 'Bamboo light'],
+    ['sky', 'Open sky'], ['grove', 'Mango grove'], ['wildflower', 'Wildflower field']
   ];
 
   const titles = {
@@ -399,6 +406,34 @@
     return `<button class="settings-link" data-route="${route}"><span>${icon(iconName)}</span><span class="grow"><b>${e(title)}</b><small>${e(note)}</small></span>${icon('chevron-right')}</button>`;
   }
 
+  function appSettings(intro, settings) {
+    const sync = settings.googleSync || {};
+    const connectorReady = /^https:\/\//i.test(sync.connectorUrl || '');
+    const accounts = Array.isArray(sync.accounts) ? sync.accounts : [];
+    const connected = accounts.filter(account => account.status === 'connected').length;
+    const accountFor = personId => accounts.find(account => account.personId === personId) || {};
+    const categories = [
+      ['bills', 'Bills & renewals'], ['travel', 'Travel & bookings'], ['school', 'School & learning'],
+      ['health', 'Health appointments'], ['deliveries', 'Shopping & deliveries'], ['home', 'Home services'],
+      ['government', 'Government & documents']
+    ];
+    return `${intro}
+      <section class="panel appearance-panel"><div class="section-head"><div><h2>Nature background</h2><p>Choose a light landscape palette for the entire app.</p></div><span class="context-badge">12 options</span></div>
+        <fieldset class="nature-picker"><legend class="sr-only">App background</legend>${natureBackgrounds.map(item => `<label class="nature-option nature-${item[0]}"><input type="radio" name="appBackground" value="${item[0]}" ${settings.appBackground === item[0] ? 'checked' : ''}><span aria-hidden="true">${icon('leaf')}</span><b>${item[1]}</b>${icon('check')}</label>`).join('')}</fieldset>
+      </section>
+      <form id="googleSyncSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">GOOGLE & AUTOMATION</span><h2>Family account sync</h2><p>Connect each account owner separately and review extracted household updates before applying them.</p></div><span class="sync-state ${connectorReady ? connected ? 'connected' : 'pending' : 'required'}">${connectorReady ? connected ? `${connected} connected` : 'Awaiting accounts' : 'Secure connector required'}</span></div>
+        <div class="sync-summary" aria-label="Google sync configuration"><span>${icon('users-round')}<b>${accounts.length}</b><small>mapped accounts</small></span><span>${icon('calendar-sync')}<b>${sync.calendarSync ? 'On' : 'Off'}</b><small>calendar import</small></span><span>${icon('mail-search')}<b>${sync.emailAnalysis ? 'On' : 'Off'}</b><small>email detection</small></span></div>
+        <label class="connector-field">Secure connector URL<input id="googleConnectorUrl" name="connectorUrl" type="url" inputmode="url" placeholder="https://sync.your-domain.in" value="${e(sync.connectorUrl || '')}"><small>OAuth codes, refresh tokens, Gmail cursors and background jobs must stay on this HTTPS service.</small></label>
+        <div class="sync-preferences"><label><input type="checkbox" name="calendarSync" ${sync.calendarSync ? 'checked' : ''}> Import Google Calendar events</label><label><input type="checkbox" name="emailAnalysis" ${sync.emailAnalysis ? 'checked' : ''}> Detect household updates in Gmail</label><label><input type="checkbox" name="autoSync" ${sync.autoSync ? 'checked' : ''}> Run automatic background sync</label><label><input type="checkbox" name="driveBackup" ${sync.driveBackup ? 'checked' : ''}> Store encrypted backups in Drive</label></div>
+        <div class="section-head sync-subhead"><div><h3>Family accounts</h3><p>Every account owner must provide separate Google consent.</p></div></div><div class="google-members">${D.state.people.map(person => { const account = accountFor(person.id); const ready = connectorReady && account.email && account.consent; return `<div class="google-member" data-google-person="${e(person.id)}"><span class="member-avatar">${e(person.name[0])}</span><div class="grow"><b>${e(person.name)}</b><small>${e(person.householdRole)}</small><input data-google-email type="email" autocomplete="email" placeholder="Google account email" value="${e(account.email || '')}"></div><label class="consent-check"><input data-google-consent type="checkbox" ${account.consent ? 'checked' : ''}><span>Owner consent</span></label><span class="sync-state ${e(account.status || 'pending')}">${e(account.status === 'connected' ? 'Connected' : account.status === 'paused' ? 'Paused' : account.status === 'error' ? 'Needs attention' : 'Not connected')}</span><button type="button" data-google-connect="${e(person.id)}" ${ready ? '' : 'disabled'}>${icon('cloud')}<span>${account.status === 'connected' ? 'Reconnect' : 'Connect'}</span></button></div>`; }).join('')}</div>
+        <fieldset class="detection-groups"><legend>Detect from email</legend>${categories.map(item => `<label><input type="checkbox" name="syncCategory" value="${item[0]}" ${(sync.categories || []).includes(item[0]) ? 'checked' : ''}><span>${icon('check')} ${item[1]}</span></label>`).join('')}</fieldset>
+        <div class="sync-controls"><label>Look back<select name="lookbackDays"><option value="7" ${+sync.lookbackDays === 7 ? 'selected' : ''}>7 days</option><option value="30" ${+sync.lookbackDays === 30 ? 'selected' : ''}>30 days</option><option value="90" ${+sync.lookbackDays === 90 ? 'selected' : ''}>90 days</option></select></label><label>Apply policy<select name="reviewPolicy"><option value="review" ${sync.reviewPolicy !== 'rules' ? 'selected' : ''}>Review every suggestion</option><option value="rules" ${sync.reviewPolicy === 'rules' ? 'selected' : ''}>Auto-apply approved rules</option></select></label><button type="button" data-google-sync ${connectorReady && connected ? '' : 'disabled'}>${icon('refresh-cw')}<span>Sync now</span></button><button type="submit" class="primary">${icon('save')}<span>Save sync settings</span></button></div>
+      </form>
+      <section class="panel sync-boundary"><span>${icon('shield-check')}</span><div><b>Private connection boundary</b><p>This GitHub Pages app never stores Google tokens or email bodies. Gmail analysis requires a verified OAuth backend using restricted read-only permission. Finance, health, identity and legal suggestions always require review.</p></div></section>
+      <section class="panel"><h2>Backup and local data</h2><div class="row"><div class="grow"><b>Export backup</b><small>Download every locally stored record and non-secret sync preference</small></div><button id="exportData">Export JSON</button></div><div class="row"><div class="grow"><b>Import backup</b><small>Validate and restore a Home Manager export</small></div><label class="primary file-button">Choose file<input id="importData" type="file" accept="application/json" hidden></label></div><div class="row"><div class="grow"><b>Reset demonstration data</b><small>Remove local changes from this browser</small></div><button id="resetData" class="danger-action">Reset</button></div></section>
+      <section class="panel privacy-note"><b>Local storage is not encrypted</b><p>Do not store full identity numbers, passwords, banking credentials, document scans, medical reports or Google tokens. Exported backups must be stored securely.</p></section>`;
+  }
+
   function settingsPage(section = 'household') {
     const settings = D.state.settings;
     const meta = settingsGroups.find(item => item[0] === section) || settingsGroups[0];
@@ -418,7 +453,7 @@
     if (section === 'money') return `${intro}<section class="settings-grid">${settingsLink('Insurance policies', 'Provider, masked reference and renewal rule', 'settings/life/insurance', 'shield-check')}${settingsLink('Tax profiles', 'Taxpayer and filing references', 'settings/life/tax', 'landmark')}${settingsLink('Subscriptions', 'Recurring service definitions', 'settings/life/subscriptions', 'repeat-2')}${settingsLink('Bills and payment rules', 'Providers, recurrence and due dates', 'settings/life/bills', 'receipt-indian-rupee')}${settingsLink('Assets and valuables', 'Long-lived household value records', 'settings/home', 'gem')}</section><section class="panel privacy-note"><b>Keep payment secrets out</b><p>Never store UPI PINs, OTPs, CVVs, passwords or full account numbers in Home Manager.</p></section>`;
     if (section === 'health') return `${intro}<section class="settings-grid">${settingsLink('Health profiles', 'Providers, allergies and preventive care references', 'settings/life/health', 'heart-pulse')}${settingsLink('Emergency plan', 'Trusted contacts, instructions and review dates', 'settings/life/emergency', 'siren')}${settingsLink('Pets and animals', 'Profiles, vaccines and care providers', 'settings/life/pets', 'paw-print')}</section><section class="panel official-links"><div class="section-head"><div><h2>Trusted services</h2><p>Open official services; Home Manager does not copy their sensitive records.</p></div></div><a href="https://112.gov.in/" target="_blank" rel="noopener">India Emergency 112 ${icon('external-link')}</a><a href="https://abdm.gov.in/" target="_blank" rel="noopener">ABHA health records ${icon('external-link')}</a></section>`;
     if (section === 'records') return `${intro}<section class="settings-grid">${settingsLink('Documents & IDs', 'Masked references, holders, issuers and expiry', 'settings/life/documents', 'folders')}${settingsLink('Digital household', 'Devices, backups and account custody notes', 'settings/life/digital', 'cloud-cog')}${settingsLink('Nominees & legacy', 'Nomination and succession review', 'settings/life/legacy', 'scroll-text')}${settingsLink('Family knowledge', 'Recipes, traditions, manuals and memories', 'home/wisdom', 'library-big')}</section><section class="panel official-links"><div class="section-head"><div><h2>Official document wallet</h2><p>Use DigiLocker for authentic documents. Store only masked references here.</p></div></div><a href="https://www.digilocker.gov.in/" target="_blank" rel="noopener">Open DigiLocker ${icon('external-link')}</a></section>`;
-    return `${intro}<section class="panel"><h2>Appearance and data</h2><div class="row"><div class="grow"><b>Contrast theme</b><small>Switch between light and dark views</small></div><button id="settingsTheme">Toggle</button></div><div class="row"><div class="grow"><b>Export backup</b><small>Download every locally stored record</small></div><button id="exportData">Export JSON</button></div><div class="row"><div class="grow"><b>Import backup</b><small>Validate and restore a Home Manager export</small></div><label class="primary file-button">Choose file<input id="importData" type="file" accept="application/json" hidden></label></div><div class="row"><div class="grow"><b>Reset demonstration data</b><small>Remove local changes from this browser</small></div><button id="resetData" class="danger-action">Reset</button></div></section><section class="panel privacy-note"><b>Local storage is not encrypted</b><p>Do not store full identity numbers, passwords, banking credentials, document scans or medical reports. Exported backups must be stored securely.</p></section>`;
+    return appSettings(intro, settings);
   }
 
   function propertyHub() {
@@ -471,6 +506,7 @@
   window.HM.views = {
     groups,
     settingsGroups,
+    natureBackgrounds,
     titles,
     render,
     renderQuestionResults,

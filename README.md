@@ -8,9 +8,9 @@ Daily and weekly work is organised into seven plain-language groups: **Today, Ho
 
 Today projects recurring work from those permanent records into one agenda. For example, a policy belongs in Settings, but its renewal remains visible on Today; an appliance belongs in the asset register, but a repair remains in Household. Emergency help is always available in the header and links to official Indian helplines without claiming to dispatch assistance.
 
-Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. The colorful Aurora interface uses teal, violet, purple and green accents over a clean `#fafafa` application background, with translucent operational surfaces and a separately tested high-contrast dark mode.
+Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. The colorful interface uses seven accessible icon and tab tones over twelve light nature backgrounds, with translucent operational surfaces, alternating table bands and no dark register banners.
 
-The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, context-aware search, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent navigation preferences, validated backup import, seven action Quick Add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
+The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, icon-triggered context-aware search, route-aware header KPIs, prominent section tabs, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent appearance preferences, validated backup import, seven action Quick Add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
 
 ## Product question audit
 
@@ -41,4 +41,6 @@ Open `index.html` directly or publish the repository root with GitHub Pages. No 
 
 ## Static limitations
 
-Firebase/realtime collaboration, Prisma/server authentication, background notifications, bank or UPI feeds, government portals, medical systems, OpenAI/Genkit, payments, municipal APIs, SQLite, Android and Capacitor services require backends or native runtimes. The static application does not claim those integrations are connected. Community votes, registrations, ticket updates and Life Registry records are explicitly local to the current browser.
+Firebase/realtime collaboration, server authentication, background notifications, bank or UPI feeds, government portals, medical systems, payments, municipal APIs and native services require backends or native runtimes. The static application does not claim those integrations are connected. Community votes, registrations, ticket updates and Life Registry records are explicitly local to the current browser.
+
+App & data Settings now model a secure Google connector: HTTPS endpoint, per-family-member email mapping and consent, Calendar/Gmail/Drive preferences, seven detection groups, review policy and manual sync. These preferences contain no tokens or message bodies. Actual Google account sync is deliberately disabled until a separately deployed OAuth backend provides encrypted refresh-token storage, household authorization, a database and scheduled or Pub/Sub jobs. Gmail read-only access is a restricted Google scope and must complete Google's verification requirements before production email analysis.

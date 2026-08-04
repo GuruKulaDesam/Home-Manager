@@ -294,7 +294,7 @@
         'Do icon buttons have accessible names?',
         'Does focus move into dialogs when they open?',
         'Can dialogs be closed with Escape?',
-        'Is a higher-contrast theme available?'),
+        'Can an elder choose a comfortable light background?'),
       ...group('responsive', 'Everyone',
         'Can the app be used on a phone?',
         'Does navigation remain available on small screens?',
@@ -345,12 +345,12 @@
     'sensitive-data': ['Store references, never secrets', 'Do not enter full identity numbers, passwords, PINs, credentials or scans. Use masked hints here and keep official documents in trusted official or encrypted services.', 'settings/records', 'privacy'],
     backup: ['Export a JSON backup deliberately', 'Settings > App & data exports the complete local household. Store that file securely and repeat backups after meaningful changes.', 'settings/app', 'settings'],
     restore: ['Import only a trusted backup', 'Settings > App & data validates the JSON structure before replacing current data. Export the current household first. Without a backup, cleared browser data cannot be recovered.', 'settings/app', 'settings'],
-    limitations: ['This static app has explicit boundaries', 'It has no background reminders, realtime sync, bank feeds, live location, form submission or professional advice. Connected services require a secure backend or native integration.', 'settings/app', 'boundary'],
+    limitations: ['This static app has explicit boundaries', 'It has no active background sync, bank feeds, live location, form submission or professional advice. Google preferences and per-owner consent are ready in Settings, but automatic Calendar and Gmail processing require the separately deployed secure connector shown there.', 'settings/app', 'boundary'],
     'data-control': ['You control local records and backups', 'Edit or delete individual records, export before major changes, and use Reset only when you intend to restore demonstration data.', 'settings/app', 'privacy'],
     help: ['Help & Guide audits the product itself', 'Browse seven usability areas, filter by family role, or search in everyday language. Every answer names the purpose and opens its actual destination.', 'global/questions', 'direct'],
     'empty-states': ['Empty pages provide a next action', 'Supported empty views show an Add action. Drawers identify required fields and can be dismissed without saving through Cancel, X or Escape.', 'global/overview', 'direct'],
     feedback: ['Status is visible at the point of work', 'Today and notifications surface overdue, due and low-stock signals. Completion updates the record; save, delete, undo and failure feedback appear as toasts.', 'global/overview', 'direct'],
-    accessibility: ['Core navigation follows browser standards', 'The app includes a skip link, labelled icon buttons, keyboard-focusable controls, native dialogs with Escape support and a stronger-contrast theme.', 'global/questions', 'direct'],
+    accessibility: ['Core navigation follows browser standards', 'The app includes a skip link, labelled icon buttons, keyboard-focusable controls, native dialogs with Escape support and twelve named light backgrounds that preserve readable text contrast.', 'global/questions', 'direct'],
     responsive: ['The core experience adapts to small screens', 'Mobile navigation, search, Add, emergency help, drawers and alternative calendar layouts remain available without depending on desktop hover.', 'global/overview', 'direct'],
     boundaries: ['Local and external capabilities are labelled', 'Community content is identified as local, emergency links are external, and unsupported sync, notification, financial, medical and government integrations are stated rather than simulated.', 'settings/app', 'boundary']
   };
