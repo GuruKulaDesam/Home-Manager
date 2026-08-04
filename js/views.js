@@ -33,14 +33,14 @@
     ['money', 'Money setup', 'wallet-cards', 'Policies, tax profiles and recurring commitments'],
     ['health', 'Health & safety', 'heart-pulse', 'Health profiles, doctors, pets and emergency plan'],
     ['records', 'Records & legacy', 'folders', 'Documents, digital household and nominees'],
-    ['app', 'App & data', 'settings-2', 'Nature backgrounds, Google sync, privacy and backup']
+    ['app', 'App & data', 'settings-2', 'Mountain backgrounds, Google sync, privacy and backup']
   ];
 
   const natureBackgrounds = [
-    ['waterfall', 'Waterfall mist'], ['river', 'River glass'], ['fern', 'Fern canopy'],
-    ['meadow', 'Morning meadow'], ['lotus', 'Lotus pond'], ['monsoon', 'Monsoon sky'],
-    ['sunrise', 'Sunrise grove'], ['glacier', 'Glacier lake'], ['bamboo', 'Bamboo light'],
-    ['sky', 'Open sky'], ['grove', 'Mango grove'], ['wildflower', 'Wildflower field']
+    ['waterfall', 'Mountain falls'], ['river', 'Spiti river'], ['fern', 'Misty forest'],
+    ['meadow', 'Alpine meadow'], ['lotus', 'Sunrise lake'], ['monsoon', 'Monsoon peaks'],
+    ['sunrise', 'Munnar sunrise'], ['glacier', 'Glacier mountains'], ['bamboo', 'Rocky forest'],
+    ['sky', 'Peaks above clouds'], ['grove', 'Evergreen valley'], ['wildflower', 'Wildflower slopes']
   ];
 
   const titles = {
@@ -418,7 +418,7 @@
       ['government', 'Government & documents']
     ];
     return `${intro}
-      <section class="panel appearance-panel"><div class="section-head"><div><h2>Nature photograph</h2><p>Choose a real landscape photograph for the entire app.</p></div><span class="context-badge">12 photos</span></div>
+      <section class="panel appearance-panel"><div class="section-head"><div><h2>Mountain photograph</h2><p>Choose a mountain landscape for the entire app.</p></div><span class="context-badge">12 photos</span></div>
         <fieldset class="nature-picker"><legend class="sr-only">App background</legend>${natureBackgrounds.map(item => `<label class="nature-option nature-${item[0]}"><input type="radio" name="appBackground" value="${item[0]}" ${settings.appBackground === item[0] ? 'checked' : ''}><span aria-hidden="true">${icon('leaf')}</span><b>${item[1]}</b>${icon('check')}</label>`).join('')}</fieldset>
       </section>
       <form id="googleSyncSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">GOOGLE & AUTOMATION</span><h2>Family account sync</h2><p>Connect each account owner separately and review extracted household updates before applying them.</p></div><span class="sync-state ${connectorReady ? connected ? 'connected' : 'pending' : 'required'}">${connectorReady ? connected ? `${connected} connected` : 'Awaiting accounts' : 'Secure connector required'}</span></div>

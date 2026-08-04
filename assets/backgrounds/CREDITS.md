@@ -1,18 +1,18 @@
-# Nature background sources
+# Mountain background sources
 
 The application stores responsive-sized local copies of these photographs. Each source is marked free to use under the [Unsplash License](https://unsplash.com/license).
 
 | App background | Source |
 | --- | --- |
-| Waterfall Mist | [Waterfalls in a forest](https://unsplash.com/photos/jWaS7KdehQA) |
-| River Valley | [Forest river](https://unsplash.com/photos/X9Z2uiOJFQs) |
-| Fern Canopy | [Fern in a forest](https://unsplash.com/photos/xhpVpXWBAX8) |
-| Green Meadow | [Sunlit meadow](https://unsplash.com/photos/zkXkQNj1Q4Y) |
-| Lotus Pond | [Lotus pond](https://unsplash.com/photos/RzSNNL_OnyA) |
-| Monsoon Hills | [Cloud-covered green mountain](https://unsplash.com/photos/QDoa6RMPhok) |
-| Forest Sunrise | [Sunlight through a forest](https://unsplash.com/photos/kKgyk2VRqcw) |
-| Himalayan Ice | [Glacier lake](https://unsplash.com/photos/evS2UcCRdn8) |
-| Bamboo Grove | [Sunlit bamboo forest](https://unsplash.com/photos/nFja6m9z7Lo) |
-| Open Sky | [Blue sky and clouds](https://unsplash.com/photos/viNPa2F7fnw) |
-| Mango Grove | [Sunlight through a grove](https://unsplash.com/photos/0Sv6fZd5d5s) |
-| Wildflower Field | [Wildflowers in a sunny meadow](https://unsplash.com/photos/wpofCJ9fCCc) |
+| Mountain Falls | [Waterfall flowing from a mountain](https://unsplash.com/photos/UfPjkP6xbUM) |
+| Spiti River | [River through a Himachal mountain valley](https://unsplash.com/photos/A4igrgBYpDk) |
+| Misty Forest | [Misty forest on a mountain slope](https://unsplash.com/photos/5Rdwb97xdWQ) |
+| Alpine Meadow | [Meadow below snow-capped mountains](https://unsplash.com/photos/sUrW7LTHE_g) |
+| Sunrise Lake | [Mountain valley lake at sunrise](https://unsplash.com/photos/HKZYYiJXmJs) |
+| Monsoon Peaks | [Cloud-covered green mountain](https://unsplash.com/photos/QDoa6RMPhok) |
+| Munnar Sunrise | [Mountain peaks at sunrise in Munnar](https://unsplash.com/photos/t_O-_9wTu3I) |
+| Glacier Mountains | [Glacier lake and mountain peaks](https://unsplash.com/photos/evS2UcCRdn8) |
+| Rocky Forest | [Misty mountains above green forest](https://unsplash.com/photos/30Xsu-ZqQRQ) |
+| Peaks Above Clouds | [Mountain peaks emerging from clouds](https://unsplash.com/photos/w-BSFRpfTWk) |
+| Evergreen Valley | [Misty mountains above evergreen forest](https://unsplash.com/photos/2BI0UWMXxF8) |
+| Wildflower Slopes | [Wildflowers on green mountain slopes](https://unsplash.com/photos/ER4ODZWITRQ) |
