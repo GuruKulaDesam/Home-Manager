@@ -895,10 +895,33 @@
   }
 
   async function googleApi(url, accessToken, options = {}) {
-    const response = await fetch(url, { ...options, headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error?.message || `Google API returned ${response.status}`);
-    return payload;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const response = await fetch(url, { ...options, headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) return payload;
+      const reasons = (payload.error?.errors || []).map(error => error.reason);
+      const quotaLimited = response.status === 429 || (response.status === 403 && reasons.some(reason => ['rateLimitExceeded', 'userRateLimitExceeded', 'backendError'].includes(reason)));
+      const retryable = quotaLimited || response.status >= 500;
+      if (!retryable || attempt === 3) throw new Error(payload.error?.message || `Google API returned ${response.status}`);
+      const retryAfter = response.headers.get('Retry-After');
+      const delay = retryAfter !== null && Number.isFinite(+retryAfter) ? +retryAfter * 1000 : Math.min(8000, 500 * (2 ** attempt)) + Math.random() * 250;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    throw new Error('Google API retry limit reached.');
+  }
+
+  async function mapWithConcurrency(items, limit, mapper) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        results[index] = await mapper(items[index], index);
+      }
+    });
+    await Promise.all(workers);
+    return results;
   }
 
   async function startGoogleConnect(button) {
@@ -965,11 +988,11 @@
     const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice renewal booking travel school exam appointment delivery government service}`;
     const listParams = new URLSearchParams({ q: query, maxResults: '40' });
     const list = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
-    const messages = await Promise.all((list.messages || []).slice(0, 40).map(async reference => {
+    const messages = await mapWithConcurrency((list.messages || []).slice(0, 40), 3, async reference => {
       const params = new URLSearchParams({ format: 'metadata' });
       ['Subject', 'From', 'Date'].forEach(name => params.append('metadataHeaders', name));
       return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
-    }));
+    });
     return messages.map(message => {
       const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name).toLowerCase(), header.value]));
       const text = `${headers.subject || ''} ${message.snippet || ''}`;

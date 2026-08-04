@@ -160,6 +160,9 @@ test('textbook library and reader fit a phone viewport', async ({ page }) => {
 });
 
 test('four Google accounts authorize and sync directly without a connector', async ({ page }) => {
+  let activeGmailDetails = 0;
+  let maxGmailDetails = 0;
+  const gmailAttempts = new Map();
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => {
     const email = route.request().headers().authorization.replace('Bearer token:', '');
@@ -174,8 +177,17 @@ test('four Google accounts authorize and sync directly without a connector', asy
     const request = route.request();
     const email = request.headers().authorization.replace('Bearer token:', '');
     const url = new URL(request.url());
-    if (url.pathname.endsWith('/messages')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages: email === 'mother@example.com' ? [{ id: 'gmail-1' }] : [] }) });
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'gmail-1', internalDate: '1785920400000', snippet: 'Class 7 exam timetable is available', payload: { headers: [{ name: 'Subject', value: 'School exam timetable' }, { name: 'From', value: 'Peepal School' }] } }) });
+    if (url.pathname.endsWith('/messages')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages: email === 'mother@example.com' ? Array.from({ length: 9 }, (_, index) => ({ id: `gmail-${index + 1}` })) : [] }) });
+    const messageId = url.pathname.split('/').pop();
+    const attempt = (gmailAttempts.get(messageId) || 0) + 1;
+    gmailAttempts.set(messageId, attempt);
+    if (messageId === 'gmail-1' && attempt === 1) return route.fulfill({ status: 429, headers: { 'Retry-After': '0' }, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Too many concurrent requests' } }) });
+    activeGmailDetails += 1;
+    maxGmailDetails = Math.max(maxGmailDetails, activeGmailDetails);
+    return new Promise(resolve => setTimeout(resolve, 20)).then(() => {
+      activeGmailDetails -= 1;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: messageId, internalDate: '1785920400000', snippet: 'Class 7 exam timetable is available', payload: { headers: [{ name: 'Subject', value: `School exam timetable ${messageId}` }, { name: 'From', value: 'Peepal School' }] } }) });
+    });
   });
   await page.goto(`${app}#/settings/app`);
   await page.evaluate(() => {
@@ -202,6 +214,8 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await page.locator('[data-google-sync]').click();
   await expect(page.locator('.integration-queue')).toContainText('Family train booking');
   await expect(page.locator('.integration-queue')).toContainText('School exam timetable');
+  expect(maxGmailDetails).toBeLessThanOrEqual(3);
+  expect(gmailAttempts.get('gmail-1')).toBe(2);
   const accounts = await page.evaluate(() => HM.data.state.settings.googleSync.accounts.map(account => ({ personId: account.personId, status: account.status })));
   expect(accounts).toEqual([
     { personId: 'p1', status: 'connected' },
