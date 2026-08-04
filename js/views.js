@@ -153,11 +153,7 @@
     const dayLabel = value => value === day ? 'Today' : value === weekDays[1].iso ? 'Tomorrow' : new Date(`${value}T00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' });
     const timeLabel = item => item.kind === 'event' && item.starts ? new Date(item.starts).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) : item.kind === 'due' ? 'Due' : 'Any time';
 
-    return `<section class="today-heading">
-        <div><span class="eyebrow">${icon('sunrise')} ${e(new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }))}</span><h2>Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}</h2><p>Here is what the family needs today.</p></div>
-        <button class="primary today-add" data-create="task" data-context="home">${icon('plus')}<span>Add task</span></button>
-      </section>
-      <section class="family-filter" aria-label="Filter the agenda by family member">
+    return `<section class="family-filter" aria-label="Filter the agenda by family member">
         <button class="active" data-agenda-person="all" aria-pressed="true"><span class="member-avatar all">${icon('users-round')}</span><span>Everyone</span></button>
         ${people.map((person, index) => `<button data-agenda-person="${e(person.name.toLowerCase())}" aria-pressed="false"><span class="member-avatar person-${index % 6}">${e(person.name[0])}</span><span>${e(person.name.split(' ')[0])}</span></button>`).join('')}
       </section>
@@ -406,6 +402,10 @@
     return `<button class="settings-link" data-route="${route}"><span>${icon(iconName)}</span><span class="grow"><b>${e(title)}</b><small>${e(note)}</small></span>${icon('chevron-right')}</button>`;
   }
 
+  function settingsTabs(activeSection) {
+    return `<nav class="settings-tabs" aria-label="Settings groups">${settingsGroups.map((item, index) => `<button type="button" data-route="settings/${item[0]}" class="tab-tone-${index + 1} ${activeSection === item[0] ? 'active' : ''}" ${activeSection === item[0] ? 'aria-current="page"' : ''} title="${e(item[3])}">${icon(item[2])}<span>${e(item[1])}</span></button>`).join('')}</nav>`;
+  }
+
   function appSettings(intro, settings) {
     const sync = settings.googleSync || {};
     const connectorReady = /^https:\/\//i.test(sync.connectorUrl || '');
@@ -436,8 +436,7 @@
 
   function settingsPage(section = 'household') {
     const settings = D.state.settings;
-    const meta = settingsGroups.find(item => item[0] === section) || settingsGroups[0];
-    const intro = `<section class="settings-intro"><span>${icon(meta[2])}</span><div><small>SETTINGS · STORED IN THIS BROWSER</small><h2>${e(meta[1])}</h2><p>${e(meta[3])}</p></div></section>`;
+    const intro = settingsTabs(section);
     if (section === 'household') return `${intro}<form id="householdSettings" class="panel settings-form"><div class="section-head"><div><h2>Home identity</h2><p>Enter once and update only when the household changes.</p></div><button class="primary" type="submit">${icon('save')}<span>Save</span></button></div><div class="form-grid"><label>Household name<input name="householdName" value="${e(settings.householdName || 'Shishyan Family')}"></label><label>Primary language<select name="language"><option ${settings.language === 'English' ? 'selected' : ''}>English</option><option ${settings.language === 'Tamil' ? 'selected' : ''}>Tamil</option><option ${settings.language === 'Hindi' ? 'selected' : ''}>Hindi</option><option ${settings.language === 'Malayalam' ? 'selected' : ''}>Malayalam</option><option ${settings.language === 'Telugu' ? 'selected' : ''}>Telugu</option><option ${settings.language === 'Kannada' ? 'selected' : ''}>Kannada</option></select></label><label class="wide">Home address and landmark<textarea name="primaryAddress" placeholder="Address visible on the emergency card">${e(settings.primaryAddress || '')}</textarea></label><label>Timezone<input name="timezone" value="${e(settings.timezone || 'Asia/Kolkata')}"></label><label>Food preference<input name="foodPreference" value="${e(settings.foodPreference || '')}" placeholder="Vegetarian, allergies, fasting preferences"></label></div></form>`;
     if (section === 'people') return `${intro}<section class="panel"><div class="section-head"><div><h2>Household members</h2><p>Profiles, roles and accessibility needs.</p></div><button class="primary" data-create="person">${icon('user-plus')}<span>Add member</span></button></div>${D.state.people.map(person => `<div class="row"><span class="avatar small-avatar">${e(person.name[0])}</span><div class="grow"><b>${e(person.name)}</b><small>${e(person.householdRole)}</small></div><button class="icon-action" aria-label="Edit ${e(person.name)}" data-edit="person" data-id="${e(person.id)}">${icon('pencil')}</button></div>`).join('')}</section><section class="settings-grid">${settingsLink('Family contacts', 'Doctors, schools, trusted people and providers', 'home/directory', 'contact-round')}${settingsLink('Family knowledge', 'Traditions, recipes and shared memories', 'home/wisdom', 'book-heart')}</section>`;
     if (section === 'home') return `${intro}
@@ -468,7 +467,11 @@
     if (route === 'global/overview') return unified();
     if (route === 'global/questions') return questionHub();
     if (route === 'global/settings') return settingsPage('app');
-    if (route.startsWith('settings/life/')) return lifeDomain(route.split('/')[2], true);
+    if (route.startsWith('settings/life/')) {
+      const domain = route.split('/')[2];
+      const parent = ({ property: 'home', vehicles: 'home', help: 'home', bills: 'money', insurance: 'money', tax: 'money', subscriptions: 'money', health: 'health', emergency: 'health', pets: 'health', documents: 'records', digital: 'records', legacy: 'records' })[domain] || 'household';
+      return `${settingsTabs(parent)}${lifeDomain(domain, true)}`;
+    }
     if (route.startsWith('settings/')) return settingsPage(route.split('/')[1]);
     if (route === 'home/life') return lifeHub();
     if (route.startsWith('home/life/')) return lifeDomain(route.split('/')[2]);

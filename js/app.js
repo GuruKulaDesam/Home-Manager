@@ -64,13 +64,13 @@
     const group = V.groups[activeGroup];
     document.body.classList.remove('workspace-home', 'workspace-community', 'workspace-study', ...Object.keys(V.groups).map(key => `group-${key}`));
     document.body.classList.add('workspace-' + workspace);
-    document.body.classList.add(activeSettings ? 'settings-mode' : `group-${activeGroup}`);
+    document.body.classList.add(`group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
     const topRoute = ({ 'home/assets': 'home/property', 'home/life/property': 'home/property', 'community/events': 'community/participate', 'community/polls': 'community/participate' })[route] || route;
     $('#groupNav').innerHTML = activeSettings ? '' : group.items.map((item, index) => { const active = topRoute === item[2]; return `<button type="button" data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="tab-tone-${index + 1} ${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('');
-    const navItems = activeSettings ? V.settingsGroups.map(item => [item[1], item[2], `settings/${item[0]}`]) : Object.entries(V.groups).map(([key, item]) => [item.label, item.icon, item.route, key]);
-    $('#workspaceMenuLabel').innerHTML = activeSettings ? `<span><small>Configure once</small><b>Settings</b></span><i data-lucide="settings-2"></i>` : `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
-    $('#nav').innerHTML = navItems.map(item => { const active = activeSettings ? activeSettings === item[2].split('/')[1] : item[3] === activeGroup; return `<button ${activeSettings ? `data-route="${item[2]}"` : `data-group="${item[3]}"`} aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
+    const navItems = Object.entries(V.groups).map(([key, item]) => [item.label, item.icon, item.route, key]);
+    $('#workspaceMenuLabel').innerHTML = `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
+    $('#nav').innerHTML = navItems.map(item => { const active = item[3] === activeGroup; return `<button data-group="${item[3]}" aria-label="Open ${D.esc(item[0])}" title="${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[1]}"></i></span><span>${D.esc(item[0])}</span></button>`; }).join('');
     const mobileItems = [['Today', 'sparkles', 'global/overview'], ['Calendar', 'calendar-days', 'home/calendar'], ['Tasks', 'list-checks', 'home/tasks'], ['Food', 'shopping-basket', 'home/inventory']];
     $('#bottomNav').innerHTML = mobileItems.map(item => { const active = route === item[2]; return `<button data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('') + '<button id="bottomMore" aria-label="Open more navigation"><i data-lucide="layout-grid"></i><span>More</span></button>';
     $('#settingsNav').classList.toggle('active', Boolean(activeSettings));

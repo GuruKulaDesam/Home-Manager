@@ -39,19 +39,21 @@
           <h1 id="pageTitle">Today</h1>
         </div>
         <div id="headerKpis" class="header-kpis" aria-label="Current household signals"></div>
-        <div class="header-actions">
-          <button type="button" id="globalSearch" class="icon-button" title="Search (Ctrl+K)" aria-label="Search records and help" aria-haspopup="dialog" aria-controls="searchDialog"><i data-lucide="search"></i></button>
-          <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i><span>Emergency</span></button>
-          <button type="button" id="notifications" class="icon-button has-indicator" title="Open notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
-          <button type="button" id="theme" class="icon-button" title="Next nature background" aria-label="Choose next nature background"><i data-lucide="palette"></i></button>
-          <button type="button" id="quickAdd" class="primary"><i data-lucide="plus"></i><span>Add</span></button>
-          <span class="avatar" title="Local profile">S</span>
-        </div>
       </div>
       <nav id="groupNav" class="group-nav" aria-label="Section views"></nav>
     </header>
     <main id="content" tabindex="-1"></main>
   </div>
+
+  <aside id="utilityRail" class="utility-rail" aria-label="Quick tools">
+    <button type="button" id="quickAdd" class="primary" title="Add item" aria-label="Add item"><i data-lucide="plus"></i></button>
+    <button type="button" id="globalSearch" class="icon-button" title="Search (Ctrl+K)" aria-label="Search records and help" aria-haspopup="dialog" aria-controls="searchDialog"><i data-lucide="search"></i></button>
+    <button type="button" id="notifications" class="icon-button has-indicator" title="Notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
+    <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i></button>
+    <span class="utility-spacer"></span>
+    <button type="button" id="theme" class="icon-button" title="Next nature background" aria-label="Choose next nature background"><i data-lucide="palette"></i></button>
+    <span class="avatar" title="Local profile" aria-label="Local profile">S</span>
+  </aside>
 
   <aside id="notificationPanel" class="notification-panel" aria-label="Notifications" aria-hidden="true">
     <div class="panel-heading"><div><small>Attention</small><h2>Household signals</h2></div><button type="button" id="closeNotifications" class="icon-button" aria-label="Close notifications"><i data-lucide="x"></i></button></div>
