@@ -159,28 +159,44 @@ test('textbook library and reader fit a phone viewport', async ({ page }) => {
   await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
 });
 
-test('two Google accounts receive real connector status and review suggestions', async ({ page }) => {
-  await page.route('https://sync.example.in/api/home-manager/status', route => route.fulfill({
-    status: 200,
-    contentType: 'application/json',
-    body: JSON.stringify({
-      accounts: [
-        { personId: 'p1', email: 'father@example.com', status: 'connected', lastSync: '2026-08-05T10:00:00Z' },
-        { personId: 'p2', email: 'mother@example.com', status: 'connected', lastSync: '2026-08-05T10:01:00Z' }
-      ],
-      suggestions: [{ externalId: 'gmail-1', source: 'gmail', personId: 'p2', category: 'travel', title: 'Train booking confirmed', summary: 'Journey departs on 12 August', sender: 'Rail booking', receivedAt: '2026-08-05T09:00:00Z' }]
-    })
-  }));
+test('two Google accounts authorize and sync directly without a connector', async ({ page }) => {
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => {
+    const email = route.request().headers().authorization.replace('Bearer token:', '');
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email }) });
+  });
+  await page.route('https://www.googleapis.com/calendar/v3/calendars/primary/events**', route => {
+    const email = route.request().headers().authorization.replace('Bearer token:', '');
+    const items = email === 'father@example.com' ? [{ id: 'cal-1', updated: '2026-08-05T08:00:00Z', summary: 'Family train booking', description: 'Journey departs on 12 August', start: { dateTime: '2026-08-12T09:00:00Z' }, status: 'confirmed' }] : [];
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items }) });
+  });
+  await page.route('https://gmail.googleapis.com/gmail/v1/users/me/messages**', route => {
+    const request = route.request();
+    const email = request.headers().authorization.replace('Bearer token:', '');
+    const url = new URL(request.url());
+    if (url.pathname.endsWith('/messages')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages: email === 'mother@example.com' ? [{ id: 'gmail-1' }] : [] }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'gmail-1', internalDate: '1785920400000', snippet: 'Class 7 exam timetable is available', payload: { headers: [{ name: 'Subject', value: 'School exam timetable' }, { name: 'From', value: 'Peepal School' }] } }) });
+  });
   await page.goto(`${app}#/settings/app`);
-  await page.locator('#googleConnectorUrl').fill('https://sync.example.in');
+  await page.evaluate(() => {
+    window.google = { accounts: { oauth2: {
+      initTokenClient: config => ({ requestAccessToken: () => setTimeout(() => config.callback({ access_token: `token:${config.login_hint}`, expires_in: 3600 }), 0) }),
+      revoke: () => {}
+    } } };
+  });
+  await page.locator('#googleClientId').fill('123456789-example.apps.googleusercontent.com');
   await page.locator('[data-google-account="google-1"] [data-google-email]').fill('father@example.com');
   await page.locator('[data-google-account="google-1"] [data-google-consent]').check();
   await page.locator('[data-google-account="google-2"] [data-google-email]').fill('mother@example.com');
   await page.locator('[data-google-account="google-2"] [data-google-consent]').check();
   await page.locator('#googleSyncSettings button[type="submit"]').click();
-  await page.locator('[data-google-status]').click();
-  await expect(page.locator('#googleSyncSettings')).toContainText('2 connected');
-  await expect(page.locator('.integration-queue')).toContainText('Train booking confirmed');
+  await page.locator('[data-google-account="google-1"] [data-google-connect]').click();
+  await expect(page.locator('[data-google-account="google-1"]')).toContainText('Active this session');
+  await page.locator('[data-google-account="google-2"] [data-google-connect]').click();
+  await expect(page.locator('#googleSyncSettings')).toContainText('2 active this session');
+  await page.locator('[data-google-sync]').click();
+  await expect(page.locator('.integration-queue')).toContainText('Family train booking');
+  await expect(page.locator('.integration-queue')).toContainText('School exam timetable');
   const accounts = await page.evaluate(() => HM.data.state.settings.googleSync.accounts.map(account => ({ personId: account.personId, status: account.status })));
   expect(accounts).toEqual([{ personId: 'p1', status: 'connected' }, { personId: 'p2', status: 'connected' }]);
 });

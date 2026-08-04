@@ -11,6 +11,8 @@
   let activeTimerMinutes = 25;
   let activeBookReader = null;
   let activeBookUrl = '';
+  const googleSessions = new Map();
+  (D.state.settings.googleSync?.accounts || []).forEach(account => { if (account.status === 'connected') account.status = 'pending'; });
   if (!['home', 'community', 'study'].includes(workspace)) workspace = D.state.settings.activeWorkspace || 'home';
 
   const iconNames = {
@@ -579,23 +581,23 @@
     if ($('#googleSyncSettings')) {
       const form = $('#googleSyncSettings');
       const refreshConnectionButtons = () => {
-        const connectorReady = /^https:\/\//i.test($('#googleConnectorUrl').value.trim());
+        const clientReady = /^[0-9]+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i.test($('#googleClientId').value.trim());
         form.querySelectorAll('[data-google-account]').forEach(row => {
-          const ready = connectorReady && row.querySelector('[data-google-email]').value.trim() && row.querySelector('[data-google-consent]').checked;
+          const ready = clientReady && row.querySelector('[data-google-email]').value.trim() && row.querySelector('[data-google-consent]').checked;
           row.querySelector('[data-google-connect]').disabled = !ready;
         });
       };
-      form.querySelectorAll('#googleConnectorUrl, [data-google-email], [data-google-consent]').forEach(control => control.addEventListener('input', refreshConnectionButtons));
-      form.onchange = event => { if (event.target.matches('#googleConnectorUrl, [data-google-email], [data-google-consent]')) refreshConnectionButtons(); };
+      form.querySelectorAll('#googleClientId, [data-google-email], [data-google-consent]').forEach(control => control.addEventListener('input', refreshConnectionButtons));
+      form.onchange = event => { if (event.target.matches('#googleClientId, [data-google-email], [data-google-consent]')) refreshConnectionButtons(); };
       form.onsubmit = event => {
         event.preventDefault();
         const values = new FormData(form);
         const previous = D.state.settings.googleSync || {};
-        const connector = String(values.get('connectorUrl') || '').trim();
-        const connectorChanged = connector !== (previous.connectorUrl || '');
+        const clientId = String(values.get('clientId') || '').trim();
+        const clientChanged = clientId !== (previous.clientId || '');
         D.state.settings.googleSync = {
           ...previous,
-          connectorUrl: connector,
+          mode: 'direct', clientId,
           autoSync: values.has('autoSync'), calendarSync: values.has('calendarSync'), emailAnalysis: values.has('emailAnalysis'), driveBackup: values.has('driveBackup'),
           reviewPolicy: values.get('reviewPolicy') === 'rules' ? 'rules' : 'review', lookbackDays: +values.get('lookbackDays') || 30,
           categories: values.getAll('syncCategory'),
@@ -605,7 +607,8 @@
             const existing = (previous.accounts || []).find(account => account.slotId === slotId) || (previous.accounts || [])[index] || {};
             const email = row.querySelector('[data-google-email]').value.trim();
             const consent = row.querySelector('[data-google-consent]').checked;
-            const keepStatus = !connectorChanged && existing.email === email && consent;
+            const keepStatus = !clientChanged && existing.email === email && consent && googleSessions.has(slotId);
+            if (!keepStatus) googleSessions.delete(slotId);
             return { ...existing, slotId, personId, email, consent, status: keepStatus ? existing.status || 'pending' : 'pending' };
           }).filter(account => account.email || account.consent)
         };
@@ -614,7 +617,6 @@
       };
       form.querySelectorAll('[data-google-connect]').forEach(button => button.onclick = () => startGoogleConnect(button));
       form.querySelector('[data-google-sync]').onclick = runGoogleSync;
-      form.querySelector('[data-google-status]').onclick = checkGoogleStatus;
     }
     if ($('#phoneSmsSettings')) {
       const form = $('#phoneSmsSettings');
@@ -792,9 +794,7 @@
     return records.filter(item => item.body && item.sender).slice(0, 10000);
   }
 
-  async function analyzeSms(message, ownerId, allowedCategories) {
-    const body = String(message.body || '');
-    if (/\b(otp|one[ -]?time password|verification code|login code|auth code)\b/i.test(body)) return null;
+  function classifyIntegrationText(text, allowedCategories = integrationCategories) {
     const rules = [
       ['bills', /\b(bill|invoice|payment due|due date|electricity|broadband|postpaid|recharge|premium|renewal|debited|credited|upi|transaction)\b/i],
       ['travel', /\b(pnr|flight|train|bus|boarding|departure|arrival|booking|trip|journey|hotel|cab)\b/i],
@@ -804,9 +804,14 @@
       ['government', /\b(aadhaar|passport|income tax|pan card|digilocker|government|municipal|certificate|challan)\b/i],
       ['home', /\b(service|repair|maintenance|technician|pest control|gas cylinder|lpg|water supply)\b/i]
     ];
-    const match = rules.find(([category, expression]) => allowedCategories.includes(category) && expression.test(body));
-    if (!match) return null;
-    const category = match[0];
+    return rules.find(([category, expression]) => allowedCategories.includes(category) && expression.test(text))?.[0] || '';
+  }
+
+  async function analyzeSms(message, ownerId, allowedCategories) {
+    const body = String(message.body || '');
+    if (/\b(otp|one[ -]?time password|verification code|login code|auth code)\b/i.test(body)) return null;
+    const category = classifyIntegrationText(body, allowedCategories);
+    if (!category) return null;
     const amountMatch = body.match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
     const sourceRef = await messageFingerprint(message);
     const sender = safeMessageSummary(message.contact && message.contact !== '(Unknown)' ? message.contact : message.sender).slice(0, 100);
@@ -851,8 +856,9 @@
     const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
     if (!item) return;
     const date = String(item.receivedAt || new Date().toISOString()).slice(0, 10);
-    if (item.category === 'school') {
-      D.state.events.push({ id: D.uid('e'), context: 'study', title: item.title, category: 'School', startAt: `${date}T09:00`, venue: item.sender || '', notes: item.summary });
+    const eventTime = String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
+    if (item.source === 'calendar' || item.category === 'school') {
+      D.state.events.push({ id: D.uid('e'), context: item.category === 'school' ? 'study' : 'home', title: item.title, category: item.category === 'school' ? 'School' : categoryLabels[item.category], startAt: eventTime, venue: item.sender || '', notes: item.summary });
     } else if (['bills', 'travel', 'health', 'government'].includes(item.category)) {
       const domain = { bills: 'bills', travel: 'travel', health: 'appointments', government: 'documents' }[item.category];
       D.state.lifeRecords.push({ id: D.uid('lr'), domain, title: item.title, category: categoryLabels[item.category], owner: D.state.people.find(person => person.id === item.personId)?.name || 'Family', provider: item.sender, reference: '', amount: item.amount, dueDate: date, frequency: 'Once', status: 'pending', phone: '', notes: item.summary, createdAt: new Date().toISOString() });
@@ -872,53 +878,113 @@
     render();
   }
 
-  function connectorUrl(path) {
-    const base = $('#googleConnectorUrl')?.value || D.state.settings.googleSync?.connectorUrl || '';
-    if (!/^https:\/\//i.test(base)) throw new Error('Enter an HTTPS connector URL first.');
-    return new URL(path, new URL(base).origin);
+  function googleScopes(form = $('#googleSyncSettings')) {
+    const scopes = ['openid', 'email'];
+    if (form?.querySelector('[name="calendarSync"]')?.checked) scopes.push('https://www.googleapis.com/auth/calendar.readonly');
+    if (form?.querySelector('[name="emailAnalysis"]')?.checked) scopes.push('https://www.googleapis.com/auth/gmail.readonly');
+    if (form?.querySelector('[name="driveBackup"]')?.checked) scopes.push('https://www.googleapis.com/auth/drive.appdata');
+    return scopes.join(' ');
   }
 
-  function startGoogleConnect(button) {
+  async function waitForGoogleIdentity() {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+      if (window.google?.accounts?.oauth2) return window.google.accounts.oauth2;
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error('Google Identity Services did not load. Check content blockers and retry.');
+  }
+
+  async function googleApi(url, accessToken, options = {}) {
+    const response = await fetch(url, { ...options, headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error?.message || `Google API returned ${response.status}`);
+    return payload;
+  }
+
+  async function startGoogleConnect(button) {
     const row = button.closest('[data-google-account]');
     const email = row.querySelector('[data-google-email]').value.trim();
     const consent = row.querySelector('[data-google-consent]').checked;
     if (!email || !consent) { toast('Add the account email and owner consent first'); return; }
     try {
-      const url = connectorUrl('/oauth/google/start');
-      url.searchParams.set('personId', row.querySelector('[data-google-owner]').value);
-      url.searchParams.set('slotId', button.dataset.googleConnect);
-      url.searchParams.set('loginHint', email);
-      url.searchParams.set('returnTo', location.href);
-      window.open(url, '_blank', 'noopener');
-      toast('Google consent opened in a new tab');
-    } catch (error) { toast(error.message); }
-  }
-
-  function acceptGoogleConnectorResult(payload) {
-    const sync = D.state.settings.googleSync || {};
-    if (Array.isArray(payload.accounts)) {
-      sync.accounts = (sync.accounts || []).map(account => {
-        const remote = payload.accounts.find(item => String(item.personId) === account.personId || String(item.email || '').toLowerCase() === account.email.toLowerCase());
-        if (!remote) return account;
-        return { ...account, status: ['connected', 'paused', 'error', 'pending'].includes(remote.status) ? remote.status : account.status, lastSync: normalizeMessageDate(remote.lastSync) || account.lastSync };
-      });
-    }
-    return mergeSuggestions(Array.isArray(payload.suggestions) ? payload.suggestions : [], 'gmail');
-  }
-
-  async function checkGoogleStatus() {
-    const button = document.querySelector('[data-google-status]');
-    try {
       button.disabled = true;
-      button.classList.add('is-syncing');
-      const response = await fetch(connectorUrl('/api/home-manager/status'), { credentials: 'include', headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error(`Connector returned ${response.status}`);
-      const payload = await response.json();
-      const added = acceptGoogleConnectorResult(payload);
-      save(added ? `${added} Google updates need review` : 'Google account status refreshed');
+      const clientId = $('#googleClientId').value.trim();
+      if (!/^[0-9]+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i.test(clientId)) throw new Error('Enter a valid Google OAuth web client ID.');
+      const oauth2 = await waitForGoogleIdentity();
+      const tokenResponse = await new Promise((resolve, reject) => {
+        const client = oauth2.initTokenClient({
+          client_id: clientId,
+          scope: googleScopes(),
+          login_hint: email,
+          prompt: 'select_account',
+          callback: response => response?.error ? reject(new Error(response.error_description || response.error)) : resolve(response),
+          error_callback: error => reject(new Error(error.type === 'popup_closed' ? 'Google account window was closed.' : 'Google authorization could not open.'))
+        });
+        client.requestAccessToken();
+      });
+      const user = await googleApi('https://openidconnect.googleapis.com/v1/userinfo', tokenResponse.access_token);
+      if (String(user.email || '').toLowerCase() !== email.toLowerCase()) {
+        oauth2.revoke(tokenResponse.access_token);
+        throw new Error(`Google authorized ${user.email || 'another account'}, not ${email}.`);
+      }
+      const slotId = button.dataset.googleConnect;
+      const personId = row.querySelector('[data-google-owner]').value;
+      googleSessions.set(slotId, { accessToken: tokenResponse.access_token, expiresAt: Date.now() + (+tokenResponse.expires_in || 3600) * 1000, email });
+      const sync = D.state.settings.googleSync;
+      sync.mode = 'direct';
+      sync.clientId = clientId;
+      let account = (sync.accounts || []).find(item => item.slotId === slotId);
+      if (!account) { account = { slotId }; sync.accounts ||= []; sync.accounts.push(account); }
+      Object.assign(account, { personId, email, consent: true, status: 'connected', lastSync: account.lastSync || '' });
+      save(`${email} connected for this browser session`);
       render();
-    } catch (error) { toast(`Google status unavailable: ${error.message}`); }
-    finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
+    } catch (error) { toast(`Google connection failed: ${error.message}`); }
+    finally { if (button?.isConnected) button.disabled = false; }
+  }
+
+  function amountFromText(text) {
+    const match = String(text || '').match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    return match ? +match[1].replace(/,/g, '') || 0 : 0;
+  }
+
+  async function readGoogleCalendar(account, session, sync) {
+    if (!sync.calendarSync) return [];
+    const from = new Date(); from.setDate(from.getDate() - (+sync.lookbackDays || 30));
+    const until = new Date(); until.setDate(until.getDate() + 90);
+    const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '100', timeMin: from.toISOString(), timeMax: until.toISOString() });
+    const payload = await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, session.accessToken);
+    return (payload.items || []).filter(item => item.status !== 'cancelled').map(item => {
+      const text = `${item.summary || ''} ${item.description || ''} ${item.location || ''}`;
+      const category = classifyIntegrationText(text, sync.categories || integrationCategories) || 'home';
+      return { source: 'calendar', sourceRef: `${account.email}:${item.id}:${item.updated || ''}`, personId: account.personId, category, title: item.summary || 'Google Calendar event', summary: [item.description, item.location].filter(Boolean).join(' - '), sender: account.email, receivedAt: item.start?.dateTime || item.start?.date || '', amount: amountFromText(text) };
+    });
+  }
+
+  async function readGoogleGmail(account, session, sync) {
+    if (!sync.emailAnalysis) return [];
+    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice renewal booking travel school exam appointment delivery government service}`;
+    const listParams = new URLSearchParams({ q: query, maxResults: '40' });
+    const list = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
+    const messages = await Promise.all((list.messages || []).slice(0, 40).map(async reference => {
+      const params = new URLSearchParams({ format: 'metadata' });
+      ['Subject', 'From', 'Date'].forEach(name => params.append('metadataHeaders', name));
+      return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
+    }));
+    return messages.map(message => {
+      const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name).toLowerCase(), header.value]));
+      const text = `${headers.subject || ''} ${message.snippet || ''}`;
+      const category = classifyIntegrationText(text, sync.categories || integrationCategories);
+      if (!category || /\b(otp|one[ -]?time password|verification code)\b/i.test(text)) return null;
+      return { source: 'gmail', sourceRef: `${account.email}:${message.id}`, personId: account.personId, category, title: headers.subject || categoryLabels[category], summary: message.snippet || '', sender: headers.from || account.email, receivedAt: message.internalDate ? new Date(+message.internalDate).toISOString() : headers.date || '', amount: amountFromText(text) };
+    }).filter(Boolean);
+  }
+
+  async function backupToGoogleDrive(account, session) {
+    const boundary = `home_manager_${Date.now()}`;
+    const metadata = { name: `Home Manager backup ${new Date().toISOString().slice(0, 10)}.json`, parents: ['appDataFolder'], mimeType: 'application/json' };
+    const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${JSON.stringify(D.state)}\r\n--${boundary}--`;
+    await googleApi('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', session.accessToken, { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body });
+    return account.email;
   }
 
   async function runGoogleSync() {
@@ -926,14 +992,22 @@
     try {
       button.disabled = true;
       button.classList.add('is-syncing');
-      const response = await fetch(connectorUrl('/api/home-manager/sync'), { method: 'POST', credentials: 'include', headers: { Accept: 'application/json' } });
-      if (!response.ok) throw new Error(`Sync service returned ${response.status}`);
-      const payload = await response.json().catch(() => ({}));
-      const added = acceptGoogleConnectorResult(payload);
-      save(added ? `${added} Google updates need review` : payload.status === 'queued' ? 'Google sync queued by the connector' : 'Google sync completed with no new updates');
+      const sync = D.state.settings.googleSync;
+      const active = (sync.accounts || []).map(account => ({ account, session: googleSessions.get(account.slotId) })).filter(item => item.session && item.session.expiresAt > Date.now());
+      if (!active.length) throw new Error('Connect at least one Google account for this session.');
+      const suggestions = [];
+      for (const { account, session } of active) {
+        suggestions.push(...await readGoogleCalendar(account, session, sync));
+        suggestions.push(...await readGoogleGmail(account, session, sync));
+        if (sync.driveBackup) await backupToGoogleDrive(account, session);
+        account.lastSync = new Date().toISOString();
+        account.status = 'connected';
+      }
+      const added = mergeSuggestions(suggestions, 'gmail');
+      save(added ? `${added} Google updates need review` : 'Google sync completed with no new updates');
       render();
-    } catch (error) { toast(`Google sync unavailable: ${error.message}`); }
-    finally { button.disabled = false; button.classList.remove('is-syncing'); }
+    } catch (error) { toast(`Google sync failed: ${error.message}`); }
+    finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
   }
 
   function toggleTheme() {

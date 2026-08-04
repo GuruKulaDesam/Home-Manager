@@ -5,7 +5,7 @@ function clone(v){return JSON.parse(JSON.stringify(v))}
 function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)}
 seed.settings.appBackground='waterfall';
 seed.settings.activeLearnerId='p3';
-seed.settings.googleSync={connectorUrl:'',autoSync:false,calendarSync:true,emailAnalysis:false,driveBackup:false,reviewPolicy:'review',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
+seed.settings.googleSync={mode:'direct',clientId:'',autoSync:false,calendarSync:true,emailAnalysis:true,driveBackup:false,reviewPolicy:'review',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
 seed.settings.phoneSms={ownerId:'p1',consent:false,lastImport:'',importedCount:0,sourceName:'',categories:['bills','travel','school','health','deliveries','home','government']};
 seed.expenses.forEach(item=>item.domain=item.category==='Food'?'food':'housing');
 seed.expenses.push(
@@ -142,10 +142,11 @@ function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
   return {
-    connectorUrl:typeof input.connectorUrl==='string'?input.connectorUrl.trim():'',
+    mode:'direct',
+    clientId:typeof input.clientId==='string'?input.clientId.trim():'',
     autoSync:Boolean(input.autoSync),
     calendarSync:input.calendarSync!==false,
-    emailAnalysis:Boolean(input.emailAnalysis),
+    emailAnalysis:input.mode?Boolean(input.emailAnalysis):true,
     driveBackup:Boolean(input.driveBackup),
     reviewPolicy:input.reviewPolicy==='rules'?'rules':'review',
     lookbackDays:[7,30,90].includes(+input.lookbackDays)?+input.lookbackDays:30,
