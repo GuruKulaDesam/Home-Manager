@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#fafafa">
   <meta name="description" content="A private, local-first command center for home, community and study life.">
   <title>Home Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://unpkg.com">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -17,10 +20,11 @@
       <div><b>Home Manager</b><small>Life, clearly organised</small></div>
     </div>
     <div class="workspace-switcher" role="tablist" aria-label="Workspace">
-      <button type="button" role="tab" data-workspace="home"><i data-lucide="house"></i><span>Home</span></button>
-      <button type="button" role="tab" data-workspace="community"><i data-lucide="map-pinned"></i><span>Community</span></button>
-      <button type="button" role="tab" data-workspace="study"><i data-lucide="book-open"></i><span>Study</span></button>
+      <button type="button" role="tab" aria-controls="nav" data-workspace="home"><i data-lucide="house"></i><span>Home</span></button>
+      <button type="button" role="tab" aria-controls="nav" data-workspace="community"><i data-lucide="map-pinned"></i><span>Community</span></button>
+      <button type="button" role="tab" aria-controls="nav" data-workspace="study"><i data-lucide="book-open"></i><span>Study</span></button>
     </div>
+    <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
     <nav id="nav"></nav>
     <div class="sidebar-bottom">
       <button type="button" data-route="global/settings"><i data-lucide="settings-2"></i><span>Settings</span></button>
@@ -58,11 +62,12 @@
 
   <nav id="bottomNav" aria-label="Mobile navigation"></nav>
 
-  <dialog id="formDialog" aria-labelledby="formTitle">
+  <dialog id="formDialog" class="side-drawer" aria-labelledby="formTitle">
     <form id="entityForm" method="dialog">
-      <div class="dialog-head"><div><small id="formContext"></small><h2 id="formTitle">Add item</h2></div><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
-      <div id="formFields"></div>
-      <menu><button value="cancel">Cancel</button><button value="default" class="primary"><i data-lucide="check"></i><span>Save</span></button></menu>
+      <span class="drawer-accent" aria-hidden="true"></span>
+      <div class="dialog-head"><div><small id="formContext"></small><h2 id="formTitle">Add item</h2><p>Complete the details below. Your data stays in this browser.</p></div><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div id="formFields" class="drawer-body"></div>
+      <menu class="drawer-footer"><button value="cancel">Cancel</button><button value="default" class="primary"><i data-lucide="check"></i><span>Save item</span></button></menu>
     </form>
   </dialog>
 
@@ -73,10 +78,11 @@
     </form>
   </dialog>
 
-  <dialog id="quickDialog" aria-labelledby="quickTitle">
+  <dialog id="quickDialog" class="side-drawer quick-drawer" aria-labelledby="quickTitle">
     <form method="dialog">
-      <div class="dialog-head"><div><small>Create</small><h2 id="quickTitle">Quick add</h2></div><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
-      <div id="quickActions" class="quick-grid"></div>
+      <span class="drawer-accent" aria-hidden="true"></span>
+      <div class="dialog-head"><div><small>Create</small><h2 id="quickTitle">Add to Home Manager</h2><p>Choose what you want to organise.</p></div><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div id="quickActions" class="quick-grid drawer-body"></div>
     </form>
   </dialog>
 

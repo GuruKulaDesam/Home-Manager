@@ -49,6 +49,12 @@
       button.setAttribute('aria-selected', String(active));
       button.tabIndex = active ? 0 : -1;
     });
+    const workspaceMeta = {
+      home: { title: 'Home menu', note: 'Plan and care', icon: 'house' },
+      community: { title: 'Community menu', note: 'Discover and participate', icon: 'map-pinned' },
+      study: { title: 'Study menu', note: 'Plan and focus', icon: 'book-open' }
+    }[workspace];
+    $('#workspaceMenuLabel').innerHTML = `<span><small>${workspaceMeta.note}</small><b>${workspaceMeta.title}</b></span><i data-lucide="${workspaceMeta.icon}"></i>`;
 
     let lastGroup = '';
     const unifiedActive = route === 'global/overview';
@@ -163,6 +169,7 @@
     else if (form.elements.context) form.elements.context.value = source.context || workspace;
     $('#formDialog').showModal();
     refreshIcons();
+    setTimeout(() => $('#formFields input, #formFields select, #formFields textarea')?.focus(), 50);
   }
 
   function addEntity(kind, values, meta) {
@@ -299,7 +306,7 @@
 
   function quick() {
     const actions = [['task', 'Task', workspace, 'list-plus'], ['event', 'Event', workspace, 'calendar-plus'], ['expense', 'Expense', 'home', 'receipt-text'], ['issue', 'Home issue', 'home', 'wrench'], ['issue', 'Civic follow-up', 'community', 'ticket-plus'], ['topic', 'Study topic', 'study', 'book-plus'], ['discussion', 'Forum note', 'community', 'message-square-plus']];
-    $('#quickActions').innerHTML = actions.map(item => `<button data-quick="${item[0]}" data-context="${item[2]}" data-scope="${item[1] === 'Civic follow-up' ? 'civic' : item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>${item[2]} workspace</small></span></button>`).join('');
+    $('#quickActions').innerHTML = actions.map(item => `<button type="button" data-quick="${item[0]}" data-context="${item[2]}" data-scope="${item[1] === 'Civic follow-up' ? 'civic' : item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>${item[2]} workspace</small></span><i data-lucide="chevron-right"></i></button>`).join('');
     $('#quickDialog').showModal();
     refreshIcons();
   }
@@ -400,14 +407,17 @@
     const calendarShift = event.target.closest('[data-calendar-shift]');
     if (calendarShift) { V.shiftCalendar(calendarShift.dataset.calendarShift); render(); return; }
     const quickTarget = event.target.closest('[data-quick]');
-    if (quickTarget) { $('#quickDialog').close(); openForm(quickTarget.dataset.quick, quickTarget.dataset); return; }
+    if (quickTarget) { event.preventDefault(); $('#quickDialog').close(); openForm(quickTarget.dataset.quick, quickTarget.dataset); return; }
     const guideButton = event.target.closest('[data-open-guide]');
     if (guideButton) { const guide = D.state.guides.find(x => x.id === guideButton.dataset.openGuide); if (guide) { guide.read = true; save('Guide marked as read'); render(); } }
   });
 
   $('#entityForm').onsubmit = event => {
     if (event.submitter?.value === 'cancel') return;
+    event.preventDefault();
     const form = event.currentTarget;
+    if (!form.reportValidity()) return;
+    $('#formDialog').close();
     addEntity(form.dataset.kind, Object.fromEntries(new FormData(form)), form.dataset);
     form.reset();
   };
