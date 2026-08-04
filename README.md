@@ -12,6 +12,12 @@ Tasks, events, issues, contacts and recognition use shared context-aware data in
 
 The command center includes a seven-item date-sorted agenda, overdue and low-stock signals, current-month finance totals, seven-day study focus, notifications, context-aware search, combined filters, calendar month navigation, mobile agenda views, keyboard-accessible study status controls, core record editing, undo for deletions, persistent navigation preferences, validated backup import, seven action Quick Add and responsive navigation. Data is stored locally in the browser under the versioned `home-manager-unified-v1` key.
 
+## Ask Home Manager
+
+The question catalog covers 250 unique questions across seven life areas and seven family roles. Each question resolves to current browser data, a direct setup or capture workflow, an official service, or an explicit privacy/static-app limitation. Ask Home Manager is available under Today and its best matches also appear in global search. Results are intentionally capped at seven.
+
+The catalog follows shared calendar, meal, shopping and household-list patterns documented by FamilyWall and Cozi, plus assigned family tasks, recurring dates and reminders documented by Todoist. Emergency answers link to the official ERSS 112 service. Home Manager does not claim background reminders, live location, realtime collaboration or emergency dispatch.
+
 ## Household coverage
 
 Reusable records cover health, identity documents, bills, insurance, tax, property, vehicles, domestic help, subscriptions, travel and pilgrimage, festivals, emergency planning, pets, digital assets, sustainability, and nominations and legacy. Each area supports adding, editing, deleting, filtering and status tracking, with upcoming dates surfaced on Today and in notifications.

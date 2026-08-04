@@ -136,7 +136,7 @@
   function area(label, name, required = true) { return `<label>${label}<textarea name="${name}" ${required ? 'required' : ''}></textarea></label>`; }
 
   const schemas = {
-    task: () => [field('Task', 'title'), field('Context', 'context', 'text', ['home', 'community', 'study']), field('Type', 'type', 'text', ['task', 'duty', 'reminder', 'practice', 'volunteer']), field('Category', 'category'), field('Assigned to', 'assignee', 'text', null, false), field('Due', 'dueAt', 'date'), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
+    task: () => [field('Task', 'title'), field('Context', 'context', 'text', ['home', 'community', 'study']), field('Type', 'type', 'text', ['task', 'duty', 'reminder', 'practice', 'volunteer']), field('Category', 'category'), field('Assigned to', 'assignee', 'text', null, false), field('Due', 'dueAt', 'date'), field('Repeats', 'frequency', 'text', ['Once', 'Daily', 'Weekly', 'Monthly', 'Yearly']), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
     event: () => [field('Event', 'title'), field('Context', 'context', 'text', ['home', 'community', 'study']), field('Category', 'category'), field('Starts', 'startAt', 'datetime-local'), field('Venue', 'venue', 'text', null, false)],
     person: () => [field('Name', 'name'), field('Household role', 'householdRole'), field('Wellbeing score', 'wellbeing', 'number')],
     points: () => [field('Reason', 'reason'), field('Points', 'points', 'number')],
@@ -194,7 +194,7 @@
       return;
     }
     switch (kind) {
-      case 'task': state.tasks.push({ id: id('t'), context: values.context, type: values.type, title: values.title, category: values.category, assignee: values.assignee, dueAt: values.dueAt, priority: values.priority, status: 'todo' }); break;
+      case 'task': state.tasks.push({ id: id('t'), context: values.context, type: values.type, title: values.title, category: values.category, assignee: values.assignee, dueAt: values.dueAt, frequency: values.frequency || 'Once', priority: values.priority, status: 'todo' }); break;
       case 'event': state.events.push({ id: id('e'), context: values.context, title: values.title, category: values.category, startAt: values.startAt, venue: values.venue }); break;
       case 'person': state.people.push({ id: id('p'), name: values.name, householdRole: values.householdRole, wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) }); break;
       case 'points': state.pointTransactions.push({ id: id('pt'), personId: meta.person, context: 'home', reason: values.reason, points: +values.points || 0, createdAt: new Date().toISOString().slice(0, 10) }); break;
@@ -272,6 +272,20 @@
       save('Household settings saved');
       render();
     };
+    if ($('#questionQuery')) {
+      const updateQuestions = () => {
+        const query = $('#questionQuery').value;
+        const category = $('#questionCategory').value;
+        const role = $('#questionRole').value;
+        $('#questionResults').innerHTML = V.renderQuestionResults(query, category, role);
+        $('#questionResultTitle').textContent = query ? `Answers for "${query}"` : category !== 'all' || role !== 'all' ? 'Filtered questions' : 'Common questions';
+        refreshIcons();
+      };
+      $('#questionQuery').oninput = updateQuestions;
+      $('#questionCategory').onchange = updateQuestions;
+      $('#questionRole').onchange = updateQuestions;
+      document.querySelectorAll('[data-question-category]').forEach(button => button.onclick = () => { $('#questionCategory').value = button.dataset.questionCategory; updateQuestions(); $('#questionQuery').focus(); });
+    }
     if ($('#timerToggle')) $('#timerToggle').onclick = toggleTimer;
     document.querySelectorAll('[data-timer]').forEach(button => button.onclick = () => setTimer(button.dataset.timer));
   }
@@ -322,8 +336,12 @@
     renderSearch('');
   }
   function renderSearch(query) {
-    const results = searchItems(query);
-    $('#searchResults').innerHTML = results.length ? `<small>${results.length} results</small>${results.map(item => `<button class="search-result" data-route="${item.route}"><span class="context-badge ${item.context}">${D.esc(item.context)}</span><span class="grow"><b>${D.esc(item.label)}</b><small>${item.type}</small></span><i data-lucide="arrow-up-right"></i></button>`).join('')}` : `<div class="empty">${query ? 'No matches' : 'Type to search every workspace'}</div>`;
+    const questionMatches = query.trim() ? HM.questions.search(query).slice(0, 3) : [];
+    const results = searchItems(query).slice(0, Math.max(0, 7 - questionMatches.length));
+    const questionRows = questionMatches.map(question => { const answer = HM.questions.answer(question); return `<button class="search-result question-search-result" data-route="${answer.route}"><span class="context-badge">Answer</span><span class="grow"><b>${D.esc(question.text)}</b><small>${D.esc(answer.headline)}</small></span><i data-lucide="arrow-up-right"></i></button>`; }).join('');
+    const recordRows = results.map(item => `<button class="search-result" data-route="${item.route}"><span class="context-badge ${item.context}">${D.esc(item.context)}</span><span class="grow"><b>${D.esc(item.label)}</b><small>${item.type}</small></span><i data-lucide="arrow-up-right"></i></button>`).join('');
+    const total = questionMatches.length + results.length;
+    $('#searchResults').innerHTML = total ? `<small>${total} best matches</small>${questionRows}${recordRows}` : `<div class="empty">${query ? 'No matches' : 'Ask a question or search every household record'}</div>`;
     refreshIcons();
   }
 
@@ -456,7 +474,27 @@
     const deletion = event.target.closest('[data-delete]');
     if (deletion) { const [collection, id] = deletion.dataset.delete.split(':'); if (confirm('Remove this item? You can undo with Ctrl+Z.')) remove(collection, id); return; }
     const complete = event.target.closest('[data-complete]');
-    if (complete) { const id = complete.dataset.complete.split(':')[1]; const task = D.state.tasks.find(x => x.id === id); if (task) { task.status = complete.checked ? 'done' : 'todo'; save(); render(); } return; }
+    if (complete) {
+      const id = complete.dataset.complete.split(':')[1];
+      const task = D.state.tasks.find(x => x.id === id);
+      if (task) {
+        if (complete.checked && task.frequency && task.frequency !== 'Once' && task.dueAt) {
+          const next = new Date(`${task.dueAt}T00:00`);
+          if (task.frequency === 'Daily') next.setDate(next.getDate() + 1);
+          if (task.frequency === 'Weekly') next.setDate(next.getDate() + 7);
+          if (task.frequency === 'Monthly') next.setMonth(next.getMonth() + 1);
+          if (task.frequency === 'Yearly') next.setFullYear(next.getFullYear() + 1);
+          task.dueAt = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+          task.status = 'todo';
+          save(`Completed; next due ${D.date(task.dueAt)}`);
+        } else {
+          task.status = complete.checked ? 'done' : 'todo';
+          save();
+        }
+        render();
+      }
+      return;
+    }
     const like = event.target.closest('[data-like]');
     if (like) { const discussion = D.state.discussions.find(x => x.id === like.dataset.like); if (discussion) { discussion.likes = (+discussion.likes || 0) + 1; save('Appreciation stored locally'); render(); } return; }
     const vote = event.target.closest('[data-vote]');

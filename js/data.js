@@ -13,10 +13,16 @@ function normalize(value){
     theme:inputSettings.theme==='dark'?'dark':'light',
     locale:typeof inputSettings.locale==='string'?inputSettings.locale:'en',
     activeWorkspace:['home','community','study'].includes(inputSettings.activeWorkspace)?inputSettings.activeWorkspace:'home',
-    sidebarCollapsed:Boolean(inputSettings.sidebarCollapsed)
+    activeGroup:typeof inputSettings.activeGroup==='string'?inputSettings.activeGroup:'today',
+    sidebarCollapsed:Boolean(inputSettings.sidebarCollapsed),
+    householdName:typeof inputSettings.householdName==='string'?inputSettings.householdName:'',
+    language:typeof inputSettings.language==='string'?inputSettings.language:'English',
+    primaryAddress:typeof inputSettings.primaryAddress==='string'?inputSettings.primaryAddress:'',
+    timezone:typeof inputSettings.timezone==='string'?inputSettings.timezone:'Asia/Kolkata',
+    foodPreference:typeof inputSettings.foodPreference==='string'?inputSettings.foodPreference:''
   };
   collections.forEach(key=>{if(Array.isArray(value[key]))next[key]=clone(value[key]).filter(item=>item&&typeof item==='object')});
-  next.tasks.forEach(item=>{item.id=String(item.id||uid('t'));item.context=['home','community','study'].includes(item.context)?item.context:'home';item.status=normalizeStatus(item.status);item.priority=['low','medium','high'].includes(item.priority)?item.priority:'medium'});
+  next.tasks.forEach(item=>{item.id=String(item.id||uid('t'));item.context=['home','community','study'].includes(item.context)?item.context:'home';item.status=normalizeStatus(item.status);item.priority=['low','medium','high'].includes(item.priority)?item.priority:'medium';item.frequency=['Once','Daily','Weekly','Monthly','Yearly'].includes(item.frequency)?item.frequency:'Once'});
   next.events.forEach(item=>{item.id=String(item.id||uid('e'));item.context=['home','community','study'].includes(item.context)?item.context:'home';item.startAt=typeof item.startAt==='string'?item.startAt:''});
   next.issues.forEach(item=>{item.id=String(item.id||uid('i'));item.scope=item.scope==='civic'?'civic':'household';item.status=normalizeStatus(item.status);item.priority=['low','medium','high'].includes(item.priority)?item.priority:'medium'});
   next.people.forEach(item=>item.wellbeing=Math.min(100,Math.max(0,+item.wellbeing||0)));

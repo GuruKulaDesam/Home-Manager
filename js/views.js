@@ -4,7 +4,7 @@
 
   const groups = {
     today: { label: 'Today', icon: 'sparkles', note: 'What needs attention now', route: 'global/overview', items: [
-      ['Today', 'sparkles', 'global/overview']
+      ['Today', 'sparkles', 'global/overview'], ['Ask Home Manager', 'message-circle-question-mark', 'global/questions']
     ]},
     household: { label: 'Household', icon: 'house', note: 'Run the home', route: 'home/overview', items: [
       ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & repairs', 'wrench', 'home/property'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
@@ -38,6 +38,7 @@
 
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
+    'global/questions': ['Ask Home Manager', 'Answers across the whole household'],
     'global/settings': ['Settings', 'Appearance, data and privacy'],
     'home/overview': ['Home Overview', 'Your household at a glance'],
     'home/tasks': ['Home Tasks', 'Responsibilities, reminders and maintenance'],
@@ -188,6 +189,35 @@
           </section>
         </aside>
       </div>`;
+  }
+
+  function questionResult(question, index = 0) {
+    const result = HM.questions.answer(question);
+    const capture = result.status === 'setup' ? result.capture : null;
+    const captureAttrs = capture ? `data-create="${capture.kind}" ${capture.context ? `data-context="${capture.context}"` : ''} ${capture.domain ? `data-domain="${capture.domain}"` : ''} ${capture.scope ? `data-scope="${capture.scope}"` : ''}` : '';
+    const statusLabels = { live: 'From your records', setup: 'Needs information', official: 'Official service', external: 'External information', limitation: 'Privacy boundary' };
+    return `<details class="question-card" ${index === 0 ? 'open' : ''}>
+      <summary><span class="question-icon">${icon(question.icon)}</span><span class="grow"><small>${e(question.role)} - ${e(question.categoryLabel)}</small><b>${e(question.text)}</b></span><span class="answer-status ${e(result.status)}">${e(statusLabels[result.status] || 'Mapped')}</span>${icon('chevron-down')}</summary>
+      <div class="question-answer"><span>${icon(result.status === 'live' ? 'database' : result.status === 'official' ? 'badge-check' : result.status === 'limitation' ? 'shield' : 'lightbulb')}</span><div class="grow"><h3>${e(result.headline)}</h3><p>${e(result.detail)}</p><div class="question-actions"><button data-route="${e(result.route)}">Open section ${icon('arrow-right')}</button>${capture ? `<button class="primary" ${captureAttrs}>${icon('plus')}<span>Add information</span></button>` : ''}${result.external ? `<a href="${e(result.external)}" target="_blank" rel="noopener">Official website ${icon('external-link')}</a>` : ''}</div></div></div>
+    </details>`;
+  }
+
+  function renderQuestionResults(query = '', category = 'all', role = 'all') {
+    const results = HM.questions.search(query, category, role);
+    return results.length ? results.map(questionResult).join('') : '<div class="empty"><p>No matching family question.</p><p>Try fewer words or choose another role.</p></div>';
+  }
+
+  function questionHub() {
+    const Q = HM.questions;
+    const audit = Q.questions.map(question => Q.answer(question)).reduce((counts, answer) => ({ ...counts, [answer.status]: (counts[answer.status] || 0) + 1 }), {});
+    return `<section class="ask-heading"><div><span class="eyebrow">${icon('message-circle-question-mark')} FAMILY ANSWERS</span><h2>What do you need to know?</h2><p>Ask in everyday language. Answers use this browser's household records.</p></div><span class="question-count"><b>${Q.questions.length}</b><small>questions mapped</small></span></section>
+      <section class="question-coverage" aria-label="Question coverage"><span><b>${audit.live || 0}</b><small>answered from records</small></span><span><b>${audit.setup || 0}</b><small>need information</small></span><span><b>${(audit.official || 0) + (audit.external || 0)}</b><small>official or live services</small></span><span><b>${audit.limitation || 0}</b><small>privacy boundary</small></span></section>
+      <section class="question-toolbar">
+        <label class="question-search">${icon('search')}<span class="sr-only">Ask Home Manager</span><input id="questionQuery" autocomplete="off" placeholder="Try: When is the electricity bill due?"></label>
+        <label><span class="sr-only">Life area</span><select id="questionCategory"><option value="all">All 7 life areas</option>${Q.sets.map(set => `<option value="${set.id}">${e(set.label)}</option>`).join('')}</select></label>
+        <label><span class="sr-only">Family role</span><select id="questionRole"><option value="all">Every family member</option>${Q.roles.map(role => `<option>${e(role)}</option>`).join('')}</select></label>
+      </section>
+      <div class="question-layout"><aside><span class="section-kicker">COVERAGE</span><h3>Everyday family life</h3><p>The catalog covers coordination, food, home, relationships, money, safety, learning and community life.</p><div class="question-domain-list">${Q.sets.map(set => `<button data-question-category="${set.id}">${icon(set.icon)}<span>${e(set.label)}</span><b>${set.items.length}</b></button>`).join('')}</div><div class="privacy-note question-privacy"><b>Private by design</b><p>Full identity numbers, passwords, PINs, scans and medical reports do not belong in browser storage.</p></div></aside><section><div class="question-results-head"><div><span class="section-kicker">BEST MATCHES</span><h3 id="questionResultTitle">Common questions</h3></div><small>Up to 7 answers</small></div><div id="questionResults" aria-live="polite">${renderQuestionResults()}</div></section></div>`;
   }
 
   function homeOverview() {
@@ -398,6 +428,7 @@
 
   function render(route) {
     if (route === 'global/overview') return unified();
+    if (route === 'global/questions') return questionHub();
     if (route === 'global/settings') return settingsPage('app');
     if (route.startsWith('settings/life/')) return lifeDomain(route.split('/')[2], true);
     if (route.startsWith('settings/')) return settingsPage(route.split('/')[1]);
@@ -439,6 +470,7 @@
     settingsGroups,
     titles,
     render,
+    renderQuestionResults,
     shiftCalendar,
     get timer() { return { seconds: timerSeconds, id: timerId }; },
     setTimer(seconds, id) { timerSeconds = seconds; timerId = id; },
