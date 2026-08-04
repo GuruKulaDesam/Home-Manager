@@ -8,8 +8,25 @@
       ['Plan', 'Tasks', 'list-checks', 'home/tasks'],
       ['Plan', 'Calendar', 'calendar-days', 'home/calendar'],
       ['Home', 'Family', 'users', 'home/family'],
+      ['People', 'Family Health', 'heart-pulse', 'home/life/health'],
       ['Home', 'Money', 'wallet-cards', 'home/finance'],
       ['Home', 'Supplies & Meals', 'shopping-basket', 'home/inventory'],
+      ['Money', 'Bills & Payments', 'receipt-indian-rupee', 'home/life/bills'],
+      ['Money', 'Insurance', 'shield-check', 'home/life/insurance'],
+      ['Money', 'Tax & Compliance', 'landmark', 'home/life/tax'],
+      ['Money', 'Subscriptions', 'repeat-2', 'home/life/subscriptions'],
+      ['Household', 'Property & Utilities', 'building-2', 'home/life/property'],
+      ['Household', 'Vehicles', 'car-front', 'home/life/vehicles'],
+      ['Household', 'Domestic Help', 'hand-helping', 'home/life/help'],
+      ['Household', 'Sustainability', 'leaf', 'home/life/sustainability'],
+      ['Plans', 'Travel & Pilgrimage', 'luggage', 'home/life/travel'],
+      ['Plans', 'Festivals & Functions', 'party-popper', 'home/life/festivals'],
+      ['Records', 'Life Registry', 'layout-grid', 'home/life'],
+      ['Records', 'Documents & IDs', 'folders', 'home/life/documents'],
+      ['Records', 'Digital Household', 'cloud-cog', 'home/life/digital'],
+      ['Records', 'Nominees & Legacy', 'scroll-text', 'home/life/legacy'],
+      ['Care', 'Emergency Readiness', 'siren', 'home/life/emergency'],
+      ['Care', 'Pets & Animals', 'paw-print', 'home/life/pets'],
       ['Care', 'Maintenance & Assets', 'wrench', 'home/assets'],
       ['Care', 'Wisdom & Recognition', 'sparkles', 'home/wisdom'],
       ['Care', 'Directory', 'contact-round', 'home/directory']
@@ -63,6 +80,10 @@
     'study/focus': ['Focus Timer', 'Focused sessions recorded in analytics'],
     'study/analytics': ['Study Analytics', 'Focus time and subject proficiency']
   };
+  titles['home/life'] = ['Family Life Registry', 'Every important family record in one place'];
+  Object.entries(HM.life.domains).forEach(([key, config]) => {
+    titles[`home/life/${key}`] = [config.title, config.note];
+  });
 
   const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
   const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, Number(value) || 0));
@@ -114,9 +135,14 @@
     const lowStock = s.inventoryItems.filter(x => (+x.quantity || 0) <= 2);
     const month = day.slice(0, 7);
     const monthSpend = s.expenses.filter(x => isoDay(x.date).startsWith(month)).reduce((sum, x) => sum + (+x.amount || 0), 0);
+    const lifeRecords = HM.life.ensure();
+    const horizonDate = new Date(); horizonDate.setDate(horizonDate.getDate() + 30);
+    const horizon = horizonDate.toISOString().slice(0, 10);
+    const lifeDue = lifeRecords.filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status)).sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
     const agenda = [
       ...openTasks.map(x => ({ date: isoDay(x.dueAt), context: x.context, title: x.title, sub: `${x.category} - ${x.assignee || 'Unassigned'}`, route: taskRoute(x.context), icon: 'circle-check-big' })),
-      ...upcomingEvents.map(x => ({ date: isoDay(x.startAt), context: x.context, title: x.title, sub: `${D.date(x.startAt)} - ${x.venue || 'No venue'}`, route: eventRoute(x.context), icon: 'calendar-clock' }))
+      ...upcomingEvents.map(x => ({ date: isoDay(x.startAt), context: x.context, title: x.title, sub: `${D.date(x.startAt)} - ${x.venue || 'No venue'}`, route: eventRoute(x.context), icon: 'calendar-clock' })),
+      ...lifeDue.map(x => ({ date: x.dueDate, context: 'home', title: x.title, sub: `${HM.life.domains[x.domain]?.title || 'Family record'} - ${x.status}`, route: `home/life/${x.domain}`, icon: HM.life.domains[x.domain]?.icon || 'folder-clock' }))
     ].filter(x => x.date).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 8);
     const issues = s.issues.filter(x => D.status(x.status) !== 'done');
 
@@ -141,8 +167,10 @@
             <article class="card signal warning"><small>Low stock</small><strong>${lowStock.length}</strong><span>${lowStock.length ? lowStock.slice(0, 2).map(x => e(x.name)).join(', ') : 'Supplies look good'}</span></article>
             <article class="card signal"><small>Home issues</small><strong>${issues.filter(x => x.scope === 'household').length}</strong><span>Maintenance follow-up</span></article>
             <article class="card signal study"><small>Study topics</small><strong>${s.learningTopics.filter(x => x.status !== 'done').length}</strong><span>Still in progress</span></article>
+            <article class="card signal danger"><small>Renewals & dues</small><strong>${lifeDue.length}</strong><span>Next 30 days</span></article>
+            <article class="card signal warning"><small>Life registry</small><strong>${lifeRecords.length}</strong><span>${Object.keys(HM.life.domains).length} family domains</span></article>
           </section>
-          <section class="panel"><div class="section-head"><div><h2>Needs attention</h2><p>Priority tasks and open issues</p></div></div>${[...overdue.slice(0, 3).map(x => row(x.title, `Due ${D.date(x.dueAt)}`, status(x.status), x.context)), ...issues.slice(0, 3).map(x => row(x.title, `${x.location} - ${x.priority}`, status(x.status), x.scope === 'civic' ? 'community' : 'home'))].join('') || '<p class="empty">No urgent signals.</p>'}</section>
+          <section class="panel"><div class="section-head"><div><h2>Needs attention</h2><p>Priority tasks, renewals and open issues</p></div><button data-route="home/life">Life registry</button></div>${[...lifeDue.slice(0, 3).map(x => row(x.title, `${HM.life.domains[x.domain]?.title || 'Family'} - ${D.date(x.dueDate)}`, lifeStatus(x.status), 'home')), ...overdue.slice(0, 2).map(x => row(x.title, `Due ${D.date(x.dueAt)}`, status(x.status), x.context)), ...issues.slice(0, 2).map(x => row(x.title, `${x.location} - ${x.priority}`, status(x.status), x.scope === 'civic' ? 'community' : 'home'))].join('') || '<p class="empty">No urgent signals.</p>'}</section>
         </div>
       </div>
       <section><div class="section-head"><div><h2>Workspaces</h2><p>Focused views when you need more detail</p></div></div><div class="grid-3">
@@ -226,6 +254,44 @@
     return `<div class="toolbar"><input data-filter aria-label="Search contacts" placeholder="Search contacts"><button class="primary" data-create="contact" data-scope="${scope}">${icon('user-plus')}<span>Contact</span></button></div><div class="cards">${contacts.length ? contacts.map(x => `<article class="card" data-filter-row><span class="badge">${e(x.category)}</span><h3>${e(x.name)}</h3><p>${e(x.hours)}</p><a href="tel:${e(String(x.phone).replace(/[^+\d]/g, ''))}">${e(x.phone)}</a></article>`).join('') : empty('No contacts saved.', 'contact', 'Add contact')}</div>`;
   }
 
+  function lifeDueState(record) {
+    if (!record.dueDate || ['done', 'paid', 'complete'].includes(record.status)) return '';
+    const days = Math.ceil((new Date(`${record.dueDate}T00:00`) - new Date(`${today()}T00:00`)) / 86400000);
+    if (days < 0) return 'overdue';
+    if (days <= 30) return 'soon';
+    return '';
+  }
+
+  function lifeStatus(value) {
+    const safe = ['planning', 'pending', 'active', 'due', 'paid', 'done'].includes(value) ? value : 'pending';
+    const className = safe === 'due' ? 'danger' : ['planning', 'pending'].includes(safe) ? 'warning' : '';
+    return `<span class="badge ${className}">${e(safe[0].toUpperCase() + safe.slice(1))}</span>`;
+  }
+
+  function lifeHub() {
+    const records = HM.life.ensure();
+    const configs = HM.life.domains;
+    const dueSoon = records.filter(record => ['overdue', 'soon'].includes(lifeDueState(record)));
+    const open = records.filter(record => !['done', 'paid', 'complete'].includes(record.status));
+    const annual = records.reduce((sum, record) => sum + (+record.amount || 0) * (record.frequency === 'Monthly' ? 12 : record.frequency === 'Quarterly' ? 4 : record.frequency === 'Half-yearly' ? 2 : 1), 0);
+    const groups = [...new Set(Object.values(configs).map(config => config.group))];
+    return `<section class="panel privacy-banner"><div>${icon('shield-alert')}<div><h2>Private family registry</h2><p>This browser storage is not encrypted. Use masked references only; never save full Aadhaar, PAN, account credentials, passwords, PINs, OTPs or document scans.</p></div></div><button data-route="global/settings">Privacy details</button></section>
+      <section class="metrics">${metric('Life records', records.length, `${Object.keys(configs).length} family domains`, 'layout-grid')}${metric('Due in 30 days', dueSoon.length, 'Renewals and commitments', 'calendar-warning')}${metric('Active items', open.length, 'Across the household', 'activity')}${metric('Tracked commitments', D.money(annual), 'Estimated annual value', 'indian-rupee')}</section>
+      ${groups.map(group => `<section class="life-section"><div class="section-head"><div><h2>${e(group)}</h2><p>Dedicated registers with shared reminders and search</p></div></div><div class="life-domain-grid">${Object.entries(configs).filter(([, config]) => config.group === group).map(([key, config]) => { const items = records.filter(record => record.domain === key); const alerts = items.filter(record => lifeDueState(record)); return `<button class="card life-domain-card" data-route="home/life/${key}"><span class="life-icon">${icon(config.icon)}</span><span class="grow"><b>${e(config.title)}</b><small>${e(config.note)}</small></span><span class="life-count ${alerts.length ? 'attention' : ''}">${alerts.length || items.length}</span></button>`; }).join('')}</div></section>`).join('')}`;
+  }
+
+  function lifeDomain(domain) {
+    const config = HM.life.domains[domain];
+    if (!config) return lifeHub();
+    const records = HM.life.ensure().filter(record => record.domain === domain);
+    const alerts = records.filter(record => lifeDueState(record));
+    const total = records.reduce((sum, record) => sum + (+record.amount || 0), 0);
+    return `<section class="domain-hero"><span class="life-icon large">${icon(config.icon)}</span><div class="grow"><small>${e(config.group)}</small><h2>${e(config.title)}</h2><p>${e(config.note)}</p></div><button class="primary" data-create="life" data-domain="${domain}">${icon('plus')}<span>Add ${e(config.noun)}</span></button></section>
+      <section class="metrics compact-metrics">${metric('Records', records.length, config.title, config.icon)}${metric('Needs attention', alerts.length, 'Due or overdue', 'calendar-warning')}${metric('Tracked value', D.money(total), 'Current records', 'indian-rupee')}${metric('Completed', records.filter(record => ['done', 'paid', 'complete'].includes(record.status)).length, 'Closed items', 'circle-check-big')}</section>
+      <div class="toolbar"><input data-filter aria-label="Search ${e(config.title)}" placeholder="Search ${e(config.title.toLowerCase())}"><select data-status-filter aria-label="Filter by status"><option value="">All statuses</option><option value="planning">Planning</option><option value="pending">Pending</option><option value="active">Active</option><option value="due">Due</option><option value="paid">Paid</option><option value="done">Done</option></select><button data-route="home/life">All life records</button></div>
+      <section class="panel life-register">${records.length ? `<table class="table"><thead><tr><th>Record</th><th>Owner</th><th>Provider / reference</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>${records.map(record => { const dueState = lifeDueState(record); return `<tr data-filter-row data-status="${e(record.status)}"><td data-label="Record"><b>${e(record.title)}</b><small>${e(record.category || config.title)}</small></td><td data-label="Owner">${e(record.owner || 'Family')}</td><td data-label="Provider"><span>${e(record.provider || 'Not set')}</span><small>${e(record.reference || '')}</small></td><td data-label="Due"><span class="badge ${dueState === 'overdue' ? 'danger' : dueState === 'soon' ? 'warning' : ''}">${D.date(record.dueDate)}</span></td><td data-label="Amount">${record.amount ? D.money(record.amount) : '-'}</td><td data-label="Status"><button data-life-status="${e(record.id)}">${lifeStatus(record.status)}</button></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(record.title)}" data-edit="life" data-id="${e(record.id)}" data-domain="${domain}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(record.title)}" data-delete="lifeRecords:${e(record.id)}">${icon('trash-2')}</button></span></td></tr>`; }).join('')}</tbody></table>` : empty(`No ${config.title.toLowerCase()} records yet.`, 'life', `Add ${config.noun}`)}</section>`;
+  }
+
   function communityOverview() {
     const s = D.state;
     const events = s.events.filter(x => x.context === 'community' && isoDay(x.startAt) >= today());
@@ -293,6 +359,8 @@
   function render(route) {
     if (route === 'global/overview') return unified();
     if (route === 'global/settings') return settings();
+    if (route === 'home/life') return lifeHub();
+    if (route.startsWith('home/life/')) return lifeDomain(route.split('/')[2]);
     const map = {
       'home/overview': homeOverview,
       'home/tasks': () => taskView('home'),

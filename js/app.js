@@ -56,15 +56,19 @@
     }[workspace];
     $('#workspaceMenuLabel').innerHTML = `<span><small>${workspaceMeta.note}</small><b>${workspaceMeta.title}</b></span><i data-lucide="${workspaceMeta.icon}"></i>`;
 
-    let lastGroup = '';
     const unifiedActive = route === 'global/overview';
-    $('#nav').innerHTML = `<button data-route="global/overview" class="${unifiedActive ? 'active' : ''}" ${unifiedActive ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="sparkles"></i></span><span>Today</span></button>` +
-      (V.nav[workspace] || []).map(item => {
-        const group = item[0] && item[0] !== lastGroup ? `<div class="nav-group">${D.esc(item[0])}</div>` : '';
-        lastGroup = item[0] || lastGroup;
-        const active = route === item[3];
-        return `${group}<button data-route="${item[3]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[2]}"></i></span><span>${D.esc(item[1])}</span></button>`;
-      }).join('');
+    const grouped = new Map();
+    (V.nav[workspace] || []).forEach(item => {
+      const group = item[0] || 'Core';
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push(item);
+    });
+    const groupIcons = { Core: 'compass', Plan: 'calendar-range', Home: 'house', People: 'users', Money: 'wallet-cards', Household: 'sofa', Plans: 'map', Records: 'folders', Care: 'heart-handshake', Discover: 'telescope', Participate: 'hand-heart', Resources: 'library', Focus: 'timer' };
+    const groups = [...grouped.entries()].map(([group, items]) => {
+      const containsActive = items.some(item => route === item[3]);
+      return `<details class="nav-section" ${containsActive || group === 'Core' ? 'open' : ''}><summary><span>${D.esc(group)}</span><i data-lucide="chevron-down"></i></summary><div>${items.map(item => { const active = route === item[3]; return `<button data-route="${item[3]}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="${item[2] || groupIcons[group] || 'circle'}"></i></span><span>${D.esc(item[1])}</span></button>`; }).join('')}</div></details>`;
+    }).join('');
+    $('#nav').innerHTML = `<button data-route="global/overview" class="${unifiedActive ? 'active' : ''}" ${unifiedActive ? 'aria-current="page"' : ''}><span class="nav-icon"><i data-lucide="sparkles"></i></span><span>Today</span></button>${groups}`;
 
     const popular = {
       home: [['home/overview', 'Overview', 'layout-dashboard'], ['home/tasks', 'Tasks', 'list-checks'], ['home/calendar', 'Calendar', 'calendar-days']],
@@ -82,10 +86,15 @@
     const overdue = D.state.tasks.filter(x => D.status(x.status) !== 'done' && x.dueAt && String(x.dueAt).slice(0, 10) < today);
     const low = D.state.inventoryItems.filter(x => (+x.quantity || 0) <= 2);
     const issues = D.state.issues.filter(x => D.status(x.status) !== 'done' && x.priority === 'high');
+    const inThirtyDays = new Date();
+    inThirtyDays.setDate(inThirtyDays.getDate() + 30);
+    const horizon = inThirtyDays.toISOString().slice(0, 10);
+    const lifeRecords = (D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
     return [
       ...overdue.map(x => ({ title: x.title, detail: `Overdue since ${D.date(x.dueAt)}`, route: x.context === 'study' ? 'study/tasks' : 'home/tasks' })),
       ...low.map(x => ({ title: `${x.name} is running low`, detail: `${x.quantity} ${x.unit} remaining`, route: 'home/inventory' })),
-      ...issues.map(x => ({ title: x.title, detail: `${x.location} - high priority`, route: x.scope === 'civic' ? 'community/tickets' : 'home/assets' }))
+      ...issues.map(x => ({ title: x.title, detail: `${x.location} - high priority`, route: x.scope === 'civic' ? 'community/tickets' : 'home/assets' })),
+      ...lifeRecords.map(x => ({ title: x.title, detail: `${HM.life.domains[x.domain]?.title || 'Family record'} - due ${D.date(x.dueDate)}`, route: `home/life/${x.domain}` }))
     ];
   }
 
@@ -96,6 +105,7 @@
   }
 
   function render() {
+    HM.life.ensure();
     route = location.hash.slice(2) || route;
     const first = route.split('/')[0];
     if (['home', 'community', 'study'].includes(first)) {
@@ -128,7 +138,7 @@
   function field(label, name, type = 'text', options, required = true) {
     return `<label>${label}${options ? `<select name="${name}" ${required ? 'required' : ''}>${options.map(option => `<option value="${option}">${option}</option>`).join('')}</select>` : `<input name="${name}" type="${type}"${inputAttributes(name, type)} ${required ? 'required' : ''}>`}</label>`;
   }
-  function area(label, name) { return `<label>${label}<textarea name="${name}" required></textarea></label>`; }
+  function area(label, name, required = true) { return `<label>${label}<textarea name="${name}" ${required ? 'required' : ''}></textarea></label>`; }
 
   const schemas = {
     task: () => [field('Task', 'title'), field('Context', 'context', 'text', ['home', 'community', 'study']), field('Type', 'type', 'text', ['task', 'duty', 'reminder', 'practice', 'volunteer']), field('Category', 'category'), field('Assigned to', 'assignee', 'text', null, false), field('Due', 'dueAt', 'date'), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
@@ -146,16 +156,18 @@
     news: () => [field('Headline', 'title'), field('Category', 'category', 'text', ['Civic', 'Transport', 'Education', 'Business']), area('Summary', 'body'), field('Date', 'date', 'date')],
     volunteer: () => [field('Opportunity', 'title'), field('Category', 'category'), field('Date', 'date', 'date'), field('People needed', 'needed', 'number')],
     topic: () => [field('Topic', 'title'), field('Subject', 'subject', 'text', ['Physics', 'Chemistry', 'Mathematics']), field('Chapter', 'chapter'), field('Planned hours', 'plannedHours', 'number'), field('Proficiency %', 'proficiency', 'number')],
-    goal: () => [field('Goal', 'title'), field('Due', 'dueAt', 'date'), field('Target', 'target', 'number'), field('Current progress', 'progress', 'number')]
+    goal: () => [field('Goal', 'title'), field('Due', 'dueAt', 'date'), field('Target', 'target', 'number'), field('Current progress', 'progress', 'number')],
+    life: () => [field('Title', 'title'), field('Category', 'category'), field('Family member / owner', 'owner'), field('Provider / contact', 'provider', 'text', null, false), field('Masked reference / location', 'reference', 'text', null, false), field('Amount', 'amount', 'number', null, false), field('Due / renewal date', 'dueDate', 'date', null, false), field('Frequency', 'frequency', 'text', ['One time', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'As needed']), field('Status', 'status', 'text', ['planning', 'pending', 'active', 'due', 'paid', 'done']), field('Phone', 'phone', 'tel', null, false), area('Notes', 'notes', false)]
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses' };
+  const editCollections = { task: 'tasks', expense: 'expenses', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
     if (!schema) return;
     const collection = editCollections[kind];
     const record = source.editId && collection ? D.state[collection].find(x => x.id === source.editId) : null;
+    const routeDomain = route.startsWith('home/life/') ? route.split('/')[2] : '';
     $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + kind;
     $('#formContext').textContent = String(source.context || record?.context || workspace).toUpperCase();
     $('#formFields').innerHTML = schema(source).join('');
@@ -164,6 +176,7 @@
     form.dataset.context = source.context || record?.context || workspace;
     form.dataset.scope = source.scope || record?.scope || '';
     form.dataset.person = source.person || '';
+    form.dataset.domain = source.domain || record?.domain || routeDomain || 'documents';
     form.dataset.editId = source.editId || '';
     if (record) Object.entries(record).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
     else if (form.elements.context) form.elements.context.value = source.context || workspace;
@@ -177,7 +190,7 @@
     const id = D.uid;
     if (meta.editId && editCollections[kind]) {
       const record = state[editCollections[kind]].find(x => x.id === meta.editId);
-      if (record) Object.assign(record, values, kind === 'expense' ? { amount: +values.amount } : {});
+      if (record) Object.assign(record, values, kind === 'expense' || kind === 'life' ? { amount: +values.amount || 0 } : {});
       save('Changes saved');
       render();
       return;
@@ -199,6 +212,7 @@
       case 'volunteer': state.volunteerOpportunities.push({ id: id('v'), title: values.title, category: values.category, date: values.date, needed: +values.needed || 0, registered: false }); break;
       case 'topic': state.learningTopics.push({ id: id('l'), subject: values.subject, chapter: values.chapter, title: values.title, status: 'backlog', plannedHours: +values.plannedHours || 0, proficiency: Math.min(100, Math.max(0, +values.proficiency || 0)) }); break;
       case 'goal': state.goals.push({ id: id('g'), context: 'study', title: values.title, dueAt: values.dueAt, target: Math.max(1, +values.target || 1), progress: Math.max(0, +values.progress || 0) }); break;
+      case 'life': state.lifeRecords.push({ id: id('lr'), domain: meta.domain || 'documents', title: values.title, category: values.category, owner: values.owner, provider: values.provider, reference: values.reference, amount: Math.max(0, +values.amount || 0), dueDate: values.dueDate, frequency: values.frequency, status: values.status, phone: values.phone, notes: values.notes, createdAt: new Date().toISOString() }); break;
     }
     save('Added to Home Manager');
     render();
@@ -263,6 +277,7 @@
     if (type === 'Event') return record.context === 'study' ? 'study/schedule' : record.context === 'community' ? 'community/events' : 'home/calendar';
     if (type === 'Issue') return record.scope === 'civic' ? 'community/tickets' : 'home/assets';
     if (type === 'Contact') return record.scope === 'community' ? 'community/directory' : 'home/directory';
+    if (type === 'Life record') return `home/life/${record.domain}`;
     return { Person: 'home/family', Expense: 'home/finance', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/board', Goal: 'study/goals', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
   }
 
@@ -290,6 +305,7 @@
     add(D.state.discussions, 'Discussion', 'title', 'community');
     add(D.state.volunteerOpportunities, 'Volunteer', 'title', 'community');
     add(D.state.guides, 'Guide', 'title', 'community');
+    add(D.state.lifeRecords || [], 'Life record', 'title', 'home');
     return output.slice(0, 30);
   }
 
@@ -305,8 +321,8 @@
   }
 
   function quick() {
-    const actions = [['task', 'Task', workspace, 'list-plus'], ['event', 'Event', workspace, 'calendar-plus'], ['expense', 'Expense', 'home', 'receipt-text'], ['issue', 'Home issue', 'home', 'wrench'], ['issue', 'Civic follow-up', 'community', 'ticket-plus'], ['topic', 'Study topic', 'study', 'book-plus'], ['discussion', 'Forum note', 'community', 'message-square-plus']];
-    $('#quickActions').innerHTML = actions.map(item => `<button type="button" data-quick="${item[0]}" data-context="${item[2]}" data-scope="${item[1] === 'Civic follow-up' ? 'civic' : item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>${item[2]} workspace</small></span><i data-lucide="chevron-right"></i></button>`).join('');
+    const actions = [['task', 'Task', workspace, 'list-plus', ''], ['event', 'Event', workspace, 'calendar-plus', ''], ['expense', 'Expense', 'home', 'receipt-text', ''], ['life', 'Health record', 'home', 'heart-pulse', 'health'], ['life', 'Document or ID', 'home', 'folders', 'documents'], ['life', 'Bill or payment', 'home', 'receipt-indian-rupee', 'bills'], ['issue', 'Home issue', 'home', 'wrench', ''], ['issue', 'Civic follow-up', 'community', 'ticket-plus', ''], ['topic', 'Study topic', 'study', 'book-plus', ''], ['discussion', 'Forum note', 'community', 'message-square-plus', '']];
+    $('#quickActions').innerHTML = actions.map(item => `<button type="button" data-quick="${item[0]}" data-context="${item[2]}" data-domain="${item[4]}" data-scope="${item[1] === 'Civic follow-up' ? 'civic' : item[0] === 'issue' ? 'household' : ''}"><i data-lucide="${item[3]}"></i><span><b>${item[1]}</b><small>${item[2]} workspace</small></span><i data-lucide="chevron-right"></i></button>`).join('');
     $('#quickDialog').showModal();
     refreshIcons();
   }
@@ -395,7 +411,7 @@
     const create = event.target.closest('[data-create]');
     if (create) { openForm(create.dataset.create, create.dataset); return; }
     const edit = event.target.closest('[data-edit]');
-    if (edit) { openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context }); return; }
+    if (edit) { openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context, domain: edit.dataset.domain }); return; }
     const deletion = event.target.closest('[data-delete]');
     if (deletion) { const [collection, id] = deletion.dataset.delete.split(':'); if (confirm('Remove this item? You can undo with Ctrl+Z.')) remove(collection, id); return; }
     const complete = event.target.closest('[data-complete]');
@@ -410,6 +426,8 @@
     if (advance) { const issue = D.state.issues.find(x => x.id === advance.dataset.advance); const order = ['todo', 'progress', 'done']; if (issue) { issue.status = order[(order.indexOf(D.status(issue.status)) + 1) % 3]; save('Issue status updated'); render(); } return; }
     const progress = event.target.closest('[data-progress]');
     if (progress) { const goal = D.state.goals.find(x => x.id === progress.dataset.progress); if (goal) { goal.progress = Math.min(Math.max(1, +goal.target || 1), (+goal.progress || 0) + 1); save('Goal progress updated'); render(); } return; }
+    const lifeStatus = event.target.closest('[data-life-status]');
+    if (lifeStatus) { const record = D.state.lifeRecords.find(x => x.id === lifeStatus.dataset.lifeStatus); const order = ['planning', 'pending', 'active', 'due', 'paid', 'done']; if (record) { record.status = order[(order.indexOf(record.status) + 1) % order.length]; save('Family record status updated'); render(); } return; }
     const calendarShift = event.target.closest('[data-calendar-shift]');
     if (calendarShift) { V.shiftCalendar(calendarShift.dataset.calendarShift); render(); return; }
     const quickTarget = event.target.closest('[data-quick]');
