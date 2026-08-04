@@ -4,6 +4,7 @@ const seed={schemaVersion:1,settings:{theme:'light',locale:'en',activeWorkspace:
 function clone(v){return JSON.parse(JSON.stringify(v))}
 function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)}
 seed.settings.appBackground='waterfall';
+seed.settings.activeLearnerId='p3';
 seed.settings.googleSync={connectorUrl:'',autoSync:false,calendarSync:true,emailAnalysis:false,driveBackup:false,reviewPolicy:'review',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
 seed.expenses.forEach(item=>item.domain=item.category==='Food'?'food':'housing');
 seed.expenses.push(
@@ -37,7 +38,82 @@ seed.moneyGoals=[
   {id:'mg2',domain:'learning',title:'Higher education fund',target:500000,saved:180000,contribution:8000,dueDate:'2029-06-01'}
 ];
 seed.assets.push({id:'a3',name:'Family home',category:'Property',value:3800000,status:'active'});
-const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
+seed.academicProfiles=[
+  {id:'ap1',personId:'p3',name:'Ananya',board:'CBSE',grade:12,stream:'Science - PCM',school:'CBSE Senior Secondary School',targetPercent:90,subjects:['English Core','Physics','Chemistry','Mathematics','Computer Science']},
+  {id:'ap2',personId:'p4',name:'Arjun',board:'CBSE',grade:7,stream:'Middle Stage',school:'CBSE School',targetPercent:85,subjects:['English','Hindi','Tamil','Mathematics','Science','Social Science','Kaushal Bodh']}
+];
+const syllabusBlueprints={
+  p4:{
+    Mathematics:['Large numbers and number sense','Fractions, decimals and rational numbers','Arithmetic expressions','Algebraic expressions','Simple equations','Lines and angles','Triangles and constructions','Comparing quantities','Perimeter and area','Data handling and probability'],
+    Science:['Nutrition in living organisms','Heat and temperature','Acids, bases and salts','Physical and chemical changes','Respiration and transport','Reproduction in plants','Motion and time','Electric current and effects','Light','Forests and wastewater'],
+    'Social Science':['Tracing changes through time','Kingdoms and regional cultures','Delhi and the Mughals','Environment and resources','Weather, climate and water','Human environment interactions','Equality and government','Markets and public services','Media and democracy'],
+    English:['Reading comprehension','Vocabulary and grammar','Prose study','Poetry study','Creative writing','Speaking and listening'],
+    Hindi:['Reading comprehension','Grammar and vocabulary','Prose and poetry','Writing skills','Speaking and listening'],
+    Tamil:['Reading comprehension','Grammar and vocabulary','Literature','Writing skills','Speaking and listening'],
+    'Kaushal Bodh':['Workplace safety and teamwork','Tools and materials','Design and making project','Community-linked vocational project']
+  },
+  p3:{
+    Physics:['Electric Charges and Fields','Electrostatic Potential and Capacitance','Current Electricity','Moving Charges and Magnetism','Magnetism and Matter','Electromagnetic Induction','Alternating Current','Electromagnetic Waves','Ray Optics','Wave Optics','Dual Nature of Radiation and Matter','Atoms','Nuclei','Semiconductor Electronics'],
+    Chemistry:['Solutions','Electrochemistry','Chemical Kinetics','The d- and f-Block Elements','Coordination Compounds','Haloalkanes and Haloarenes','Alcohols, Phenols and Ethers','Aldehydes, Ketones and Carboxylic Acids','Amines','Biomolecules'],
+    Mathematics:['Relations and Functions','Inverse Trigonometric Functions','Matrices','Determinants','Continuity and Differentiability','Applications of Derivatives','Integrals','Applications of Integrals','Differential Equations','Vector Algebra','Three Dimensional Geometry','Linear Programming','Probability'],
+    'English Core':['Reading comprehension','Creative writing skills','Flamingo prose','Flamingo poetry','Vistas supplementary reader','Listening and speaking portfolio'],
+    'Computer Science':['Python revision','Functions','Exception handling','Text and binary files','CSV files','Data structures','Computer networks','Database concepts','SQL','Python-SQL connectivity']
+  }
+};
+seed.syllabusItems=[];
+Object.entries(syllabusBlueprints).forEach(([studentId,subjects])=>Object.entries(subjects).forEach(([subject,units])=>units.forEach((title,index)=>seed.syllabusItems.push({id:`sy-${studentId}-${subject.replace(/[^a-z]/gi,'').slice(0,4).toLowerCase()}-${index+1}`,studentId,subject,title,term:index<Math.ceil(units.length/2)?'Term 1':'Term 2',competency:['Concept','Application','Analysis'][index%3],status:index%5===0?'mastered':index%3===0?'revision':index%2===0?'learning':'not-started',mastery:index%5===0?88:index%3===0?68:index%2===0?52:20,plannedHours:index%3+2}))));
+seed.studyPlans=[
+  {id:'sp1',studentId:'p3',date:'2026-08-05',startTime:'05:45',minutes:60,subject:'Physics',activity:'Ray Optics numericals',method:'Active recall',status:'planned'},
+  {id:'sp2',studentId:'p3',date:'2026-08-05',startTime:'19:00',minutes:75,subject:'Chemistry',activity:'Electrochemistry NCERT questions',method:'Written practice',status:'planned'},
+  {id:'sp3',studentId:'p3',date:'2026-08-06',startTime:'05:45',minutes:60,subject:'Mathematics',activity:'Definite integrals mixed set',method:'Timed practice',status:'planned'},
+  {id:'sp4',studentId:'p3',date:'2026-08-07',startTime:'18:30',minutes:90,subject:'Physics',activity:'Practical record and viva',method:'Practical',status:'planned'},
+  {id:'sp5',studentId:'p4',date:'2026-08-05',startTime:'17:00',minutes:35,subject:'Mathematics',activity:'Fractions worked examples',method:'Guided practice',status:'planned'},
+  {id:'sp6',studentId:'p4',date:'2026-08-05',startTime:'17:45',minutes:30,subject:'English',activity:'Reading and summary',method:'Read-recall',status:'planned'},
+  {id:'sp7',studentId:'p4',date:'2026-08-06',startTime:'17:00',minutes:35,subject:'Science',activity:'Heat concept map',method:'Teach-back',status:'planned'},
+  {id:'sp8',studentId:'p4',date:'2026-08-07',startTime:'17:00',minutes:30,subject:'Social Science',activity:'Climate map work',method:'Visual practice',status:'planned'}
+];
+seed.academicDeliverables=[
+  {id:'ad1',studentId:'p3',title:'Physics investigatory project',subject:'Physics',type:'Project',dueDate:'2026-08-25',teacher:'Physics faculty',status:'progress',weight:30,notes:'Complete observations, graphs and viva questions.'},
+  {id:'ad2',studentId:'p3',title:'Chemistry practical record',subject:'Chemistry',type:'Practical',dueDate:'2026-08-18',teacher:'Chemistry faculty',status:'progress',weight:30,notes:'Finish salt analysis observations.'},
+  {id:'ad3',studentId:'p3',title:'English speaking assessment',subject:'English Core',type:'Internal assessment',dueDate:'2026-08-12',teacher:'English faculty',status:'todo',weight:20,notes:'Prepare two-minute position statement.'},
+  {id:'ad4',studentId:'p3',title:'Mathematics activity file',subject:'Mathematics',type:'Portfolio',dueDate:'2026-08-20',teacher:'Mathematics faculty',status:'todo',weight:20,notes:'Index, activities and viva review.'},
+  {id:'ad5',studentId:'p4',title:'Fractions worksheet',subject:'Mathematics',type:'Homework',dueDate:'2026-08-06',teacher:'Mathematics teacher',status:'todo',weight:10,notes:'Show all working.'},
+  {id:'ad6',studentId:'p4',title:'Heat and temperature activity',subject:'Science',type:'Activity',dueDate:'2026-08-08',teacher:'Science teacher',status:'progress',weight:10,notes:'Record observations safely with an adult.'},
+  {id:'ad7',studentId:'p4',title:'Monsoon map work',subject:'Social Science',type:'Project',dueDate:'2026-08-10',teacher:'Social Science teacher',status:'todo',weight:10,notes:'Label rainfall regions and legend.'},
+  {id:'ad8',studentId:'p4',title:'English book reflection',subject:'English',type:'Homework',dueDate:'2026-08-07',teacher:'English teacher',status:'done',weight:10,notes:'One-page personal response.'}
+];
+seed.academicAssessments=[
+  {id:'as1',studentId:'p3',title:'Unit Test 1',subject:'Physics',type:'School test',date:'2026-07-18',status:'completed',score:52,maxScore:70,target:60,practicalScore:26,practicalMax:30},
+  {id:'as2',studentId:'p3',title:'Unit Test 1',subject:'Chemistry',type:'School test',date:'2026-07-20',status:'completed',score:55,maxScore:70,target:60,practicalScore:27,practicalMax:30},
+  {id:'as3',studentId:'p3',title:'Unit Test 1',subject:'Mathematics',type:'School test',date:'2026-07-22',status:'completed',score:68,maxScore:80,target:72,practicalScore:18,practicalMax:20},
+  {id:'as4',studentId:'p3',title:'Monthly test',subject:'English Core',type:'School test',date:'2026-07-24',status:'completed',score:65,maxScore:80,target:72,practicalScore:18,practicalMax:20},
+  {id:'as5',studentId:'p3',title:'Weekly mock',subject:'Computer Science',type:'Board pattern',date:'2026-08-02',status:'completed',score:56,maxScore:70,target:62,practicalScore:28,practicalMax:30},
+  {id:'as6',studentId:'p4',title:'Periodic Test 1',subject:'Mathematics',type:'School test',date:'2026-07-15',status:'completed',score:34,maxScore:40,target:36,practicalScore:0,practicalMax:0},
+  {id:'as7',studentId:'p4',title:'Periodic Test 1',subject:'Science',type:'School test',date:'2026-07-17',status:'completed',score:32,maxScore:40,target:35,practicalScore:0,practicalMax:0},
+  {id:'as8',studentId:'p4',title:'Periodic Test 1',subject:'English',type:'School test',date:'2026-07-19',status:'completed',score:30,maxScore:40,target:34,practicalScore:0,practicalMax:0},
+  {id:'as9',studentId:'p4',title:'Class quiz',subject:'Social Science',type:'Quiz',date:'2026-07-26',status:'completed',score:17,maxScore:20,target:17,practicalScore:0,practicalMax:0},
+  {id:'as10',studentId:'p3',title:'Pre-board 1',subject:'Physics',type:'Pre-board',date:'2026-08-28',status:'scheduled',score:0,maxScore:70,target:62,practicalScore:0,practicalMax:30},
+  {id:'as11',studentId:'p4',title:'Periodic Test 2',subject:'Science',type:'Periodic test',date:'2026-08-20',status:'scheduled',score:0,maxScore:40,target:35,practicalScore:0,practicalMax:0}
+];
+seed.practiceLogs=[
+  {id:'pr1',studentId:'p3',date:'2026-08-01',subject:'Physics',source:'CBSE competency questions',attempted:25,correct:18,minutes:60,errorType:'Application'},
+  {id:'pr2',studentId:'p3',date:'2026-08-02',subject:'Chemistry',source:'NCERT exemplar',attempted:30,correct:24,minutes:70,errorType:'Concept'},
+  {id:'pr3',studentId:'p3',date:'2026-08-03',subject:'Mathematics',source:'Board sample paper',attempted:20,correct:16,minutes:80,errorType:'Calculation'},
+  {id:'pr4',studentId:'p3',date:'2026-08-04',subject:'English Core',source:'Writing practice',attempted:8,correct:7,minutes:45,errorType:'Format'},
+  {id:'pr5',studentId:'p4',date:'2026-08-01',subject:'Mathematics',source:'NCERT exercise',attempted:18,correct:14,minutes:35,errorType:'Calculation'},
+  {id:'pr6',studentId:'p4',date:'2026-08-02',subject:'Science',source:'CBSE competency questions',attempted:15,correct:12,minutes:30,errorType:'Application'},
+  {id:'pr7',studentId:'p4',date:'2026-08-03',subject:'English',source:'Reading comprehension',attempted:10,correct:8,minutes:25,errorType:'Inference'},
+  {id:'pr8',studentId:'p4',date:'2026-08-04',subject:'Social Science',source:'School worksheet',attempted:12,correct:10,minutes:30,errorType:'Recall'}
+];
+seed.academicResources=[
+  {id:'ar1',audience:'6-10',title:'CBSE competency assessment resources',type:'Question banks',url:'https://cbseacademic.nic.in/cbe/assessment.html'},
+  {id:'ar2',audience:'6-12',title:'NCERT textbooks',type:'Official textbooks',url:'https://ncert.nic.in/textbook.php'},
+  {id:'ar3',audience:'12',title:'CBSE curriculum 2026-27',type:'Official syllabus',url:'https://cbseacademic.nic.in/curriculum_2027.html'},
+  {id:'ar4',audience:'12',title:'Class XII question banks',type:'Official practice',url:'https://cbseacademic.nic.in/qbclass12.html'},
+  {id:'ar5',audience:'12',title:'Class XII sample papers (2025-26)',type:'Official practice and marking schemes',url:'https://cbseacademic.nic.in/sqp_classxii_2025-26.html'},
+  {id:'ar6',audience:'6-8',title:'Kaushal Bodh curriculum',type:'Skill education',url:'https://cbseacademic.nic.in/skill-education-curriculum.html'}
+];
+const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
 function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
@@ -64,6 +140,7 @@ function normalize(value){
     locale:typeof inputSettings.locale==='string'?inputSettings.locale:'en',
     activeWorkspace:['home','community','study'].includes(inputSettings.activeWorkspace)?inputSettings.activeWorkspace:'home',
     activeGroup:typeof inputSettings.activeGroup==='string'?inputSettings.activeGroup:'today',
+    activeLearnerId:typeof inputSettings.activeLearnerId==='string'?inputSettings.activeLearnerId:'p3',
     sidebarCollapsed:Boolean(inputSettings.sidebarCollapsed),
     householdName:typeof inputSettings.householdName==='string'?inputSettings.householdName:'',
     language:typeof inputSettings.language==='string'?inputSettings.language:'English',
@@ -78,6 +155,12 @@ function normalize(value){
   next.issues.forEach(item=>{item.id=String(item.id||uid('i'));item.scope=item.scope==='civic'?'civic':'household';item.status=normalizeStatus(item.status);item.priority=['low','medium','high'].includes(item.priority)?item.priority:'medium'});
   next.people.forEach(item=>item.wellbeing=Math.min(100,Math.max(0,+item.wellbeing||0)));
   next.learningTopics.forEach(item=>{item.status=['backlog','progress','revision','done'].includes(item.status)?item.status:'backlog';item.proficiency=Math.min(100,Math.max(0,+item.proficiency||0));item.plannedHours=Math.max(0,+item.plannedHours||0)});
+  next.academicProfiles.forEach(item=>{item.grade=Math.min(12,Math.max(6,+item.grade||6));item.targetPercent=Math.min(100,Math.max(33,+item.targetPercent||75));item.subjects=Array.isArray(item.subjects)?item.subjects.map(String):[]});
+  next.syllabusItems.forEach(item=>{item.mastery=Math.min(100,Math.max(0,+item.mastery||0));item.plannedHours=Math.max(0,+item.plannedHours||0);item.status=['not-started','learning','revision','mastered'].includes(item.status)?item.status:'not-started'});
+  next.studyPlans.forEach(item=>{item.minutes=Math.max(5,+item.minutes||30);item.status=['planned','done','missed'].includes(item.status)?item.status:'planned'});
+  next.academicDeliverables.forEach(item=>{item.weight=Math.max(0,+item.weight||0);item.status=['todo','progress','submitted','done'].includes(item.status)?item.status:'todo'});
+  next.academicAssessments.forEach(item=>{['score','maxScore','target','practicalScore','practicalMax'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.status=item.status==='scheduled'?'scheduled':'completed'});
+  next.practiceLogs.forEach(item=>{['attempted','correct','minutes'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.correct=Math.min(item.attempted,item.correct)});
   next.goals.forEach(item=>{item.target=Math.max(1,+item.target||1);item.progress=Math.max(0,+item.progress||0)});
   next.expenses.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:(String(item.category||'').toLowerCase().includes('food')?'food':String(item.category||'').toLowerCase().match(/health|medical|pharmacy/)?'health':String(item.category||'').toLowerCase().match(/school|education|tuition/)?'learning':'housing')});
   next.budgets.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:'family';item.bucket=['Fixed','Flexible','Non-monthly'].includes(item.bucket)?item.bucket:'Flexible'});

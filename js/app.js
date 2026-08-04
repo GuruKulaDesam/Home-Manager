@@ -139,6 +139,13 @@
       const expenses = D.state.expenses.filter(item => String(item.date).startsWith(month));
       const planned = (D.state.budgets || []).reduce((sum, item) => sum + (+item.amount || 0), 0);
       items = [['Budget', D.money(planned), 'home/money/budget', 'chart-pie'], ['Spent', D.money(expenses.reduce((sum, item) => sum + (+item.amount || 0), 0)), 'home/money/spending', 'wallet-cards'], ['Net worth', D.money((D.state.assets || []).reduce((sum, item) => sum + (+item.value || 0), 0) - (D.state.liabilities || []).reduce((sum, item) => sum + (+item.balance || 0), 0)), 'home/money/networth', 'scale']];
+    } else if (route.startsWith('study/')) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const profile = D.state.academicProfiles.find(item => item.personId === learnerId) || D.state.academicProfiles[0];
+      const syllabus = D.state.syllabusItems.filter(item => item.studentId === learnerId);
+      const mastery = syllabus.length ? Math.round(syllabus.reduce((sum, item) => sum + (+item.mastery || 0), 0) / syllabus.length) : 0;
+      const due = D.state.academicDeliverables.filter(item => item.studentId === learnerId && !['done', 'submitted'].includes(item.status)).length;
+      items = [[`Class ${profile?.grade || ''}`, profile?.name || 'Learner', 'study/overview', 'graduation-cap'], ['Mastery', `${mastery}%`, 'study/curriculum', 'gauge'], ['Due work', due, 'study/assignments', 'clipboard-check']];
     } else if (route === 'home/inventory') {
       items = [['Low stock', lowStock.length, route, 'shopping-basket'], ['Items', D.state.inventoryItems.length, route, 'package-open'], ['Meals', D.state.meals.filter(item => item.date >= day).length, route, 'cooking-pot']];
     } else if (route.startsWith('settings/')) {
@@ -168,6 +175,8 @@
       go(movedSettingsRoute);
       return;
     }
+    const movedStudyRoute = { 'study/board': 'study/curriculum', 'study/schedule': 'study/planner', 'study/tasks': 'study/assignments', 'study/goals': 'study/reports', 'study/focus': 'study/practice', 'study/analytics': 'study/reports' }[route];
+    if (movedStudyRoute) { go(movedStudyRoute); return; }
     const first = route.split('/')[0];
     if (['home', 'community', 'study'].includes(first)) {
       workspace = first;
@@ -193,8 +202,8 @@
     if (type !== 'number') return '';
     if (['wellbeing', 'proficiency'].includes(name)) return ' min="0" max="100" step="1"';
     if (name === 'target') return ' min="1" step="1"';
-    if (['quantity', 'points', 'plannedHours', 'progress', 'needed'].includes(name)) return ' min="0" step="1"';
-    if (['amount', 'value', 'balance', 'payment', 'interestRate', 'saved', 'contribution'].includes(name)) return ' min="0" step="0.01"';
+    if (['quantity', 'points', 'plannedHours', 'progress', 'needed', 'minutes', 'score', 'maxScore', 'practicalScore', 'practicalMax', 'targetPercent', 'mastery', 'weight', 'attempted', 'correct'].includes(name)) return ' min="0" step="1"';
+    if (['amount', 'value', 'balance', 'payment', 'interestRate', 'saved', 'contribution', 'target'].includes(name)) return ' min="0" step="0.01"';
     return '';
   }
 
@@ -202,6 +211,8 @@
     return `<label>${label}${options ? `<select name="${name}" ${required ? 'required' : ''}>${options.map(option => `<option value="${option}">${option}</option>`).join('')}</select>` : `<input name="${name}" type="${type}"${inputAttributes(name, type)} ${required ? 'required' : ''}>`}</label>`;
   }
   function area(label, name, required = true) { return `<label>${label}<textarea name="${name}" ${required ? 'required' : ''}></textarea></label>`; }
+  const activeAcademicProfile = source => D.state.academicProfiles.find(item => item.personId === (source.student || D.state.settings.activeLearnerId)) || D.state.academicProfiles[0];
+  const academicSubjects = source => activeAcademicProfile(source)?.subjects || ['English', 'Mathematics', 'Science'];
 
   const schemas = {
     task: () => [field('Task', 'title'), field('Context', 'context', 'text', ['home', 'community', 'study']), field('Type', 'type', 'text', ['task', 'duty', 'reminder', 'practice', 'volunteer']), field('Category', 'category'), field('Assigned to', 'assignee', 'text', null, false), field('Due', 'dueAt', 'date'), field('Repeats', 'frequency', 'text', ['Once', 'Daily', 'Weekly', 'Monthly', 'Yearly']), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
@@ -224,10 +235,16 @@
     volunteer: () => [field('Opportunity', 'title'), field('Category', 'category'), field('Date', 'date', 'date'), field('People needed', 'needed', 'number')],
     topic: () => [field('Topic', 'title'), field('Subject', 'subject', 'text', ['Physics', 'Chemistry', 'Mathematics']), field('Chapter', 'chapter'), field('Planned hours', 'plannedHours', 'number'), field('Proficiency %', 'proficiency', 'number')],
     goal: () => [field('Goal', 'title'), field('Due', 'dueAt', 'date'), field('Target', 'target', 'number'), field('Current progress', 'progress', 'number')],
+    academicProfile: () => [field('Student name', 'name'), field('CBSE grade', 'grade', 'text', ['6', '7', '8', '9', '10', '11', '12']), field('Stream / stage', 'stream'), field('School', 'school'), field('Target percentage', 'targetPercent', 'number'), area('Subjects (comma separated)', 'subjects')],
+    syllabus: source => [field('Subject', 'subject', 'text', academicSubjects(source)), field('Chapter / learning outcome', 'title'), field('Term', 'term', 'text', ['Term 1', 'Term 2', 'Full year']), field('Competency', 'competency', 'text', ['Concept', 'Application', 'Analysis', 'Communication', 'Practical']), field('Status', 'status', 'text', ['not-started', 'learning', 'revision', 'mastered']), field('Mastery %', 'mastery', 'number'), field('Planned hours', 'plannedHours', 'number')],
+    studyPlan: source => [field('Date', 'date', 'date'), field('Start time', 'startTime', 'time'), field('Minutes', 'minutes', 'number'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Activity', 'activity'), field('Study method', 'method', 'text', ['Active recall', 'Written practice', 'Timed practice', 'Teach-back', 'Read-recall', 'Practical', 'Revision']), field('Status', 'status', 'text', ['planned', 'done', 'missed'])],
+    deliverable: source => [field('Assignment / project', 'title'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Type', 'type', 'text', ['Homework', 'Worksheet', 'Project', 'Practical', 'Portfolio', 'Internal assessment']), field('Due date', 'dueDate', 'date'), field('Teacher', 'teacher', 'text', null, false), field('Status', 'status', 'text', ['todo', 'progress', 'submitted', 'done']), field('Marks / weight', 'weight', 'number', null, false), area('Instructions / notes', 'notes', false)],
+    assessment: source => [field('Assessment', 'title'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Type', 'type', 'text', ['Class quiz', 'School test', 'Periodic test', 'Pre-board', 'Board pattern', 'Practical']), field('Date', 'date', 'date'), field('Status', 'status', 'text', ['scheduled', 'completed']), field('Theory score', 'score', 'number'), field('Theory maximum', 'maxScore', 'number'), field('Target score', 'target', 'number'), field('Practical / internal score', 'practicalScore', 'number', null, false), field('Practical / internal maximum', 'practicalMax', 'number', null, false)],
+    practiceLog: source => [field('Date', 'date', 'date'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Source', 'source', 'text', ['NCERT exercise', 'NCERT exemplar', 'CBSE competency questions', 'CBSE question bank', 'Board sample paper', 'Previous-year paper', 'School worksheet', 'Reading / writing practice']), field('Questions attempted', 'attempted', 'number'), field('Correct', 'correct', 'number'), field('Minutes', 'minutes', 'number'), field('Main error type', 'errorType', 'text', ['Concept', 'Application', 'Calculation', 'Recall', 'Inference', 'Format', 'Time management', 'Careless error'])],
     life: () => [field('Title', 'title'), field('Category', 'category'), field('Family member / owner', 'owner'), field('Provider / contact', 'provider', 'text', null, false), field('Masked reference / location', 'reference', 'text', null, false), field('Amount', 'amount', 'number', null, false), field('Due / renewal date', 'dueDate', 'date', null, false), field('Frequency', 'frequency', 'text', ['One time', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'As needed']), field('Status', 'status', 'text', ['planning', 'pending', 'active', 'due', 'paid', 'done']), field('Phone', 'phone', 'tel', null, false), area('Notes', 'notes', false)]
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', asset: 'assets', life: 'lifeRecords' };
+  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
@@ -235,7 +252,7 @@
     const collection = editCollections[kind];
     const record = source.editId && collection ? D.state[collection].find(x => x.id === source.editId) : null;
     const routeDomain = route.match(/^(?:home|settings)\/life\/([^/]+)$/)?.[1] || '';
-    const labels = { moneyGoal: 'savings goal', liability: 'loan or liability', income: 'income source', budget: 'section budget', expense: 'section expense' };
+    const labels = { moneyGoal: 'savings goal', liability: 'loan or liability', income: 'income source', budget: 'section budget', expense: 'section expense', academicProfile: 'student profile', syllabus: 'syllabus item', studyPlan: 'study block', deliverable: 'assignment', assessment: 'assessment', practiceLog: 'practice session' };
     $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + (labels[kind] || kind);
     $('#formContext').textContent = String(source.context || record?.context || workspace).toUpperCase();
     $('#formFields').innerHTML = schema(source).join('');
@@ -262,6 +279,12 @@
         kind === 'expense' || kind === 'budget' || kind === 'income' || kind === 'life' ? { amount: +values.amount || 0 } :
         kind === 'liability' ? { balance: +values.balance || 0, payment: +values.payment || 0, interestRate: +values.interestRate || 0 } :
         kind === 'moneyGoal' ? { target: Math.max(1, +values.target || 1), saved: +values.saved || 0, contribution: +values.contribution || 0 } :
+        kind === 'academicProfile' ? { grade: Math.min(12, Math.max(6, +values.grade || 6)), targetPercent: Math.min(100, Math.max(33, +values.targetPercent || 75)), subjects: String(values.subjects || '').split(',').map(item => item.trim()).filter(Boolean) } :
+        kind === 'syllabus' ? { mastery: Math.min(100, Math.max(0, +values.mastery || 0)), plannedHours: Math.max(0, +values.plannedHours || 0) } :
+        kind === 'studyPlan' ? { minutes: Math.max(5, +values.minutes || 30) } :
+        kind === 'deliverable' ? { weight: Math.max(0, +values.weight || 0) } :
+        kind === 'assessment' ? { score: +values.score || 0, maxScore: +values.maxScore || 0, target: +values.target || 0, practicalScore: +values.practicalScore || 0, practicalMax: +values.practicalMax || 0 } :
+        kind === 'practiceLog' ? { attempted: +values.attempted || 0, correct: Math.min(+values.attempted || 0, +values.correct || 0), minutes: +values.minutes || 0 } :
         kind === 'asset' ? { value: +values.value || 0 } :
         kind === 'person' ? { wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) } : {});
       save('Changes saved');
@@ -289,6 +312,12 @@
       case 'volunteer': state.volunteerOpportunities.push({ id: id('v'), title: values.title, category: values.category, date: values.date, needed: +values.needed || 0, registered: false }); break;
       case 'topic': state.learningTopics.push({ id: id('l'), subject: values.subject, chapter: values.chapter, title: values.title, status: 'backlog', plannedHours: +values.plannedHours || 0, proficiency: Math.min(100, Math.max(0, +values.proficiency || 0)) }); break;
       case 'goal': state.goals.push({ id: id('g'), context: 'study', title: values.title, dueAt: values.dueAt, target: Math.max(1, +values.target || 1), progress: Math.max(0, +values.progress || 0) }); break;
+      case 'academicProfile': state.academicProfiles.push({ id: id('ap'), personId: meta.student || '', name: values.name, board: 'CBSE', grade: Math.min(12, Math.max(6, +values.grade || 6)), stream: values.stream, school: values.school, targetPercent: Math.min(100, Math.max(33, +values.targetPercent || 75)), subjects: String(values.subjects || '').split(',').map(item => item.trim()).filter(Boolean) }); break;
+      case 'syllabus': state.syllabusItems.push({ id: id('sy'), studentId: meta.student || state.settings.activeLearnerId, subject: values.subject, title: values.title, term: values.term, competency: values.competency, status: values.status, mastery: Math.min(100, Math.max(0, +values.mastery || 0)), plannedHours: Math.max(0, +values.plannedHours || 0) }); break;
+      case 'studyPlan': state.studyPlans.push({ id: id('sp'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, startTime: values.startTime, minutes: Math.max(5, +values.minutes || 30), subject: values.subject, activity: values.activity, method: values.method, status: values.status }); break;
+      case 'deliverable': state.academicDeliverables.push({ id: id('ad'), studentId: meta.student || state.settings.activeLearnerId, title: values.title, subject: values.subject, type: values.type, dueDate: values.dueDate, teacher: values.teacher, status: values.status, weight: Math.max(0, +values.weight || 0), notes: values.notes }); break;
+      case 'assessment': state.academicAssessments.push({ id: id('as'), studentId: meta.student || state.settings.activeLearnerId, title: values.title, subject: values.subject, type: values.type, date: values.date, status: values.status, score: +values.score || 0, maxScore: +values.maxScore || 0, target: +values.target || 0, practicalScore: +values.practicalScore || 0, practicalMax: +values.practicalMax || 0 }); break;
+      case 'practiceLog': state.practiceLogs.push({ id: id('pr'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, source: values.source, attempted: +values.attempted || 0, correct: Math.min(+values.attempted || 0, +values.correct || 0), minutes: +values.minutes || 0, errorType: values.errorType }); break;
       case 'life': state.lifeRecords.push({ id: id('lr'), domain: meta.domain || 'documents', title: values.title, category: values.category, owner: values.owner, provider: values.provider, reference: values.reference, amount: Math.max(0, +values.amount || 0), dueDate: values.dueDate, frequency: values.frequency, status: values.status, phone: values.phone, notes: values.notes, createdAt: new Date().toISOString() }); break;
     }
     save('Added to Home Manager');
@@ -347,6 +376,18 @@
       applyTheme();
       renderHeaderKpis();
       refreshIcons();
+    });
+    document.querySelectorAll('[data-syllabus-status]').forEach(select => select.onchange = () => {
+      const item = D.state.syllabusItems.find(record => record.id === select.dataset.syllabusStatus);
+      if (item) { item.status = select.value; if (item.status === 'mastered') item.mastery = Math.max(80, +item.mastery || 0); save('Syllabus status updated'); render(); }
+    });
+    document.querySelectorAll('[data-plan-status]').forEach(select => select.onchange = () => {
+      const item = D.state.studyPlans.find(record => record.id === select.dataset.planStatus);
+      if (item) { item.status = select.value; save('Study plan updated'); render(); }
+    });
+    document.querySelectorAll('[data-deliverable-status]').forEach(select => select.onchange = () => {
+      const item = D.state.academicDeliverables.find(record => record.id === select.dataset.deliverableStatus);
+      if (item) { item.status = select.value; save('Assignment status updated'); render(); }
     });
     if ($('#exportData')) $('#exportData').onclick = exportData;
     if ($('#importData')) $('#importData').onchange = importData;
@@ -423,7 +464,7 @@
     }
     const moneySources = { food: 'home/inventory', housing: 'home/property', vehicle: 'home/life/vehicles', health: 'home/life/health', family: 'home/family', learning: 'study/overview', community: 'community/overview' };
     if (['Expense', 'Budget', 'Income', 'Liability', 'Savings goal'].includes(type)) return moneySources[record.domain] || 'home/family';
-    return { Person: 'home/family', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/board', Goal: 'study/goals', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
+    return { Person: 'home/family', Inventory: 'home/inventory', Meal: 'home/inventory', Asset: 'home/assets', Wisdom: 'home/wisdom', Topic: 'study/curriculum', Syllabus: 'study/curriculum', Assignment: 'study/assignments', Assessment: 'study/assessments', 'Study plan': 'study/planner', Goal: 'study/reports', News: 'community/feed', Discussion: 'community/feed', Volunteer: 'community/volunteer', Guide: 'community/guides' }[type] || 'global/overview';
   }
 
   function searchItems(query) {
@@ -456,6 +497,10 @@
     add(D.state.volunteerOpportunities, 'Volunteer', 'title', 'community');
     add(D.state.guides, 'Guide', 'title', 'community');
     add(D.state.lifeRecords || [], 'Life record', 'title', 'home');
+    add(D.state.syllabusItems || [], 'Syllabus', 'title', 'study');
+    add(D.state.academicDeliverables || [], 'Assignment', 'title', 'study');
+    add(D.state.academicAssessments || [], 'Assessment', 'title', 'study');
+    add(D.state.studyPlans || [], 'Study plan', 'activity', 'study');
     return output.slice(0, 7);
   }
 
@@ -583,7 +628,7 @@
       if (remaining <= 0) {
         clearInterval(id);
         V.setTimer(25 * 60, null);
-        if (activeTimerMinutes >= 20) D.state.focusSessions.push({ id: D.uid('f'), date: new Date().toISOString().slice(0, 10), minutes: activeTimerMinutes, subject: 'Focus' });
+        if (activeTimerMinutes >= 20) D.state.focusSessions.push({ id: D.uid('f'), studentId: D.state.settings.activeLearnerId, date: new Date().toISOString().slice(0, 10), minutes: activeTimerMinutes, subject: 'General revision' });
         save(activeTimerMinutes >= 20 ? 'Focus session recorded' : 'Break complete');
         render();
       }
@@ -638,6 +683,8 @@
       if (empty) empty.hidden = visible > 0;
       return;
     }
+    const learner = event.target.closest('[data-learner]');
+    if (learner) { D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); return; }
     const workspaceTarget = event.target.closest('[data-workspace]');
     if (workspaceTarget) { workspace = workspaceTarget.dataset.workspace; go(workspace + '/overview'); return; }
     const create = event.target.closest('[data-create]');

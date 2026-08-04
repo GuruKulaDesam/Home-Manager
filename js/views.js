@@ -19,7 +19,7 @@
       ['Health', 'heart-pulse', 'home/life/health'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
     ]},
     learning: { label: 'Learning', icon: 'graduation-cap', note: 'Study and development', route: 'study/overview', items: [
-      ['Overview', 'graduation-cap', 'study/overview'], ['Study Board', 'columns-3', 'study/board'], ['Schedule', 'calendar-clock', 'study/schedule'], ['Tasks', 'list-todo', 'study/tasks'], ['Goals', 'target', 'study/goals'], ['Focus', 'timer', 'study/focus'], ['Analytics', 'chart-spline', 'study/analytics']
+      ['Dashboard', 'graduation-cap', 'study/overview'], ['Curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice'], ['Reports', 'chart-spline', 'study/reports']
     ]},
     community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
       ['Overview', 'map', 'community/overview'], ['Updates', 'newspaper', 'community/feed'], ['Events & polls', 'calendar-heart', 'community/participate'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic issues', 'ticket-check', 'community/tickets'], ['Local services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
@@ -68,13 +68,13 @@
     'community/directory': ['Community Services', 'Essential local contacts'],
     'community/guides': ['Civic Guides', 'Self-service local information'],
     'community/participate': ['Events & Polls', 'Plans and local preferences'],
-    'study/overview': ['Study Overview', 'Preparation at a glance'],
-    'study/board': ['Study Board', 'Syllabus progress from backlog to mastery'],
-    'study/schedule': ['Study Schedule', 'Study blocks on the shared calendar'],
-    'study/tasks': ['Study Tasks', 'Practice and revision checklist'],
-    'study/goals': ['Study Goals', 'Milestones and target scores'],
-    'study/focus': ['Focus Timer', 'Focused sessions recorded in analytics'],
-    'study/analytics': ['Study Analytics', 'Focus time and subject proficiency']
+    'study/overview': ['Learning Dashboard', 'CBSE progress and next actions'],
+    'study/curriculum': ['CBSE Curriculum', 'Chapter and competency mastery'],
+    'study/planner': ['Study Planner', 'Balanced weekly learning plan'],
+    'study/assignments': ['Assignments', 'Homework, projects and practicals'],
+    'study/assessments': ['Assessments', 'Tests, practicals and target gaps'],
+    'study/practice': ['Practice Centre', 'Questions, errors and focused study'],
+    'study/reports': ['Learning Reports', 'Readiness and parent review']
   };
   titles['home/life'] = ['Family Life Registry', 'Every important family record in one place'];
   Object.entries(HM.life.domains).forEach(([key, config]) => {
@@ -441,36 +441,114 @@
     return `<div class="cards">${D.state.guides.map(x => `<article class="card"><span class="context-badge community">Guide</span><h3>${e(x.title)}</h3><p>${e(x.body)}</p><footer><button data-open-guide="${e(x.id)}">${x.read ? 'Read' : 'Mark as read'}</button></footer></article>`).join('')}</div>`;
   }
 
+  function academicContext() {
+    const profiles = D.state.academicProfiles || [];
+    const activeId = profiles.some(item => item.personId === D.state.settings.activeLearnerId) ? D.state.settings.activeLearnerId : profiles[0]?.personId;
+    if (activeId && activeId !== D.state.settings.activeLearnerId) D.state.settings.activeLearnerId = activeId;
+    const profile = profiles.find(item => item.personId === activeId) || { personId: '', name: 'Student', grade: 6, subjects: [], targetPercent: 75 };
+    return {
+      activeId,
+      profile,
+      profiles,
+      syllabus: (D.state.syllabusItems || []).filter(item => item.studentId === activeId),
+      plans: (D.state.studyPlans || []).filter(item => item.studentId === activeId),
+      deliverables: (D.state.academicDeliverables || []).filter(item => item.studentId === activeId),
+      assessments: (D.state.academicAssessments || []).filter(item => item.studentId === activeId),
+      practice: (D.state.practiceLogs || []).filter(item => item.studentId === activeId),
+      sessions: (D.state.focusSessions || []).filter(item => !item.studentId || item.studentId === activeId)
+    };
+  }
+
+  const averageOf = values => values.length ? Math.round(values.reduce((total, value) => total + (+value || 0), 0) / values.length) : 0;
+  const assessmentPercent = item => Math.round(((+item.score || 0) + (+item.practicalScore || 0)) / Math.max(1, (+item.maxScore || 0) + (+item.practicalMax || 0)) * 100);
+  const practicePercent = items => Math.round(items.reduce((sumValue, item) => sumValue + (+item.correct || 0), 0) / Math.max(1, items.reduce((sumValue, item) => sumValue + (+item.attempted || 0), 0)) * 100);
+  const academicStatus = value => `<span class="badge ${['missed', 'todo'].includes(value) ? 'danger' : ['planned', 'progress', 'revision', 'learning'].includes(value) ? 'warning' : ''}">${e(String(value || 'pending').replace('-', ' '))}</span>`;
+
+  function learnerBar(context) {
+    const p = context.profile;
+    return `<section class="learner-bar"><div class="learner-switch" role="group" aria-label="Choose student">${context.profiles.map((profile, index) => `<button data-learner="${e(profile.personId)}" class="student-tone-${index + 1} ${profile.personId === context.activeId ? 'active' : ''}" aria-pressed="${profile.personId === context.activeId}"><span>${e(profile.name[0])}</span><span><b>${e(profile.name)}</b><small>CBSE Class ${e(profile.grade)}</small></span></button>`).join('')}</div><div class="learner-target"><span>${icon('target')}</span><span><small>Academic target</small><b>${e(p.targetPercent)}%</b></span><button class="icon-action" data-edit="academicProfile" data-id="${e(p.id)}" data-student="${e(p.personId)}" aria-label="Edit ${e(p.name)} profile">${icon('pencil')}</button></div></section>`;
+  }
+
+  function subjectReadiness(context) {
+    return context.profile.subjects.map(subject => {
+      const syllabus = context.syllabus.filter(item => item.subject === subject);
+      const assessments = context.assessments.filter(item => item.subject === subject && item.status !== 'scheduled');
+      const practice = context.practice.filter(item => item.subject === subject);
+      const mastery = averageOf(syllabus.map(item => item.mastery));
+      const test = assessments.length ? averageOf(assessments.map(assessmentPercent)) : mastery;
+      const accuracy = practice.length ? practicePercent(practice) : mastery;
+      return { subject, mastery, test, accuracy, readiness: Math.round(mastery * .4 + test * .4 + accuracy * .2) };
+    });
+  }
+
   function studyOverview() {
-    const topics = D.state.learningTopics;
-    const average = topics.length ? Math.round(topics.reduce((sum, x) => sum + clamp(x.proficiency), 0) / topics.length) : 0;
-    const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - 6);
-    const minutes = D.state.focusSessions.filter(x => x.date >= weekStart.toISOString().slice(0, 10)).reduce((sum, x) => sum + (+x.minutes || 0), 0);
-    return `<section class="metrics">${metric('Syllabus topics', topics.length, 'All subjects', 'book-open-check')}${metric('Mastered', topics.filter(x => x.status === 'done').length, 'Completed topics', 'badge-check')}${metric('Average proficiency', `${average}%`, 'Self-assessed', 'gauge')}${metric('Weekly focus', `${minutes} min`, 'Last 7 days', 'timer-reset')}</section><div class="grid-2"><section class="panel"><div class="section-head"><h2>Subject progress</h2><button data-route="study/analytics">Analytics</button></div>${['Physics', 'Chemistry', 'Mathematics'].map(subject => { const items = topics.filter(x => x.subject === subject); const progress = items.length ? Math.round(items.reduce((sum, x) => sum + clamp(x.proficiency), 0) / items.length) : 0; return `<div class="row"><b style="width:100px">${subject}</b><div class="progress grow" role="progressbar" aria-label="${subject} proficiency" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}"><span style="width:${progress}%"></span></div><b>${progress}%</b></div>`; }).join('')}</section><section class="panel"><div class="section-head"><h2>Due next</h2><button data-route="study/tasks">Tasks</button></div>${D.state.tasks.filter(x => x.context === 'study' && D.status(x.status) !== 'done').map(x => row(x.title, `${x.category} - ${D.date(x.dueAt)}`, status(x.status))).join('') || '<p class="empty">No study tasks due.</p>'}</section></div>${sectionFinance('learning', ['goal', 'liability', 'education'])}`;
+    const c = academicContext();
+    const readiness = subjectReadiness(c);
+    const mastery = averageOf(c.syllabus.map(item => item.mastery));
+    const completedAssessments = c.assessments.filter(item => item.status !== 'scheduled');
+    const score = averageOf(completedAssessments.map(assessmentPercent));
+    const due = c.deliverables.filter(item => !['done', 'submitted'].includes(item.status));
+    const upcomingExams = c.assessments.filter(item => item.status === 'scheduled' && item.date >= today()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const nextPlans = c.plans.filter(item => item.date >= today()).sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)).slice(0, 7);
+    const weak = [...readiness].sort((a, b) => a.readiness - b.readiness).slice(0, 3);
+    return `${learnerBar(c)}<section class="metrics">${metric('Syllabus mastery', `${mastery}%`, `${c.syllabus.filter(item => item.status === 'mastered').length}/${c.syllabus.length} outcomes mastered`, 'book-open-check')}${metric('Assessment average', `${score}%`, `Target ${c.profile.targetPercent}%`, 'file-chart-column')}${metric('Open submissions', due.length, due.filter(item => item.dueDate <= today()).length ? 'Includes overdue work' : 'Homework and projects', 'clipboard-check')}${metric('Practice accuracy', `${practicePercent(c.practice)}%`, `${c.practice.reduce((sumValue, item) => sumValue + (+item.attempted || 0), 0)} questions logged`, 'brain-circuit')}</section><div class="grid-2 learning-dashboard"><section class="panel"><div class="section-head"><div><h2>Next study blocks</h2><p>A realistic plan for ${e(c.profile.name)}</p></div><button data-route="study/planner">Open planner</button></div>${nextPlans.length ? nextPlans.map(item => row(`${item.startTime} - ${item.activity}`, `${D.date(item.date, { weekday: 'short', day: 'numeric', month: 'short' })} - ${item.subject} - ${item.minutes} min`, academicStatus(item.status))).join('') : '<p class="empty">No study blocks planned.</p>'}</section><section class="panel"><div class="section-head"><div><h2>Priority subjects</h2><p>Lowest combined readiness first</p></div><button data-route="study/reports">Full report</button></div>${weak.map(item => `<div class="readiness-row"><span class="subject-dot"></span><div class="grow"><b>${e(item.subject)}</b><small>Mastery ${item.mastery}% - Tests ${item.test}% - Practice ${item.accuracy}%</small><div class="progress ${item.readiness < 60 ? 'over' : ''}"><span style="width:${clamp(item.readiness)}%"></span></div></div><strong>${item.readiness}%</strong></div>`).join('')}</section></div><section class="panel learning-actions"><div class="section-head"><div><h2>Do next</h2><p>Highest-impact actions based on current records</p></div></div><div class="action-strip">${upcomingExams.slice(0, 1).map(item => `<button data-route="study/assessments"><span>${icon('calendar-warning')}</span><span><small>UPCOMING EXAM</small><b>${e(item.subject)} - ${e(item.title)}</b><em>${D.date(item.date)}</em></span></button>`).join('')}${due.slice(0, 2).map(item => `<button data-route="study/assignments"><span>${icon('clipboard-check')}</span><span><small>SUBMISSION</small><b>${e(item.title)}</b><em>${D.date(item.dueDate)}</em></span></button>`).join('')}${weak.slice(0, 2).map(item => `<button data-route="study/practice"><span>${icon('brain-circuit')}</span><span><small>REINFORCE</small><b>${e(item.subject)}</b><em>${item.readiness}% ready</em></span></button>`).join('')}<button data-route="study/assessments"><span>${icon(c.profile.grade === 12 ? 'file-check-2' : 'notebook-tabs')}</span><span><small>${c.profile.grade === 12 ? 'BOARD PREP' : 'SCHOOL REVIEW'}</small><b>${c.profile.grade === 12 ? 'Check practical and theory gaps' : 'Review periodic-test gaps'}</b><em>Open assessment plan</em></span></button></div></section>${sectionFinance('learning', ['goal', 'education'])}`;
   }
 
-  function board() {
-    const topics = D.state.learningTopics;
-    const columns = [['backlog', 'Backlog'], ['progress', 'In progress'], ['revision', 'Revision'], ['done', 'Mastered']];
-    return `<div class="toolbar"><input data-filter aria-label="Search syllabus" placeholder="Search syllabus"><select id="subjectFilter" aria-label="Filter by subject"><option value="">All subjects</option><option>Physics</option><option>Chemistry</option><option>Mathematics</option></select><button class="primary" data-create="topic">${icon('plus')}<span>Topic</span></button></div><div class="kanban">${columns.map(([state, label]) => `<section class="kanban-column" data-drop="${state}"><h3>${label}<span class="badge">${topics.filter(x => x.status === state).length}</span></h3>${topics.filter(x => x.status === state).map(x => { const proficiency = clamp(x.proficiency); return `<article class="kanban-card" draggable="true" data-topic="${e(x.id)}" data-filter-row data-subject="${e(x.subject)}"><b>${e(x.title)}</b><small>${e(x.subject)} - ${e(x.chapter)}</small><div class="progress" role="progressbar" aria-label="${e(x.title)} proficiency" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${proficiency}"><span style="width:${proficiency}%"></span></div><small>${+x.plannedHours || 0}h planned - ${proficiency}%</small><select data-topic-status="${e(x.id)}" aria-label="Move ${e(x.title)}"><option value="backlog" ${state === 'backlog' ? 'selected' : ''}>Backlog</option><option value="progress" ${state === 'progress' ? 'selected' : ''}>In progress</option><option value="revision" ${state === 'revision' ? 'selected' : ''}>Revision</option><option value="done" ${state === 'done' ? 'selected' : ''}>Mastered</option></select></article>`; }).join('')}</section>`).join('')}</div>`;
+  function curriculum() {
+    const c = academicContext();
+    const subjects = c.profile.subjects;
+    return `${learnerBar(c)}<section class="curriculum-summary">${['not-started', 'learning', 'revision', 'mastered'].map((state, index) => `<span class="curriculum-state state-${index + 1}"><b>${c.syllabus.filter(item => item.status === state).length}</b><small>${e(state.replace('-', ' '))}</small></span>`).join('')}</section><div class="toolbar"><input data-filter aria-label="Search curriculum" placeholder="Search chapters and competencies"><select id="subjectFilter" aria-label="Filter by subject"><option value="">All subjects</option>${subjects.map(subject => `<option>${e(subject)}</option>`).join('')}</select><select data-status-filter aria-label="Filter by mastery status"><option value="">All stages</option><option value="not-started">Not started</option><option value="learning">Learning</option><option value="revision">Revision</option><option value="mastered">Mastered</option></select><button class="primary" data-create="syllabus" data-student="${e(c.activeId)}">${icon('plus')}<span>Outcome</span></button></div><section class="panel"><table class="table academic-table"><thead><tr><th>Subject & outcome</th><th>Term</th><th>Competency</th><th>Mastery</th><th>Stage</th><th>Actions</th></tr></thead><tbody>${c.syllabus.map(item => `<tr data-filter-row data-subject="${e(item.subject)}" data-status="${e(item.status)}"><td data-label="Outcome"><b>${e(item.title)}</b><small>${e(item.subject)} - ${item.plannedHours} planned hours</small></td><td data-label="Term">${e(item.term)}</td><td data-label="Competency"><span class="badge">${e(item.competency)}</span></td><td data-label="Mastery"><div class="mastery-cell"><div class="progress"><span style="width:${clamp(item.mastery)}%"></span></div><b>${clamp(item.mastery)}%</b></div></td><td data-label="Stage"><select data-syllabus-status="${e(item.id)}" aria-label="Update ${e(item.title)} stage">${['not-started', 'learning', 'revision', 'mastered'].map(value => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${value.replace('-', ' ')}</option>`).join('')}</select></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="syllabus" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.title)}">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="syllabusItems:${e(item.id)}" aria-label="Delete ${e(item.title)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section>`;
   }
 
-  function goals() {
-    const goals = D.state.goals.filter(x => x.context === 'study');
-    return `<div class="section-head"><h2>Active milestones</h2><button class="primary" data-create="goal">${icon('plus')}<span>Goal</span></button></div>${goals.map(x => { const target = Math.max(1, +x.target || 1); const progress = Math.max(0, +x.progress || 0); const percent = clamp(Math.round(progress / target * 100)); return `<article class="panel"><div class="row"><div class="grow"><b>${e(x.title)}</b><small>Due ${D.date(x.dueAt)} - ${progress}/${target}</small><div class="progress" role="progressbar" aria-label="${e(x.title)} progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><span style="width:${percent}%"></span></div></div><b>${percent}%</b><button data-progress="${e(x.id)}">+1</button></div></article>`; }).join('') || empty('No study goals yet.', 'goal', 'Add goal')}`;
+  function studyPlanner() {
+    const c = academicContext();
+    const plans = [...c.plans].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`));
+    const total = plans.filter(item => item.date >= today()).reduce((sumValue, item) => sumValue + (+item.minutes || 0), 0);
+    const days = Array.from({ length: 7 }, (_, index) => { const value = new Date(`${today()}T00:00`); value.setDate(value.getDate() + index); return value.toISOString().slice(0, 10); });
+    return `${learnerBar(c)}<section class="metrics compact-metrics">${metric('Planned this week', `${Math.round(total / 60 * 10) / 10} h`, 'Sustainable load', 'calendar-clock')}${metric('Study blocks', plans.filter(item => item.date >= today()).length, 'Upcoming', 'list-checks')}${metric('Subjects covered', new Set(plans.filter(item => item.date >= today()).map(item => item.subject)).size, `of ${c.profile.subjects.length}`, 'library-big')}${metric('Completed blocks', plans.filter(item => item.status === 'done').length, 'Build consistency', 'badge-check')}</section><div class="section-head"><div><h2>Seven-day plan</h2><p>Short, specific sessions with rest between blocks</p></div><button class="primary" data-create="studyPlan" data-student="${e(c.activeId)}">${icon('plus')}<span>Study block</span></button></div><div class="study-week">${days.map(date => { const items = plans.filter(item => item.date === date); return `<section><header><small>${D.date(date, { weekday: 'short' })}</small><b>${D.date(date, { day: 'numeric', month: 'short' })}</b></header>${items.map(item => `<article><span class="plan-time">${e(item.startTime)}</span><b>${e(item.subject)}</b><p>${e(item.activity)}</p><small>${item.minutes} min - ${e(item.method)}</small><select data-plan-status="${e(item.id)}" aria-label="Update ${e(item.activity)}">${['planned', 'done', 'missed'].map(value => `<option ${item.status === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="row-actions"><button class="icon-action" data-edit="studyPlan" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit block">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="studyPlans:${e(item.id)}" aria-label="Delete block">${icon('trash-2')}</button></span></article>`).join('') || '<p class="day-empty">Recovery / unplanned</p>'}</section>`; }).join('')}</div><section class="panel plan-guidance"><span>${icon('heart-pulse')}</span><div><b>Protect sleep and recovery</b><p>Use this planner to balance school, revision, exercise and sleep. More logged hours do not guarantee better marks; consistent retrieval practice and correction do.</p></div></section>`;
+  }
+
+  function assignments() {
+    const c = academicContext();
+    const items = [...c.deliverables].sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
+    const open = items.filter(item => !['done', 'submitted'].includes(item.status));
+    const weekEnd = new Date(`${today()}T00:00`); weekEnd.setDate(weekEnd.getDate() + 7);
+    return `${learnerBar(c)}<section class="metrics compact-metrics">${metric('Open work', open.length, 'Needs action', 'clipboard-list')}${metric('Due in 7 days', open.filter(item => item.dueDate <= weekEnd.toISOString().slice(0, 10)).length, 'Plan early', 'calendar-warning')}${metric('Projects & practicals', items.filter(item => ['Project', 'Practical', 'Portfolio', 'Internal assessment'].includes(item.type)).length, c.profile.grade === 12 ? 'Board evidence' : 'Applied learning', 'flask-conical')}${metric('Submitted', items.filter(item => ['done', 'submitted'].includes(item.status)).length, 'Completed work', 'circle-check-big')}</section><div class="toolbar"><input data-filter aria-label="Search assignments" placeholder="Search assignments"><select id="subjectFilter" aria-label="Filter assignments by subject"><option value="">All subjects</option>${c.profile.subjects.map(subject => `<option>${e(subject)}</option>`).join('')}</select><select data-status-filter aria-label="Filter assignment status"><option value="">All statuses</option><option>todo</option><option>progress</option><option>submitted</option><option>done</option></select><button class="primary" data-create="deliverable" data-student="${e(c.activeId)}">${icon('plus')}<span>Assignment</span></button></div><section class="panel"><table class="table"><thead><tr><th>Work</th><th>Type</th><th>Teacher</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item => `<tr data-filter-row data-subject="${e(item.subject)}" data-status="${e(item.status)}"><td data-label="Work"><b>${e(item.title)}</b><small>${e(item.subject)} - ${e(item.notes || 'No notes')}</small></td><td data-label="Type"><span class="badge">${e(item.type)}</span></td><td data-label="Teacher">${e(item.teacher || '-')}</td><td data-label="Due"><span class="badge ${item.dueDate < today() && !['done', 'submitted'].includes(item.status) ? 'danger' : ''}">${D.date(item.dueDate)}</span></td><td data-label="Status"><select data-deliverable-status="${e(item.id)}" aria-label="Update ${e(item.title)}">${['todo', 'progress', 'submitted', 'done'].map(value => `<option ${item.status === value ? 'selected' : ''}>${value}</option>`).join('')}</select></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="deliverable" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.title)}">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="academicDeliverables:${e(item.id)}" aria-label="Delete ${e(item.title)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section>`;
+  }
+
+  function assessments() {
+    const c = academicContext();
+    const completed = c.assessments.filter(item => item.status !== 'scheduled');
+    const scheduled = c.assessments.filter(item => item.status === 'scheduled' && item.date >= today());
+    const scores = completed.map(assessmentPercent);
+    const target = +c.profile.targetPercent || 75;
+    const below = completed.filter(item => assessmentPercent(item) < target);
+    return `${learnerBar(c)}<section class="metrics compact-metrics">${metric('Current average', `${averageOf(scores)}%`, `Target ${target}%`, 'file-chart-column')}${metric('Target gap', `${Math.max(0, target - averageOf(scores))} pts`, below.length ? 'Improvement needed' : 'On target', 'target')}${metric('Upcoming exams', scheduled.length, scheduled.length ? `Next ${D.date([...scheduled].sort((a, b) => String(a.date).localeCompare(String(b.date)))[0].date)}` : 'Nothing scheduled', 'calendar-warning')}${metric(c.profile.grade === 12 ? 'Practical readiness' : 'Competency checks', c.profile.grade === 12 ? `${averageOf(completed.filter(item => item.practicalMax).map(item => Math.round(item.practicalScore / item.practicalMax * 100)))}%` : `${below.length} to review`, c.profile.grade === 12 ? 'Separate practical evidence' : 'Use errors for revision', 'flask-conical')}</section><div class="section-head"><div><h2>${c.profile.grade === 12 ? 'Board and school assessments' : 'School assessment record'}</h2><p>Schedule exams first; add marks only after completion</p></div><button class="primary" data-create="assessment" data-student="${e(c.activeId)}">${icon('plus')}<span>Assessment</span></button></div><section class="panel"><table class="table"><thead><tr><th>Assessment</th><th>Date</th><th>Status</th><th>Theory</th><th>Practical / IA</th><th>Overall</th><th>Target</th><th>Actions</th></tr></thead><tbody>${[...c.assessments].sort((a, b) => String(b.date).localeCompare(String(a.date))).map(item => { const isScheduled = item.status === 'scheduled'; const percent = assessmentPercent(item); const targetPercent = Math.round((+item.target || 0) / Math.max(1, +item.maxScore || 0) * 100); return `<tr><td data-label="Assessment"><b>${e(item.subject)}</b><small>${e(item.title)} - ${e(item.type)}</small></td><td data-label="Date">${D.date(item.date)}</td><td data-label="Status">${academicStatus(item.status)}</td><td data-label="Theory">${isScheduled ? `Target ${item.target}/${item.maxScore}` : `${item.score}/${item.maxScore}`}</td><td data-label="Practical / IA">${item.practicalMax ? (isScheduled ? `Max ${item.practicalMax}` : `${item.practicalScore}/${item.practicalMax}`) : '-'}</td><td data-label="Overall">${isScheduled ? '<span class="muted">Pending</span>' : `<b class="${percent < targetPercent ? 'negative' : ''}">${percent}%</b>`}</td><td data-label="Target">${targetPercent}%</td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="assessment" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.subject)} assessment">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="academicAssessments:${e(item.id)}" aria-label="Delete assessment">${icon('trash-2')}</button></span></td></tr>`; }).join('')}</tbody></table></section><section class="panel assessment-note"><span>${icon('shield-check')}</span><div><b>${c.profile.grade === 12 ? 'Track theory and practical separately' : 'Use formative evidence, not one test alone'}</b><p>${c.profile.grade === 12 ? 'The board requires separate attention to theory and practical/project/internal work where applicable. Confirm exact subject marks with the school and current CBSE documents.' : 'Combine school feedback, application questions, projects and self-correction when planning support.'}</p></div></section>`;
   }
 
   let timerSeconds = 25 * 60;
   let timerId = null;
-  function focus() {
-    return `<section class="panel timer"><span class="context-badge study">Focus session</span><div class="clock" id="clock" role="timer" aria-live="polite">${format(timerSeconds)}</div><p>Completed focus sessions are recorded in local study analytics.</p><div class="timer-actions"><button id="timerToggle" class="primary">${icon(timerId ? 'pause' : 'play')}<span>${timerId ? 'Pause' : 'Start'}</span></button><button data-timer="reset">Reset</button><button data-timer="5">5 min break</button><button data-timer="25">25 min focus</button></div></section>`;
-  }
   function format(seconds) { return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`; }
 
-  function analytics() {
-    const sessions = D.state.focusSessions.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-7);
-    const topics = D.state.learningTopics;
-    return `<section class="metrics">${metric('Focus sessions', D.state.focusSessions.length, 'Recorded locally', 'timer')}${metric('Focus minutes', D.state.focusSessions.reduce((sum, x) => sum + (+x.minutes || 0), 0), 'All time', 'clock-3')}${metric('Mastered topics', topics.filter(x => x.status === 'done').length, 'Syllabus progress', 'badge-check')}${metric('Active goals', D.state.goals.filter(x => x.context === 'study').length, 'Milestones', 'target')}</section><div class="grid-2"><section class="panel"><h2>Recent focus minutes</h2><div class="chart" aria-label="Recent focus minutes">${sessions.map(x => `<div style="height:${Math.max(4, (+x.minutes || 0) / 90 * 100)}%"><span>${D.date(x.date, { weekday: 'short' })}</span></div>`).join('')}</div></section><section class="panel"><h2>Topic proficiency</h2>${topics.map(x => { const proficiency = clamp(x.proficiency); return `<div class="row"><div class="grow"><b>${e(x.title)}</b><small>${e(x.subject)}</small><div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${proficiency}"><span style="width:${proficiency}%"></span></div></div><b>${proficiency}%</b></div>`; }).join('')}</section></div>`;
+  function practiceCentre() {
+    const c = academicContext();
+    const attempted = c.practice.reduce((sumValue, item) => sumValue + (+item.attempted || 0), 0);
+    const commonErrors = Object.entries(c.practice.reduce((counts, item) => { counts[item.errorType] = (counts[item.errorType] || 0) + 1; return counts; }, {})).sort((a, b) => b[1] - a[1]);
+    const resources = (D.state.academicResources || []).filter(item => item.audience === '6-12' || item.audience.split('-').map(Number).some((value, index, values) => values.length === 1 ? +c.profile.grade === value : +c.profile.grade >= values[0] && +c.profile.grade <= values[1]));
+    return `${learnerBar(c)}<section class="metrics compact-metrics">${metric('Accuracy', `${practicePercent(c.practice)}%`, `${attempted} questions attempted`, 'brain-circuit')}${metric('Practice time', `${c.practice.reduce((sumValue, item) => sumValue + (+item.minutes || 0), 0)} min`, 'Logged sessions', 'clock-3')}${metric('Main error', commonErrors[0]?.[0] || 'None', 'Correct the pattern', 'scan-search')}${metric('Practice sets', c.practice.length, 'NCERT and CBSE sources', 'notebook-pen')}</section><div class="practice-layout"><section class="panel timer practice-timer"><span class="context-badge study">Focused study</span><div class="clock" id="clock" role="timer" aria-live="polite">${format(timerSeconds)}</div><p>A completed 25-minute block is added to ${e(c.profile.name)}'s report.</p><div class="timer-actions"><button id="timerToggle" class="primary">${icon(timerId ? 'pause' : 'play')}<span>${timerId ? 'Pause' : 'Start'}</span></button><button data-timer="reset">Reset</button><button data-timer="5">5 min break</button><button data-timer="25">25 min focus</button></div></section><section class="panel"><div class="section-head"><div><h2>Error notebook</h2><p>Turn mistakes into the next practice set</p></div><button class="primary" data-create="practiceLog" data-student="${e(c.activeId)}">${icon('plus')}<span>Practice log</span></button></div>${commonErrors.map(([label, count]) => row(label, `${count} logged session${count === 1 ? '' : 's'}`, `<button data-route="study/planner">Plan correction</button>`)).join('') || '<p class="empty">No errors logged yet.</p>'}</section></div><section class="panel"><div class="section-head"><h2>Recent practice</h2></div><table class="table"><thead><tr><th>Date & source</th><th>Subject</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Error focus</th><th>Actions</th></tr></thead><tbody>${[...c.practice].sort((a, b) => String(b.date).localeCompare(String(a.date))).map(item => `<tr><td data-label="Date & source"><b>${D.date(item.date)}</b><small>${e(item.source)}</small></td><td data-label="Subject">${e(item.subject)}</td><td data-label="Attempted">${item.attempted}</td><td data-label="Correct">${item.correct}</td><td data-label="Accuracy"><b>${Math.round(item.correct / Math.max(1, item.attempted) * 100)}%</b></td><td data-label="Error focus">${e(item.errorType)}</td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="practiceLog" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit practice log">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="practiceLogs:${e(item.id)}" aria-label="Delete practice log">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section><section class="official-study-resources"><div class="section-head"><div><h2>Official study sources</h2><p>Open current CBSE and NCERT material</p></div></div>${resources.map(item => `<a href="${e(item.url)}" target="_blank" rel="noopener noreferrer"><span>${icon(item.type.includes('textbook') ? 'book-open' : 'external-link')}</span><span><b>${e(item.title)}</b><small>${e(item.type)}</small></span></a>`).join('')}</section>`;
+  }
+
+  function learningReports() {
+    const c = academicContext();
+    const subjects = subjectReadiness(c).sort((a, b) => a.readiness - b.readiness);
+    const overall = averageOf(subjects.map(item => item.readiness));
+    const focusMinutes = c.sessions.reduce((sumValue, item) => sumValue + (+item.minutes || 0), 0);
+    const interventions = subjects.filter(item => item.readiness < c.profile.targetPercent - 10);
+    const reviewItems = interventions.length ? interventions.slice(0, 4).map(item => {
+      const action = item.mastery < item.test ? 'Re-teach the weakest concept, then check with three application questions.' : item.accuracy < item.test ? 'Review the error notebook and schedule one short correction set.' : 'Protect the planned revision block and confirm school feedback.';
+      return `<div class="review-action"><span>${icon('arrow-up-right')}</span><div><b>${e(item.subject)}</b><p>${action}</p></div></div>`;
+    }).join('') : `<div class="review-action"><span>${icon('circle-check-big')}</span><div><b>Progress is on target</b><p>Keep the weekly routine stable and ask the student to explain one thing learned well.</p></div></div>`;
+    return `${learnerBar(c)}<section class="metrics">${metric('Overall readiness', `${overall}%`, `Target ${c.profile.targetPercent}%`, 'gauge')}${metric('On-target subjects', subjects.filter(item => item.readiness >= c.profile.targetPercent).length, `of ${subjects.length}`, 'badge-check')}${metric('Focus recorded', `${focusMinutes} min`, 'Use with quality evidence', 'timer-reset')}${metric('Parent actions', interventions.length, interventions.length ? 'Review this week' : 'No urgent intervention', 'users-round')}</section><div class="grid-2"><section class="panel"><div class="section-head"><div><h2>Subject readiness</h2><p>Mastery 40% + assessments 40% + practice 20%</p></div></div>${subjects.map(item => `<div class="readiness-row"><span class="subject-dot"></span><div class="grow"><b>${e(item.subject)}</b><small>Curriculum ${item.mastery}% - Assessment ${item.test}% - Accuracy ${item.accuracy}%</small><div class="progress ${item.readiness < 60 ? 'over' : ''}"><span style="width:${clamp(item.readiness)}%"></span></div></div><strong>${item.readiness}%</strong></div>`).join('')}</section><section class="panel parent-review"><div class="section-head"><div><h2>Weekly parent review</h2><p>Support without micromanaging</p></div></div>${reviewItems}<div class="review-boundary"><b>Marks are evidence, not identity.</b><p>Use this dashboard to find support needs. Do not use it to compare siblings or punish a low score.</p></div></section></div><section class="panel"><div class="section-head"><div><h2>Readiness distribution</h2><p>Use the lowest bars to plan the next week</p></div></div><div class="chart readiness-chart" aria-label="Subject readiness">${subjects.map(item => `<div style="height:${Math.max(4, item.readiness)}%"><b>${item.readiness}%</b><span>${e(item.subject.split(' ')[0])}</span></div>`).join('')}</div></section>`;
   }
 
   function settingsLink(title, note, route, iconName) {
@@ -566,12 +644,18 @@
       'community/directory': () => directory('community'),
       'community/guides': guides,
       'study/overview': studyOverview,
-      'study/board': board,
-      'study/schedule': () => calendar('study'),
-      'study/tasks': () => taskView('study'),
-      'study/goals': goals,
-      'study/focus': focus,
-      'study/analytics': analytics
+      'study/curriculum': curriculum,
+      'study/planner': studyPlanner,
+      'study/assignments': assignments,
+      'study/assessments': assessments,
+      'study/practice': practiceCentre,
+      'study/reports': learningReports,
+      'study/board': curriculum,
+      'study/schedule': studyPlanner,
+      'study/tasks': assignments,
+      'study/goals': learningReports,
+      'study/focus': practiceCentre,
+      'study/analytics': learningReports
     };
     return (map[route] || unified)();
   }
