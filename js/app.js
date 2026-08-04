@@ -9,6 +9,8 @@
   let lastDeleted = null;
   let toastTimer = null;
   let activeTimerMinutes = 25;
+  let activeBookReader = null;
+  let activeBookUrl = '';
   if (!['home', 'community', 'study'].includes(workspace)) workspace = D.state.settings.activeWorkspace || 'home';
 
   const iconNames = {
@@ -54,6 +56,157 @@
     if (lifeOwners[lifeDomain]) return lifeOwners[lifeDomain];
     const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'community/events': 'community', 'community/polls': 'community' };
     return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
+  }
+
+  function openBookDatabase() {
+    return new Promise((resolve, reject) => {
+      if (!window.indexedDB) { reject(new Error('IndexedDB is unavailable')); return; }
+      const request = indexedDB.open('home-manager-books-v1', 1);
+      request.onupgradeneeded = () => {
+        if (!request.result.objectStoreNames.contains('files')) request.result.createObjectStore('files', { keyPath: 'bookId' });
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error || new Error('Could not open the private book library'));
+    });
+  }
+
+  async function getBookFile(bookId) {
+    const db = await openBookDatabase();
+    return new Promise((resolve, reject) => {
+      const request = db.transaction('files', 'readonly').objectStore('files').get(bookId);
+      request.onsuccess = () => { db.close(); resolve(request.result || null); };
+      request.onerror = () => { db.close(); reject(request.error); };
+    });
+  }
+
+  async function putBookFile(bookId, file) {
+    const db = await openBookDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('files', 'readwrite');
+      transaction.objectStore('files').put({ bookId, name: file.name, type: file.type || 'application/pdf', size: file.size, updatedAt: new Date().toISOString(), blob: file });
+      transaction.oncomplete = () => { db.close(); resolve(); };
+      transaction.onerror = () => { db.close(); reject(transaction.error); };
+    });
+  }
+
+  async function deleteBookFile(bookId) {
+    const db = await openBookDatabase();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction('files', 'readwrite');
+      transaction.objectStore('files').delete(bookId);
+      transaction.oncomplete = () => { db.close(); resolve(); };
+      transaction.onerror = () => { db.close(); reject(transaction.error); };
+    });
+  }
+
+  function readingProgress(bookId, studentId, create = true) {
+    D.state.readingProgress ||= [];
+    let record = D.state.readingProgress.find(item => item.bookId === bookId && item.studentId === studentId);
+    if (!record && create) {
+      record = { id: D.uid('rp'), bookId, studentId, currentPage: 1, totalPages: 0, status: 'not-started', bookmarks: [], notes: [], lastOpened: '' };
+      D.state.readingProgress.push(record);
+    }
+    return record;
+  }
+
+  async function hydrateBookshelf() {
+    const cards = [...document.querySelectorAll('[data-book-card]')];
+    await Promise.all(cards.map(async card => {
+      const state = card.querySelector('[data-book-state]');
+      const open = card.querySelector('[data-book-open]');
+      const importLabel = card.querySelector('[data-book-import-label]');
+      try {
+        const file = await getBookFile(card.dataset.bookCard);
+        card.classList.toggle('book-ready', Boolean(file));
+        open.disabled = !file;
+        state.textContent = file ? `Ready offline - ${file.name}` : 'PDF not added on this device';
+        importLabel.textContent = file ? 'Replace PDF' : 'Add PDF';
+      } catch (error) {
+        open.disabled = true;
+        state.textContent = 'Private storage is unavailable in this browser';
+        console.error(error);
+      }
+    }));
+  }
+
+  function renderReaderNotes() {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    const notes = [...progress.notes].sort((a, b) => +b.page - +a.page);
+    $('#bookNotes').innerHTML = notes.length ? notes.map(note => `<article><span><b>Page ${note.page}</b><small>${D.esc(note.createdAt ? D.date(note.createdAt) : '')}</small></span><p>${D.esc(note.text)}</p><button type="button" data-book-note-delete="${D.esc(note.id)}" aria-label="Delete note on page ${note.page}"><i data-lucide="trash-2"></i></button></article>`).join('') : '<p class="empty">No review notes yet.</p>';
+    refreshIcons();
+  }
+
+  function refreshBookReader(reloadDocument = false) {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    const page = Math.max(1, Math.min(progress.totalPages || Infinity, +progress.currentPage || 1));
+    progress.currentPage = page;
+    $('#bookCurrentPage').value = page;
+    $('#bookTotalPages').value = progress.totalPages || 0;
+    const percent = progress.totalPages ? Math.min(100, Math.round(page / progress.totalPages * 100)) : 0;
+    $('#bookReadProgress').innerHTML = `<span>${progress.totalPages ? `${percent}%` : 'In progress'}</span><b>Page ${page}${progress.totalPages ? ` of ${progress.totalPages}` : ''}</b>`;
+    const bookmarked = progress.bookmarks.includes(page);
+    $('#bookBookmark').classList.toggle('active', bookmarked);
+    $('#bookBookmark').querySelector('span').textContent = bookmarked ? 'Remove bookmark' : 'Bookmark page';
+    $('#bookReviewed').classList.toggle('active', progress.status === 'reviewed');
+    $('#bookReviewed').querySelector('span').textContent = progress.status === 'reviewed' ? 'Reviewed' : 'Mark reviewed';
+    if (reloadDocument && activeBookUrl) $('#bookFrame').src = `${activeBookUrl}#page=${page}&view=FitH`;
+  }
+
+  async function openBookReader(bookId, studentId) {
+    const book = V.textbookCatalog.find(item => item.id === bookId);
+    if (!book) return;
+    try {
+      const stored = await getBookFile(bookId);
+      if (!stored?.blob) { chooseBookFile(bookId, studentId); return; }
+      if (activeBookUrl) URL.revokeObjectURL(activeBookUrl);
+      activeBookUrl = URL.createObjectURL(stored.blob);
+      activeBookReader = { book, studentId };
+      const profile = D.state.academicProfiles.find(item => item.personId === studentId);
+      const progress = readingProgress(bookId, studentId);
+      if (progress.status === 'not-started') progress.status = 'reading';
+      progress.lastOpened = new Date().toISOString();
+      D.save();
+      $('#bookReaderContext').textContent = `${profile?.name || 'Student'} - CLASS ${book.grade} - ${book.subject}`;
+      $('#bookReaderTitle').textContent = book.title;
+      $('#bookReaderMeta').textContent = `${book.publisher} - ${stored.name} - stored only in this browser`;
+      $('#bookNote').value = '';
+      refreshBookReader(true);
+      renderReaderNotes();
+      $('#bookReaderDialog').showModal();
+      refreshIcons();
+    } catch (error) {
+      console.error(error);
+      toast('Could not open this book from private browser storage.');
+    }
+  }
+
+  function chooseBookFile(bookId, studentId) {
+    const input = $('#bookFileInput');
+    input.dataset.bookId = bookId;
+    input.dataset.studentId = studentId;
+    input.value = '';
+    input.click();
+  }
+
+  async function importBookFile(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    if (!(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) { toast('Choose a PDF textbook file.'); return; }
+    if (file.size > 150 * 1024 * 1024) { toast('This PDF is over the 150 MB device limit.'); return; }
+    try {
+      await putBookFile(input.dataset.bookId, file);
+      readingProgress(input.dataset.bookId, input.dataset.studentId);
+      D.save();
+      toast('Textbook saved privately on this device');
+      await hydrateBookshelf();
+      await openBookReader(input.dataset.bookId, input.dataset.studentId);
+    } catch (error) {
+      console.error(error);
+      toast('Could not store the PDF. Check available browser storage.');
+    }
   }
 
   function settingsSection() {
@@ -477,6 +630,7 @@
     }
     if ($('#timerToggle')) $('#timerToggle').onclick = toggleTimer;
     document.querySelectorAll('[data-timer]').forEach(button => button.onclick = () => setTimer(button.dataset.timer));
+    if (document.querySelector('[data-book-card]')) hydrateBookshelf();
   }
 
   function routeFor(type, record) {
@@ -689,6 +843,18 @@
       if (dialog?.open) dialog.close();
       return;
     }
+    const bookImport = event.target.closest('[data-book-import]');
+    if (bookImport) { chooseBookFile(bookImport.dataset.bookImport, bookImport.dataset.student); return; }
+    const bookOpen = event.target.closest('[data-book-open]');
+    if (bookOpen) { openBookReader(bookOpen.dataset.bookOpen, bookOpen.dataset.student); return; }
+    const noteDelete = event.target.closest('[data-book-note-delete]');
+    if (noteDelete && activeBookReader) {
+      const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+      progress.notes = progress.notes.filter(note => note.id !== noteDelete.dataset.bookNoteDelete);
+      save('Reading note removed');
+      renderReaderNotes();
+      return;
+    }
     const groupTarget = event.target.closest('[data-group]');
     if (groupTarget) {
       const groupKey = groupTarget.dataset.group;
@@ -775,6 +941,76 @@
     addEntity(form.dataset.kind, Object.fromEntries(new FormData(form)), form.dataset);
     form.reset();
   };
+  $('#bookFileInput').onchange = importBookFile;
+  $('#bookCurrentPage').onchange = event => {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    progress.currentPage = Math.max(1, Math.min(progress.totalPages || Infinity, +event.target.value || 1));
+    if (progress.status === 'not-started') progress.status = 'reading';
+    progress.lastOpened = new Date().toISOString();
+    D.save();
+    refreshBookReader(true);
+  };
+  $('#bookTotalPages').onchange = event => {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    progress.totalPages = Math.max(0, +event.target.value || 0);
+    progress.currentPage = Math.min(progress.totalPages || Infinity, progress.currentPage);
+    D.save();
+    refreshBookReader(true);
+  };
+  document.querySelectorAll('[data-book-page-delta]').forEach(button => button.onclick = () => {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    progress.currentPage = Math.max(1, Math.min(progress.totalPages || Infinity, progress.currentPage + +button.dataset.bookPageDelta));
+    if (progress.status === 'not-started') progress.status = 'reading';
+    progress.lastOpened = new Date().toISOString();
+    D.save();
+    refreshBookReader(true);
+  });
+  $('#bookBookmark').onclick = () => {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    const page = progress.currentPage;
+    progress.bookmarks = progress.bookmarks.includes(page) ? progress.bookmarks.filter(item => item !== page) : [...progress.bookmarks, page].sort((a, b) => a - b);
+    save(progress.bookmarks.includes(page) ? 'Page bookmarked' : 'Bookmark removed');
+    refreshBookReader();
+  };
+  $('#bookReviewed').onclick = () => {
+    if (!activeBookReader) return;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    progress.status = progress.status === 'reviewed' ? 'reading' : 'reviewed';
+    save(progress.status === 'reviewed' ? 'Book marked reviewed' : 'Book returned to reading');
+    refreshBookReader();
+  };
+  $('#saveBookNote').onclick = () => {
+    if (!activeBookReader) return;
+    const text = $('#bookNote').value.trim();
+    if (!text) { toast('Write a review note first.'); $('#bookNote').focus(); return; }
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    progress.notes.push({ id: D.uid('rn'), page: progress.currentPage, text, createdAt: new Date().toISOString() });
+    $('#bookNote').value = '';
+    save('Review note saved');
+    renderReaderNotes();
+  };
+  $('#removeBookFile').onclick = async () => {
+    if (!activeBookReader || !confirm('Remove this PDF from this browser? Reading progress and notes will remain.')) return;
+    try {
+      await deleteBookFile(activeBookReader.book.id);
+      toast('PDF removed from this device');
+      $('#bookReaderDialog').close();
+    } catch (error) {
+      console.error(error);
+      toast('Could not remove the PDF from browser storage.');
+    }
+  };
+  $('#bookReaderDialog').addEventListener('close', () => {
+    $('#bookFrame').src = 'about:blank';
+    if (activeBookUrl) URL.revokeObjectURL(activeBookUrl);
+    activeBookUrl = '';
+    activeBookReader = null;
+    if (route === 'study/curriculum') render();
+  });
   $('#globalSearch').onclick = showSearch;
   $('#searchInput').oninput = event => renderSearch(event.target.value);
   $('#quickAdd').onclick = quick;

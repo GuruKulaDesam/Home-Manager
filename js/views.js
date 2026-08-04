@@ -19,7 +19,7 @@
       ['Overview', 'heart-handshake', 'home/care'], ['Health', 'heart-pulse', 'home/life/health'], ['Medicines', 'pill', 'home/life/medicines'], ['Appointments', 'stethoscope', 'home/life/appointments'], ['Elder care', 'accessibility', 'home/life/elders'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
     ]},
     learning: { label: 'Learning', icon: 'graduation-cap', note: 'Study and development', route: 'study/overview', items: [
-      ['Dashboard', 'graduation-cap', 'study/overview'], ['Curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice'], ['Reports', 'chart-spline', 'study/reports']
+      ['Dashboard', 'graduation-cap', 'study/overview'], ['Books & curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice'], ['Reports', 'chart-spline', 'study/reports']
     ]},
     community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
       ['Overview', 'map', 'community/overview'], ['Updates', 'newspaper', 'community/feed'], ['Events & polls', 'calendar-heart', 'community/participate'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic issues', 'ticket-check', 'community/tickets'], ['Local services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
@@ -37,6 +37,27 @@
     ['meadow', 'Alpine meadow'], ['lotus', 'Sunrise lake'], ['monsoon', 'Monsoon peaks'],
     ['sunrise', 'Munnar sunrise'], ['glacier', 'Glacier mountains'], ['bamboo', 'Rocky forest'],
     ['sky', 'Peaks above clouds'], ['grove', 'Evergreen valley'], ['wildflower', 'Wildflower slopes']
+  ];
+
+  const textbookCatalog = [
+    { id: 'g7-math-1', grade: 7, subject: 'Mathematics', title: 'Ganita Prakash Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gegp1=0-8' },
+    { id: 'g7-math-2', grade: 7, subject: 'Mathematics', title: 'Ganita Prakash Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gegp2=0-7' },
+    { id: 'g7-science', grade: 7, subject: 'Science', title: 'Curiosity', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gecu1=0-12' },
+    { id: 'g7-english', grade: 7, subject: 'English', title: 'Poorvi', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gepr1=0-5' },
+    { id: 'g7-social-1', grade: 7, subject: 'Social Science', title: 'Exploring Society: India and Beyond Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gees1=0-12' },
+    { id: 'g7-social-2', grade: 7, subject: 'Social Science', title: 'Exploring Society: India and Beyond Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gees2=0-8' },
+    { id: 'g7-hindi', grade: 7, subject: 'Hindi', title: 'Malhar', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?ghml1=0-10' },
+    { id: 'g7-skills', grade: 7, subject: 'Kaushal Bodh', title: 'Kaushal Bodh', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gekb1=0-7' },
+    { id: 'g7-tamil', grade: 7, subject: 'Tamil', title: 'Tamil course book', publisher: 'Peepal-issued', sourceUrl: 'https://crm.peepalprodigy.cloud/' },
+    { id: 'g12-math-1', grade: 12, subject: 'Mathematics', title: 'Mathematics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh1=0-6' },
+    { id: 'g12-math-2', grade: 12, subject: 'Mathematics', title: 'Mathematics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh2=0-7' },
+    { id: 'g12-physics-1', grade: 12, subject: 'Physics', title: 'Physics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph1=0-8' },
+    { id: 'g12-physics-2', grade: 12, subject: 'Physics', title: 'Physics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph2=0-6' },
+    { id: 'g12-chemistry-1', grade: 12, subject: 'Chemistry', title: 'Chemistry Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech1=0-5' },
+    { id: 'g12-chemistry-2', grade: 12, subject: 'Chemistry', title: 'Chemistry Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech2=0-5' },
+    { id: 'g12-english-1', grade: 12, subject: 'English Core', title: 'Flamingo', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lefl1=0-13' },
+    { id: 'g12-english-2', grade: 12, subject: 'English Core', title: 'Vistas', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?levt1=0-6' },
+    { id: 'g12-cs', grade: 12, subject: 'Computer Science', title: 'Computer Science', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lecs1=0-13' }
   ];
 
   const titles = {
@@ -71,7 +92,7 @@
     'community/guides': ['Civic Guides', 'Self-service local information'],
     'community/participate': ['Events & Polls', 'Plans and local preferences'],
     'study/overview': ['Learning Dashboard', 'Peepal and CBSE progress'],
-    'study/curriculum': ['CBSE Curriculum', 'Outcomes and Peepal self-assessment'],
+    'study/curriculum': ['Books & Curriculum', 'Textbooks, reading review and CBSE outcomes'],
     'study/planner': ['Study Planner', 'School day and home study'],
     'study/assignments': ['Assignments', 'Homework, projects and practicals'],
     'study/assessments': ['Assessments', 'Tests, practicals and target gaps'],
@@ -579,8 +600,19 @@
   function curriculum() {
     const c = academicContext();
     const subjects = c.profile.subjects;
-    c.learningExtension = 'curriculum';
-    return `${learnerBar(c)}<section class="curriculum-summary">${['not-started', 'learning', 'revision', 'mastered'].map((state, index) => `<span class="curriculum-state state-${index + 1}"><b>${c.syllabus.filter(item => item.status === state).length}</b><small>${e(state.replace('-', ' '))}</small></span>`).join('')}</section><div class="toolbar"><input data-filter aria-label="Search curriculum" placeholder="Search chapters and competencies"><select id="subjectFilter" aria-label="Filter by subject"><option value="">All subjects</option>${subjects.map(subject => `<option>${e(subject)}</option>`).join('')}</select><select data-status-filter aria-label="Filter by mastery status"><option value="">All stages</option><option value="not-started">Not started</option><option value="learning">Learning</option><option value="revision">Revision</option><option value="mastered">Mastered</option></select><button class="primary" data-create="syllabus" data-student="${e(c.activeId)}">${icon('plus')}<span>Outcome</span></button></div><section class="panel"><table class="table academic-table"><thead><tr><th>Subject & outcome</th><th>Term</th><th>Competency</th><th>Mastery</th><th>Stage</th><th>Actions</th></tr></thead><tbody>${c.syllabus.map(item => `<tr data-filter-row data-subject="${e(item.subject)}" data-status="${e(item.status)}"><td data-label="Outcome"><b>${e(item.title)}</b><small>${e(item.subject)} - ${item.plannedHours} planned hours</small></td><td data-label="Term">${e(item.term)}</td><td data-label="Competency"><span class="badge">${e(item.competency)}</span></td><td data-label="Mastery"><div class="mastery-cell"><div class="progress"><span style="width:${clamp(item.mastery)}%"></span></div><b>${clamp(item.mastery)}%</b></div></td><td data-label="Stage"><select data-syllabus-status="${e(item.id)}" aria-label="Update ${e(item.title)} stage">${['not-started', 'learning', 'revision', 'mastered'].map(value => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${value.replace('-', ' ')}</option>`).join('')}</select></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="syllabus" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.title)}">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="syllabusItems:${e(item.id)}" aria-label="Delete ${e(item.title)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section>`;
+    const learner = learnerBar(c);
+    const books = textbookCatalog.filter(book => book.grade === +c.profile.grade);
+    const reading = D.state.readingProgress || [];
+    const bookCards = books.map((book, index) => {
+      const progress = reading.find(item => item.studentId === c.activeId && item.bookId === book.id);
+      const page = progress?.currentPage || 1;
+      const total = progress?.totalPages || 0;
+      const statusLabel = progress?.status === 'reviewed' ? 'Reviewed' : progress?.status === 'reading' ? 'Reading' : 'Not started';
+      const pageLabel = progress ? `Page ${page}${total ? ` of ${total}` : ''}` : 'No reading progress';
+      return `<article class="book-card book-tone-${index % 7 + 1}" data-book-card="${e(book.id)}" data-student="${e(c.activeId)}"><span class="book-subject-icon">${icon(book.subject === 'Computer Science' ? 'code-2' : book.subject.includes('English') || book.subject === 'Hindi' || book.subject === 'Tamil' ? 'languages' : book.subject === 'Science' || book.subject === 'Physics' || book.subject === 'Chemistry' ? 'flask-conical' : book.subject === 'Mathematics' ? 'sigma' : book.subject === 'Social Science' ? 'landmark' : 'blocks')}</span><div class="book-card-copy"><small>${e(book.subject)}</small><h3>${e(book.title)}</h3><p>${e(book.publisher)} - ${e(statusLabel)} - ${e(pageLabel)}</p><span class="book-local-state" data-book-state>Checking this device...</span></div><div class="book-card-actions"><button type="button" class="primary" data-book-open="${e(book.id)}" data-student="${e(c.activeId)}" disabled>${icon('book-open')}<span>Read</span></button><button type="button" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}">${icon('file-up')}<span data-book-import-label>Add PDF</span></button><a href="${e(book.sourceUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open official source for ${e(book.title)}" title="Official source">${icon('external-link')}</a></div></article>`;
+    }).join('');
+    const reviewed = reading.filter(item => item.studentId === c.activeId && books.some(book => book.id === item.bookId) && item.status === 'reviewed').length;
+    return `${learner}<section class="textbook-section"><div class="section-head textbook-heading"><div><small>PRIVATE READING LIBRARY</small><h2>${e(c.profile.name)}'s Class ${e(c.profile.grade)} books</h2><p>${books.length} prescribed or school-issued titles - ${reviewed} reviewed</p></div><a href="https://epathshala.nic.in/topics.php?ln=en" target="_blank" rel="noopener noreferrer">${icon('library-big')}<span>ePathshala</span></a></div><div class="book-shelf">${bookCards}</div><div class="book-rights-note">${icon('shield-check')}<span><b>Your PDFs stay on this device.</b> Add only copies your family may lawfully use. NCERT books are not redistributed by Home Manager; use each official-source button to obtain the current edition. PDF files are excluded from Home Manager JSON backups.</span></div></section>${reflectionPanel(c)}<section class="curriculum-summary">${['not-started', 'learning', 'revision', 'mastered'].map((state, index) => `<span class="curriculum-state state-${index + 1}"><b>${c.syllabus.filter(item => item.status === state).length}</b><small>${e(state.replace('-', ' '))}</small></span>`).join('')}</section><div class="toolbar"><input data-filter aria-label="Search curriculum" placeholder="Search chapters and competencies"><select id="subjectFilter" aria-label="Filter by subject"><option value="">All subjects</option>${subjects.map(subject => `<option>${e(subject)}</option>`).join('')}</select><select data-status-filter aria-label="Filter by mastery status"><option value="">All stages</option><option value="not-started">Not started</option><option value="learning">Learning</option><option value="revision">Revision</option><option value="mastered">Mastered</option></select><button class="primary" data-create="syllabus" data-student="${e(c.activeId)}">${icon('plus')}<span>Outcome</span></button></div><section class="panel"><table class="table academic-table"><thead><tr><th>Subject & outcome</th><th>Term</th><th>Competency</th><th>Mastery</th><th>Stage</th><th>Actions</th></tr></thead><tbody>${c.syllabus.map(item => `<tr data-filter-row data-subject="${e(item.subject)}" data-status="${e(item.status)}"><td data-label="Outcome"><b>${e(item.title)}</b><small>${e(item.subject)} - ${item.plannedHours} planned hours</small></td><td data-label="Term">${e(item.term)}</td><td data-label="Competency"><span class="badge">${e(item.competency)}</span></td><td data-label="Mastery"><div class="mastery-cell"><div class="progress"><span style="width:${clamp(item.mastery)}%"></span></div><b>${clamp(item.mastery)}%</b></div></td><td data-label="Stage"><select data-syllabus-status="${e(item.id)}" aria-label="Update ${e(item.title)} stage">${['not-started', 'learning', 'revision', 'mastered'].map(value => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${value.replace('-', ' ')}</option>`).join('')}</select></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="syllabus" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.title)}">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="syllabusItems:${e(item.id)}" aria-label="Delete ${e(item.title)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section>`;
   }
 
   function studyPlanner() {
@@ -751,6 +783,7 @@
     groups,
     settingsGroups,
     natureBackgrounds,
+    textbookCatalog,
     titles,
     render,
     renderQuestionResults,

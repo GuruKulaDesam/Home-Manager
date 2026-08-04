@@ -82,6 +82,23 @@
     </form>
   </dialog>
 
+  <dialog id="bookReaderDialog" class="book-reader-dialog" aria-labelledby="bookReaderTitle">
+    <div class="book-reader-head">
+      <div><small id="bookReaderContext">PRIVATE LIBRARY</small><h2 id="bookReaderTitle">Textbook reader</h2><p id="bookReaderMeta"></p></div>
+      <button type="button" data-close-dialog="bookReaderDialog" aria-label="Close textbook reader"><i data-lucide="x"></i></button>
+    </div>
+    <div class="book-reader-layout">
+      <aside class="book-reader-tools" aria-label="Reading tools">
+        <section><small>READING POSITION</small><div class="reader-page-control"><button type="button" data-book-page-delta="-1" aria-label="Previous page"><i data-lucide="chevron-left"></i></button><label>Page<input id="bookCurrentPage" type="number" min="1" value="1"></label><button type="button" data-book-page-delta="1" aria-label="Next page"><i data-lucide="chevron-right"></i></button></div><label class="reader-total-pages">Total pages (optional)<input id="bookTotalPages" type="number" min="0" value="0"></label><div id="bookReadProgress" class="reader-progress">Page 1</div></section>
+        <section class="reader-review-actions"><button type="button" id="bookBookmark"><i data-lucide="bookmark"></i><span>Bookmark page</span></button><button type="button" id="bookReviewed"><i data-lucide="badge-check"></i><span>Mark reviewed</span></button></section>
+        <section class="reader-notes"><label for="bookNote"><small>REVIEW NOTE FOR THIS PAGE</small></label><textarea id="bookNote" rows="4" placeholder="Summary, question, formula or point to revisit"></textarea><button type="button" id="saveBookNote" class="primary"><i data-lucide="save"></i><span>Save note</span></button><div id="bookNotes" aria-live="polite"></div></section>
+        <button type="button" id="removeBookFile" class="reader-remove"><i data-lucide="trash-2"></i><span>Remove PDF from this device</span></button>
+      </aside>
+      <section class="book-document" aria-label="Textbook document"><iframe id="bookFrame" title="Textbook PDF"></iframe></section>
+    </div>
+  </dialog>
+  <input id="bookFileInput" class="sr-only" type="file" accept="application/pdf,.pdf" aria-label="Choose textbook PDF">
+
   <dialog id="quickDialog" class="side-drawer quick-drawer" aria-labelledby="quickTitle">
     <form method="dialog">
       <span class="drawer-accent" aria-hidden="true"></span>

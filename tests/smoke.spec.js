@@ -4,7 +4,13 @@ const app = 'http://127.0.0.1:8765/';
 
 test.beforeEach(async ({ page }) => {
   await page.goto(app);
-  await page.evaluate(() => localStorage.clear());
+  await page.evaluate(async () => {
+    localStorage.clear();
+    await new Promise(resolve => {
+      const request = indexedDB.deleteDatabase('home-manager-books-v1');
+      request.onsuccess = request.onerror = request.onblocked = () => resolve();
+    });
+  });
   await page.reload();
 });
 
@@ -89,4 +95,66 @@ test('mobile Care page has no horizontal page overflow', async ({ page }) => {
   await page.goto(`${app}#/home/care`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
+});
+
+test('Class 7 and Class 12 have separate official textbook libraries', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  await expect(page.locator('#pageTitle')).toHaveText('Books & Curriculum');
+  await expect(page.locator('[data-book-card]')).toHaveCount(9);
+  await expect(page.locator('#content')).toContainText('Physics Part I');
+  await expect(page.locator('#content')).toContainText('Flamingo');
+  await expect(page.locator('#content')).toContainText('Computer Science');
+
+  await page.locator('[data-learner="p4"]').click();
+  await expect(page.locator('[data-book-card]')).toHaveCount(9);
+  await expect(page.locator('#content')).toContainText('Ganita Prakash Part I');
+  await expect(page.locator('#content')).toContainText('Curiosity');
+  await expect(page.locator('#content')).toContainText('Poorvi');
+  await expect(page.locator('#content')).toContainText('Kaushal Bodh');
+  await expect(page.locator('#content')).toContainText('PDF not added on this device');
+});
+
+test('a private PDF can be read, bookmarked and reviewed without upload', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  await page.locator('[data-learner="p4"]').click();
+  await page.locator('#bookFileInput').evaluate(input => {
+    input.dataset.bookId = 'g7-science';
+    input.dataset.studentId = 'p4';
+  });
+  await page.locator('#bookFileInput').setInputFiles({
+    name: 'curiosity-family-copy.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF')
+  });
+
+  await expect(page.locator('#bookReaderDialog')).toBeVisible();
+  await expect(page.locator('#bookReaderTitle')).toHaveText('Curiosity');
+  await page.locator('#bookTotalPages').fill('100');
+  await page.locator('#bookTotalPages').press('Tab');
+  await page.locator('#bookCurrentPage').fill('12');
+  await page.locator('#bookCurrentPage').press('Tab');
+  await page.locator('#bookBookmark').click();
+  await page.locator('#bookNote').fill('Explain the experiment and revise the key observation.');
+  await page.locator('#saveBookNote').click();
+  await page.locator('#bookReviewed').click();
+  await expect(page.locator('#bookNotes')).toContainText('Explain the experiment');
+  await page.getByRole('button', { name: 'Close textbook reader' }).click();
+
+  await expect(page.locator('[data-book-card="g7-science"] [data-book-state]')).toContainText('Ready offline');
+  await page.locator('[data-book-open="g7-science"]').click();
+  await expect(page.locator('#bookCurrentPage')).toHaveValue('12');
+  await expect(page.locator('#bookTotalPages')).toHaveValue('100');
+  await expect(page.locator('#bookBookmark')).toContainText('Remove bookmark');
+  await expect(page.locator('#bookReviewed')).toContainText('Reviewed');
+  const progress = await page.evaluate(() => HM.data.state.readingProgress.find(item => item.bookId === 'g7-science' && item.studentId === 'p4'));
+  expect(progress).toMatchObject({ currentPage: 12, totalPages: 100, status: 'reviewed', bookmarks: [12] });
+  expect(progress.notes).toHaveLength(1);
+});
+
+test('textbook library and reader fit a phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${app}#/study/curriculum`);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
 });

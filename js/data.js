@@ -134,7 +134,8 @@ seed.attendanceRecords=[];
 seed.learningReflections=[];
 seed.tutorFeedback=[];
 seed.coCurricularRecords=[];
-const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
+seed.readingProgress=[];
+const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','readingProgress','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
 function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
@@ -190,6 +191,7 @@ function normalize(value){
   next.learningReflections.forEach(item=>{['confidence','effort','clarity'].forEach(key=>item[key]=Math.min(5,Math.max(1,+item[key]||3)))});
   next.tutorFeedback.forEach(item=>{item.status=item.status==='done'?'done':'open'});
   next.coCurricularRecords.forEach(item=>{item.status=['active','paused','completed'].includes(item.status)?item.status:'active'});
+  next.readingProgress.forEach(item=>{item.currentPage=Math.max(1,+item.currentPage||1);item.totalPages=Math.max(0,+item.totalPages||0);item.status=['not-started','reading','reviewed'].includes(item.status)?item.status:'not-started';item.bookmarks=Array.isArray(item.bookmarks)?[...new Set(item.bookmarks.map(Number).filter(page=>page>0))]:[];item.notes=Array.isArray(item.notes)?item.notes.filter(note=>note&&typeof note==='object').map(note=>({id:String(note.id||uid('rn')),page:Math.max(1,+note.page||1),text:String(note.text||''),createdAt:String(note.createdAt||'')})).filter(note=>note.text):[]});
   next.goals.forEach(item=>{item.target=Math.max(1,+item.target||1);item.progress=Math.max(0,+item.progress||0)});
   next.expenses.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:(String(item.category||'').toLowerCase().includes('food')?'food':String(item.category||'').toLowerCase().match(/health|medical|pharmacy/)?'health':String(item.category||'').toLowerCase().match(/school|education|tuition/)?'learning':'housing')});
   next.budgets.forEach(item=>{item.amount=Math.max(0,+item.amount||0);item.domain=['food','housing','vehicle','health','family','learning','community'].includes(item.domain)?item.domain:'family';item.bucket=['Fixed','Flexible','Non-monthly'].includes(item.bucket)?item.bucket:'Flexible'});
