@@ -1,0 +1,10 @@
+{
+  "name": "home-manager-static",
+  "private": true,
+  "scripts": {
+    "test": "playwright test tests/smoke.spec.js --reporter=line --workers=1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
+  }
+}

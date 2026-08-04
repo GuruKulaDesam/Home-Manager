@@ -248,7 +248,16 @@
     reflection: source => [field('Date', 'date', 'date'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Confidence (1-5)', 'confidence', 'number'), field('Effort (1-5)', 'effort', 'number'), field('Clarity (1-5)', 'clarity', 'number'), area('What went well', 'strength'), area('Question or challenge', 'question', false), area('Next step', 'nextStep')],
     tutorFeedback: source => [field('Review date', 'date', 'date'), field('Subject / area', 'subject', 'text', [...academicSubjects(source), 'Study habits', 'Wellbeing', 'Co-curricular']), field('Review type', 'type', 'text', ['Tutor feedback', 'Student-Parent-Tutor meeting', 'Learning objective', 'Recognition']), field('Tutor', 'tutor', 'text', null, false), area('Strength', 'strength'), area('Challenge', 'challenge', false), area('Agreed action', 'action'), field('Follow-up date', 'dueDate', 'date', null, false), field('Status', 'status', 'text', ['open', 'done'])],
     coCurricular: () => [field('Activity', 'activity'), field('Category', 'category', 'text', ['Think Tank', 'Club', 'Sport', 'Art & craft', 'Traditional games', 'Silambam', 'Community', 'Other']), field('Tutor / coach', 'tutor', 'text', null, false), field('Schedule', 'schedule', 'text', null, false), area('Growth goal', 'goal'), field('Status', 'status', 'text', ['active', 'paused', 'completed']), area('Achievement / evidence', 'achievement', false)],
-    life: () => [field('Title', 'title'), field('Category', 'category'), field('Family member / owner', 'owner'), field('Provider / contact', 'provider', 'text', null, false), field('Masked reference / location', 'reference', 'text', null, false), field('Amount', 'amount', 'number', null, false), field('Due / renewal date', 'dueDate', 'date', null, false), field('Frequency', 'frequency', 'text', ['One time', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'As needed']), field('Status', 'status', 'text', ['planning', 'pending', 'active', 'due', 'paid', 'done']), field('Phone', 'phone', 'tel', null, false), area('Notes', 'notes', false)]
+    life: source => {
+      const domain = source.domain || 'documents';
+      const variants = {
+        medicines: { title: 'Medicine or refill plan', categories: ['Regular medicine', 'Short course', 'Prescription', 'Refill', 'Stock and expiry'], provider: 'Prescriber / pharmacy', date: 'Next refill / review' },
+        appointments: { title: 'Appointment or follow-up', categories: ['Consultation', 'Test', 'Procedure', 'Follow-up', 'Therapy', 'Dental'], provider: 'Doctor / clinic / hospital', date: 'Appointment / follow-up date' },
+        elders: { title: 'Elder care action', categories: ['Check-in', 'Mobility', 'Meals', 'Medicine handoff', 'Appointment', 'Support service'], provider: 'Caregiver / provider', date: 'Next handoff / review' }
+      };
+      const variant = variants[domain] || { title: 'Title', categories: null, provider: 'Provider / contact', date: 'Due / renewal date' };
+      return [field(variant.title, 'title'), field('Category', 'category', 'text', variant.categories), field('Family member / owner', 'owner'), field(variant.provider, 'provider', 'text', null, false), field('Masked reference / location', 'reference', 'text', null, false), field('Amount', 'amount', 'number', null, false), field(variant.date, 'dueDate', 'date', null, false), field('Frequency', 'frequency', 'text', ['One time', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Half-yearly', 'Yearly', 'As needed']), field('Status', 'status', 'text', ['planning', 'pending', 'active', 'due', 'paid', 'done']), field('Phone', 'phone', 'tel', null, false), area('Instructions / notes', 'notes', false)];
+    }
   };
 
   const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
@@ -260,7 +269,8 @@
     const record = source.editId && collection ? D.state[collection].find(x => x.id === source.editId) : null;
     const routeDomain = route.match(/^(?:home|settings)\/life\/([^/]+)$/)?.[1] || '';
     const labels = { moneyGoal: 'savings goal', liability: 'loan or liability', income: 'income source', budget: 'section budget', expense: 'section expense', academicProfile: 'student profile', syllabus: 'syllabus item', studyPlan: 'study block', deliverable: 'assignment', assessment: 'assessment', practiceLog: 'practice session', schoolTimetable: 'school timetable period', schoolEvent: 'school calendar item', attendance: 'attendance day', reflection: 'self-assessment', tutorFeedback: 'tutor review', coCurricular: 'co-curricular activity' };
-    $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + (labels[kind] || kind);
+    const lifeLabel = kind === 'life' ? HM.life.domains[source.domain || record?.domain || routeDomain]?.noun : '';
+    $('#formTitle').textContent = (record ? 'Edit ' : 'Add ') + (lifeLabel || labels[kind] || kind);
     $('#formContext').textContent = String(source.context || record?.context || workspace).toUpperCase();
     $('#formFields').innerHTML = schema(source).join('');
     const form = $('#entityForm');

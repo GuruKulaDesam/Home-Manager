@@ -1,7 +1,10 @@
 (function () {
   const D = HM.data;
   const domains = {
-    health: { title: 'Family Health', group: 'People', icon: 'heart-pulse', note: 'Appointments, medicines and preventive care', noun: 'health record' },
+    health: { title: 'Family Health', group: 'People', icon: 'heart-pulse', note: 'Conditions, measurements, preventive care and health cover', noun: 'health record' },
+    medicines: { title: 'Medicines & Refills', group: 'Care', icon: 'pill', note: 'Dosage plans, stock, prescriptions and refill dates', noun: 'medicine plan' },
+    appointments: { title: 'Appointments & Follow-ups', group: 'Care', icon: 'stethoscope', note: 'Consultations, tests, reports and next actions', noun: 'appointment' },
+    elders: { title: 'Elder Care', group: 'Care', icon: 'accessibility', note: 'Daily support, mobility, check-ins and caregiver handoffs', noun: 'care plan' },
     documents: { title: 'Documents & IDs', group: 'Records', icon: 'folders', note: 'Aadhaar, PAN, passports and certificates', noun: 'document' },
     bills: { title: 'Bills & Payments', group: 'Household', icon: 'receipt-indian-rupee', note: 'Utilities, fees, EMIs and recurring dues', noun: 'bill' },
     insurance: { title: 'Family Protection', group: 'Family', icon: 'shield-check', note: 'Life and personal accident cover', noun: 'policy' },
@@ -38,7 +41,10 @@
     { id: 'lr15', domain: 'emergency', title: 'Family emergency contact card', category: 'Contacts', owner: 'Family', provider: 'Local contacts', reference: 'Printed near entrance', amount: 0, dueDate: '2026-09-01', frequency: 'Half-yearly', status: 'active', phone: '112', notes: 'Include doctors, neighbours, school and insurance helplines.' },
     { id: 'lr16', domain: 'digital', title: 'Family photo backup', category: 'Backup', owner: 'Family', provider: 'Encrypted drive', reference: 'Two-copy rule', amount: 0, dueDate: '2026-08-30', frequency: 'Monthly', status: 'pending', phone: '', notes: 'Verify both local and off-site copies.' },
     { id: 'lr17', domain: 'sustainability', title: 'Rainwater system service', category: 'Water', owner: 'Household', provider: 'Local plumber', reference: 'Pre-monsoon', amount: 2500, dueDate: '2027-05-15', frequency: 'Yearly', status: 'active', phone: '', notes: 'Clean filters and inspect recharge pit.' },
-    { id: 'lr18', domain: 'legacy', title: 'Nominee review across accounts', category: 'Nominations', owner: 'Parents', provider: 'Banks and investments', reference: 'Legacy folder', amount: 0, dueDate: '2026-12-15', frequency: 'Yearly', status: 'pending', phone: '', notes: 'Review bank, demat, mutual fund, insurance and locker nominations.' }
+    { id: 'lr18', domain: 'legacy', title: 'Nominee review across accounts', category: 'Nominations', owner: 'Parents', provider: 'Banks and investments', reference: 'Legacy folder', amount: 0, dueDate: '2026-12-15', frequency: 'Yearly', status: 'pending', phone: '', notes: 'Review bank, demat, mutual fund, insurance and locker nominations.' },
+    { id: 'lr19', domain: 'medicines', title: 'Review family medicine box', category: 'Stock and expiry', owner: 'Mother', provider: 'Family pharmacy', reference: 'Keep prescriptions offline', amount: 0, dueDate: '2026-08-15', frequency: 'Monthly', status: 'pending', phone: '', notes: 'Check regular medicines, expiry dates and seven days of essential stock.' },
+    { id: 'lr20', domain: 'appointments', title: 'Dental preventive visit', category: 'Dental', owner: 'Children', provider: 'Family dentist', reference: 'Confirm directly with clinic', amount: 1200, dueDate: '2026-09-12', frequency: 'Half-yearly', status: 'planning', phone: '', notes: 'Record the appointment and follow-up action; do not store reports here.' },
+    { id: 'lr21', domain: 'elders', title: 'Weekly elder care call', category: 'Check-in', owner: 'Parents', provider: 'Family', reference: 'Sunday handoff', amount: 0, dueDate: '2026-08-09', frequency: 'Weekly', status: 'active', phone: '', notes: 'Confirm medicines, meals, mobility, appointments and who will follow up.' }
   ];
 
   function ensure() {

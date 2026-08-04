@@ -6,6 +6,8 @@ One dependency-free application combining the meaningful capabilities from all r
 
 Daily and weekly work is organised into seven plain-language groups: **Today, Household, Family, Money, Care, Learning, and Community**. No group exposes more than seven choices. The active group opens its pages directly in the main sidebar. Permanent or rarely changed preferences use only three Settings groups: household profile, people and roles, and app and data.
 
+Family now has seven owned workflows: overview, shared calendar, travel, celebrations, documents, contacts, and protection and legacy. Care also has seven: overview, health, medicines, appointments, elder care, emergency, and pets. Medicine, appointment and elder-care entries have their own registers, owners, due dates and section-owned costs; the Care overview consolidates the next handoff without pretending to diagnose, send dose alarms or contact a clinician.
+
 Today projects recurring work into one agenda. Operational sections own every financial input: vehicle insurance and fuel stay in Vehicles, health insurance and care costs stay in Health, groceries stay in Food, education fees stay in Learning, and utilities, loans and subscriptions stay with Property. **Money is reporting-only** and consolidates Budget, Cash flow, Spending, Commitments, Net worth and Reports. Emergency help remains available from the right utility rail and links to official Indian helplines without claiming to dispatch assistance.
 
 Tasks, events, issues, contacts and recognition use shared context-aware data instead of duplicate stores. The colorful interface uses seven accessible icon and tab tones over twelve locally stored mountain photographs, with highly translucent operational surfaces, alternating table bands and no dark register banners.
@@ -33,6 +35,8 @@ Help & Guide checks 250 unique questions that family members commonly ask about 
 The audit is available from the permanent sidebar Help & Guide action and under Today. Product answers also appear beside household records in global search, with results capped at seven. A seven-step path connects the command centre, family setup, responsibilities, calendar, money, care and backup without requiring the user to understand the internal data model.
 
 The workflows follow shared calendar, meal, shopping and household-list patterns documented by FamilyWall, Cozi and AnyList; cleaning routines documented by Tody; and assigned family tasks, recurring dates and reminders documented by Todoist. Money uses planning and reporting patterns documented by YNAB, Monarch and Quicken Simplifi: fixed, flexible and non-monthly plans, goals, recurring commitments, cash flow, watchlists and net worth. Emergency help links to official Indian services. Home Manager does not claim bank feeds, background reminders, live location, realtime collaboration, access control or emergency dispatch.
+
+The Care suite follows the multi-profile medication, refill, appointment and health-diary workflow documented by [MyTherapy](https://www.mytherapyapp.com/), while keeping this static app to planning records only. It links out to the official [ORS patient portal](https://ors.gov.in/) for supported government-hospital appointments, [Ayushman Bharat Digital Mission](https://abdm.gov.in/) for ABHA services, and the official [Emergency Response Support System](https://112.gov.in/) for Pan-India emergency help. Sensitive medical reports, full ABHA numbers and prescriptions should not be stored in this browser.
 
 ## Household coverage
 
