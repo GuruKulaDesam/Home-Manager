@@ -18,6 +18,7 @@
       "tests/**",
       "inputs/**",
       "docs/**",
+      "android-companion/**",
       "*.log",
       "package.json",
       "package-lock.json",

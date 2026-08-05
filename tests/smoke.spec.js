@@ -313,6 +313,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
 
 test('Android SMS backup excludes OTPs and auto-applies trusted family updates', async ({ page }) => {
   await page.goto(`${app}#/settings/app`);
+  await expect(page.getByRole('link', { name: 'Download Android APK' })).toHaveAttribute('href', 'assets/downloads/our-divine-nest-sms.apk');
   await page.locator('#smsConsent').check();
   await page.locator('#phoneSmsSettings button[type="submit"]').click();
   const smsXml = `<?xml version="1.0" encoding="UTF-8"?><smses count="4">
