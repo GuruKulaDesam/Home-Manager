@@ -124,6 +124,8 @@ seed.academicResources=[
   {id:'ar3',audience:'12',title:'CBSE curriculum 2026-27',type:'Official syllabus',url:'https://cbseacademic.nic.in/curriculum_2027.html'},
   {id:'ar4',audience:'12',title:'Class XII question banks',type:'Official practice',url:'https://cbseacademic.nic.in/qbclass12.html'},
   {id:'ar5',audience:'12',title:'Class XII sample papers (2025-26)',type:'Official practice and marking schemes',url:'https://cbseacademic.nic.in/sqp_classxii_2025-26.html'},
+  {id:'ar10',audience:'12',title:'JEE Main 2026 syllabus',type:'Official JEE Main syllabus',url:'https://jeemain.nta.nic.in/document/syllabus-2026/'},
+  {id:'ar11',audience:'12',title:'JEE Main official documents',type:'Notices, papers and answer keys',url:'https://jeemain.nta.nic.in/documents/'},
   {id:'ar6',audience:'6-8',title:'Kaushal Bodh curriculum',type:'Skill education',url:'https://cbseacademic.nic.in/skill-education-curriculum.html'},
   {id:'ar7',audience:'6-12',title:'Peepal parent portal',type:'School account',url:'https://crm.peepalprodigy.cloud/'},
   {id:'ar8',audience:'6-10',title:'Peepal secondary programme',type:'School methodology',url:'https://www.peepalprodigy.in/secondary-school.html'},
@@ -177,6 +179,7 @@ function normalize(value){
     activeWorkspace:['home','community','study'].includes(inputSettings.activeWorkspace)?inputSettings.activeWorkspace:'home',
     activeGroup:typeof inputSettings.activeGroup==='string'?inputSettings.activeGroup:'today',
     activeLearnerId:typeof inputSettings.activeLearnerId==='string'?inputSettings.activeLearnerId:'p3',
+    learningSubjectTabs:inputSettings.learningSubjectTabs&&typeof inputSettings.learningSubjectTabs==='object'?clone(inputSettings.learningSubjectTabs):{},
     sidebarCollapsed:Boolean(inputSettings.sidebarCollapsed),
     householdName:typeof inputSettings.householdName==='string'?inputSettings.householdName:'',
     language:typeof inputSettings.language==='string'?inputSettings.language:'English',
@@ -198,8 +201,8 @@ function normalize(value){
   next.syllabusItems.forEach(item=>{item.mastery=Math.min(100,Math.max(0,+item.mastery||0));item.plannedHours=Math.max(0,+item.plannedHours||0);item.status=['not-started','learning','revision','mastered'].includes(item.status)?item.status:'not-started'});
   next.studyPlans.forEach(item=>{item.minutes=Math.max(5,+item.minutes||30);item.status=['planned','done','missed'].includes(item.status)?item.status:'planned'});
   next.academicDeliverables.forEach(item=>{item.weight=Math.max(0,+item.weight||0);item.status=['todo','progress','submitted','done'].includes(item.status)?item.status:'todo'});
-  next.academicAssessments.forEach(item=>{['score','maxScore','target','practicalScore','practicalMax'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.status=item.status==='scheduled'?'scheduled':'completed'});
-  next.practiceLogs.forEach(item=>{['attempted','correct','minutes'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.correct=Math.min(item.attempted,item.correct)});
+  next.academicAssessments.forEach(item=>{['score','maxScore','target','practicalScore','practicalMax'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.status=item.status==='scheduled'?'scheduled':'completed';item.exam=item.exam||(/JEE/i.test(item.type||'')?'JEE Main':'CBSE')});
+  next.practiceLogs.forEach(item=>{['attempted','correct','minutes'].forEach(key=>item[key]=Math.max(0,+item[key]||0));item.correct=Math.min(item.attempted,item.correct);item.exam=item.exam||(/JEE/i.test(item.source||'')?'JEE Main':'CBSE')});
   next.schoolTimetable.forEach(item=>{item.day=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].includes(item.day)?item.day:'Monday';item.period=Math.max(1,+item.period||1)});
   next.schoolEvents.forEach(item=>{item.status=['planned','done','cancelled'].includes(item.status)?item.status:'planned'});
   next.attendanceRecords.forEach(item=>{item.status=['present','absent','leave','late','holiday'].includes(item.status)?item.status:'present'});
