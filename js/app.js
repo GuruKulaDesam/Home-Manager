@@ -12,6 +12,8 @@
   let activeBookReader = null;
   let activeBookUrl = '';
   const googleSessions = new Map();
+  const googleWorkspaceSessions = new Map();
+  HM.workspace = { cache: {}, selected: {} };
   (D.state.settings.googleSync?.accounts || []).forEach(account => { if (account.status === 'connected') account.status = 'pending'; });
   if (!['home', 'community', 'study'].includes(workspace)) workspace = D.state.settings.activeWorkspace || 'home';
 
@@ -263,7 +265,9 @@
     inThirtyDays.setDate(inThirtyDays.getDate() + 30);
     const horizon = inThirtyDays.toISOString().slice(0, 10);
     const lifeRecords = (D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
+    const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.status === 'pending').sort((a, b) => ({ high: 0, medium: 1, normal: 2 }[a.urgency] ?? 2) - ({ high: 0, medium: 1, normal: 2 }[b.urgency] ?? 2));
     return [
+      ...gmail.map(item => ({ title: item.title, detail: `${item.decision || 'Review'}${item.actionDate ? ` by ${D.date(item.actionDate)}` : ''}`, route: 'global/intelligence' })),
       ...overdue.map(x => ({ title: x.title, detail: `Overdue since ${D.date(x.dueAt)}`, route: x.context === 'study' ? 'study/tasks' : 'home/tasks' })),
       ...low.map(x => ({ title: `${x.name} is running low`, detail: `${x.quantity} ${x.unit} remaining`, route: 'home/inventory' })),
       ...issues.map(x => ({ title: x.title, detail: `${x.location} - high priority`, route: x.scope === 'civic' ? 'community/tickets' : 'home/assets' })),
@@ -288,7 +292,10 @@
     const routeDomain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
     const records = routeDomain ? (D.state.lifeRecords || []).filter(item => item.domain === routeDomain) : [];
     let items;
-    if (routeDomain) {
+    if (route === 'global/intelligence') {
+      const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail');
+      items = [['Signals', gmail.length, route, 'mail-search'], ['Needs review', gmail.filter(item => item.status === 'pending').length, route, 'list-checks'], ['Detected', D.money(gmail.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
+    } else if (routeDomain) {
       items = [['Records', records.length, route, 'database'], ['Need attention', records.filter(item => item.dueDate && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, route, 'bell-ring'], ['Tracked', D.money(records.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
     } else if (route === 'home/finance' || route.startsWith('home/money/')) {
       const expenses = D.state.expenses.filter(item => String(item.date).startsWith(month));
@@ -334,15 +341,16 @@
     if (movedStudyRoute) { go(movedStudyRoute); return; }
     const first = route.split('/')[0];
     if (['home', 'community', 'study'].includes(first)) {
+    if (['home', 'community', 'study'].includes(first)) {
       workspace = first;
       D.state.settings.activeWorkspace = workspace;
       D.save();
     }
     renderNav();
-    const title = V.titles[route] || ['Today', 'Home Manager'];
+    const title = V.titles[route] || ['Today', 'LotusNaga Divine Nest'];
     $('#breadcrumb').textContent = settingsSection() ? 'Settings' : V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
-    document.title = title[0] + ' - Home Manager';
+    document.title = title[0] + ' - LotusNaga Divine Nest';
     $('#content').innerHTML = V.render(route);
     bindView();
     renderNotifications();
@@ -525,17 +533,19 @@
   function applyFilters() {
     const query = (document.querySelector('[data-filter]')?.value || '').toLowerCase();
     const status = document.querySelector('[data-status-filter]')?.value || '';
+    const category = document.querySelector('[data-category-filter]')?.value || '';
     const subject = $('#subjectFilter')?.value || '';
     document.querySelectorAll('[data-filter-row]').forEach(row => {
       const matchesText = !query || row.textContent.toLowerCase().includes(query);
       const matchesStatus = !status || row.dataset.status === status;
+      const matchesCategory = !category || row.dataset.category === category;
       const matchesSubject = !subject || row.dataset.subject === subject;
-      row.hidden = !(matchesText && matchesStatus && matchesSubject);
+      row.hidden = !(matchesText && matchesStatus && matchesCategory && matchesSubject);
     });
   }
 
   function bindView() {
-    document.querySelectorAll('[data-filter], [data-status-filter], #subjectFilter').forEach(control => {
+    document.querySelectorAll('[data-filter], [data-status-filter], [data-category-filter], #subjectFilter').forEach(control => {
       control.addEventListener(control.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
     });
     document.querySelectorAll('[data-topic]').forEach(card => card.ondragstart = event => event.dataTransfer.setData('topic', card.dataset.topic));
@@ -568,6 +578,16 @@
     document.querySelectorAll('[data-deliverable-status]').forEach(select => select.onchange = () => {
       const item = D.state.academicDeliverables.find(record => record.id === select.dataset.deliverableStatus);
       if (item) { item.status = select.value; save('Assignment status updated'); render(); }
+    });
+    document.querySelectorAll('[data-google-workspace-account]').forEach(select => select.onchange = () => {
+      const service = select.closest('[data-google-service]')?.dataset.googleService;
+      if (service) HM.workspace.selected[service] = select.value;
+    });
+    document.querySelectorAll('[data-google-action]').forEach(button => button.addEventListener(button.matches('input[type="checkbox"]') ? 'change' : 'click', () => runGoogleWorkspaceAction(button)));
+    document.querySelectorAll('[data-google-drive-file]').forEach(input => input.onchange = () => { if (input.files?.[0]) runGoogleWorkspaceAction(input, 'drive-upload'); });
+    document.querySelectorAll('[data-note-archive]').forEach(button => button.onclick = () => {
+      const note = (D.state.quickNotes || []).find(item => item.id === button.dataset.noteArchive);
+      if (note) { note.status = 'archived'; save('Quick note archived'); render(); }
     });
     if ($('#exportData')) $('#exportData').onclick = exportData;
     if ($('#importData')) $('#importData').onchange = importData;
@@ -752,6 +772,7 @@
 
   const integrationCategories = ['bills', 'travel', 'school', 'health', 'deliveries', 'home', 'government'];
   const categoryLabels = { bills: 'Bill or payment', travel: 'Travel update', school: 'School update', health: 'Health update', deliveries: 'Delivery update', home: 'Home service', government: 'Government document' };
+  const categoryDecisions = { bills: 'Pay or verify', travel: 'Confirm booking', school: 'Review school action', health: 'Prepare care action', deliveries: 'Track delivery', home: 'Schedule service', government: 'Review or renew' };
 
   function safeMessageSummary(value) {
     return String(value || '')
@@ -767,6 +788,43 @@
     const numeric = Number(value);
     const date = Number.isFinite(numeric) && numeric > 0 ? new Date(numeric < 1e11 ? numeric * 1000 : numeric) : new Date(value);
     return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  }
+
+  function extractActionDate(text, receivedAt = '') {
+    const value = String(text || '');
+    const received = receivedAt ? new Date(receivedAt) : new Date();
+    const iso = value.match(/\b(20\d{2})[-/]([01]?\d)[-/]([0-3]?\d)\b/);
+    if (iso) {
+      const date = new Date(+iso[1], +iso[2] - 1, +iso[3]);
+      if (date.getFullYear() === +iso[1] && date.getMonth() === +iso[2] - 1 && date.getDate() === +iso[3]) return `${iso[1]}-${String(+iso[2]).padStart(2, '0')}-${String(+iso[3]).padStart(2, '0')}`;
+    }
+    const numeric = value.match(/\b([0-3]?\d)[/-]([01]?\d)[/-](20\d{2})\b/);
+    if (numeric) {
+      const date = new Date(+numeric[3], +numeric[2] - 1, +numeric[1]);
+      if (date.getFullYear() === +numeric[3] && date.getMonth() === +numeric[2] - 1 && date.getDate() === +numeric[1]) return `${numeric[3]}-${String(+numeric[2]).padStart(2, '0')}-${String(+numeric[1]).padStart(2, '0')}`;
+    }
+    const monthNames = 'january february march april may june july august september october november december'.split(' ');
+    const named = value.match(/\b([0-3]?\d)(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:\s+(20\d{2}))?\b/i);
+    if (named) {
+      let year = +(named[3] || received.getFullYear());
+      const month = monthNames.indexOf(named[2].toLowerCase());
+      const candidate = new Date(year, month, +named[1]);
+      if (!named[3] && candidate < new Date(received.getFullYear(), received.getMonth(), received.getDate() - 30)) year += 1;
+      const date = new Date(year, month, +named[1]);
+      if (date.getMonth() === month && date.getDate() === +named[1]) return `${year}-${String(month + 1).padStart(2, '0')}-${String(+named[1]).padStart(2, '0')}`;
+    }
+    if (/\b(today|tonight)\b/i.test(value) && !Number.isNaN(received.getTime())) return received.toISOString().slice(0, 10);
+    if (/\btomorrow\b/i.test(value) && !Number.isNaN(received.getTime())) { received.setDate(received.getDate() + 1); return received.toISOString().slice(0, 10); }
+    return '';
+  }
+
+  function integrationDecision(category, text, receivedAt) {
+    const actionDate = extractActionDate(text, receivedAt);
+    const today = new Date().toISOString().slice(0, 10);
+    const inThreeDays = new Date(); inThreeDays.setDate(inThreeDays.getDate() + 3);
+    const urgentWords = /\b(urgent|overdue|final reminder|action required|immediately|expires? soon|past due)\b/i.test(text);
+    const urgency = urgentWords || (actionDate && actionDate <= inThreeDays.toISOString().slice(0, 10)) ? 'high' : actionDate && actionDate >= today ? 'medium' : 'normal';
+    return { actionDate, urgency, decision: categoryDecisions[category] || 'Review' };
   }
 
   async function messageFingerprint(message) {
@@ -812,7 +870,7 @@
     if (/\b(otp|one[ -]?time password|verification code|login code|auth code)\b/i.test(body)) return null;
     const category = classifyIntegrationText(body, allowedCategories);
     if (!category) return null;
-    const amountMatch = body.match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const amountMatch = body.match(/(?:rs\.?|inr|\u20b9)\s*([\d,]+(?:\.\d{1,2})?)/i);
     const sourceRef = await messageFingerprint(message);
     const sender = safeMessageSummary(message.contact && message.contact !== '(Unknown)' ? message.contact : message.sender).slice(0, 100);
     return { id: D.uid('sg'), source: 'sms', sourceRef, personId: ownerId, category, title: `${categoryLabels[category]}${sender ? ` from ${sender}` : ''}`, summary: safeMessageSummary(body), sender, receivedAt: message.receivedAt, amount: amountMatch ? +amountMatch[1].replace(/,/g, '') || 0 : 0, status: 'pending' };
@@ -826,7 +884,11 @@
       const source = ['gmail', 'calendar', 'sms'].includes(item.source) ? item.source : fallbackSource;
       const sourceRef = String(item.sourceRef || item.externalId || item.id || '').slice(0, 180);
       if (!sourceRef || D.state.syncSuggestions.some(existing => existing.source === source && existing.sourceRef === sourceRef)) return;
-      D.state.syncSuggestions.push({ id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title: safeMessageSummary(item.title || categoryLabels[category]).slice(0, 160), summary: safeMessageSummary(item.summary || item.snippet || ''), sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt: normalizeMessageDate(item.receivedAt || item.startAt || item.date), amount: Math.max(0, +item.amount || 0), status: 'pending' });
+      const title = safeMessageSummary(item.title || categoryLabels[category]).slice(0, 160);
+      const summary = safeMessageSummary(item.summary || item.snippet || '');
+      const receivedAt = normalizeMessageDate(item.receivedAt || item.startAt || item.date);
+      const decision = integrationDecision(category, `${title} ${summary}`, receivedAt);
+      D.state.syncSuggestions.push({ id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), status: 'pending', ...decision, processedAt: new Date().toISOString() });
       added += 1;
     });
     return added;
@@ -855,8 +917,8 @@
   function applyIntegrationSuggestion(id) {
     const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
     if (!item) return;
-    const date = String(item.receivedAt || new Date().toISOString()).slice(0, 10);
-    const eventTime = String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
+    const date = String(item.actionDate || item.receivedAt || new Date().toISOString()).slice(0, 10);
+    const eventTime = item.actionDate ? `${date}T09:00` : String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
     if (item.source === 'calendar' || item.category === 'school') {
       D.state.events.push({ id: D.uid('e'), context: item.category === 'school' ? 'study' : 'home', title: item.title, category: item.category === 'school' ? 'School' : categoryLabels[item.category], startAt: eventTime, venue: item.sender || '', notes: item.summary });
     } else if (['bills', 'travel', 'health', 'government'].includes(item.category)) {
@@ -895,10 +957,33 @@
   }
 
   async function googleApi(url, accessToken, options = {}) {
-    const response = await fetch(url, { ...options, headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error?.message || `Google API returned ${response.status}`);
-    return payload;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const response = await fetch(url, { ...options, headers: { Accept: 'application/json', Authorization: `Bearer ${accessToken}`, ...(options.headers || {}) } });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok) return payload;
+      const reasons = (payload.error?.errors || []).map(error => error.reason);
+      const quotaLimited = response.status === 429 || (response.status === 403 && reasons.some(reason => ['rateLimitExceeded', 'userRateLimitExceeded', 'backendError'].includes(reason)));
+      const retryable = quotaLimited || response.status >= 500;
+      if (!retryable || attempt === 3) throw new Error(payload.error?.message || `Google API returned ${response.status}`);
+      const retryAfter = response.headers.get('Retry-After');
+      const delay = retryAfter !== null && Number.isFinite(+retryAfter) ? +retryAfter * 1000 : Math.min(8000, 500 * (2 ** attempt)) + Math.random() * 250;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    throw new Error('Google API retry limit reached.');
+  }
+
+  async function mapWithConcurrency(items, limit, mapper) {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        results[index] = await mapper(items[index], index);
+      }
+    });
+    await Promise.all(workers);
+    return results;
   }
 
   async function startGoogleConnect(button) {
@@ -943,7 +1028,7 @@
   }
 
   function amountFromText(text) {
-    const match = String(text || '').match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const match = String(text || '').match(/(?:rs\.?|inr|\u20b9)\s*([\d,]+(?:\.\d{1,2})?)/i);
     return match ? +match[1].replace(/,/g, '') || 0 : 0;
   }
 
@@ -962,14 +1047,21 @@
 
   async function readGoogleGmail(account, session, sync) {
     if (!sync.emailAnalysis) return [];
-    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice renewal booking travel school exam appointment delivery government service}`;
-    const listParams = new URLSearchParams({ q: query, maxResults: '40' });
-    const list = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
-    const messages = await Promise.all((list.messages || []).slice(0, 40).map(async reference => {
+    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice payment receipt renewal premium insurance booking travel ticket itinerary school exam assignment fee result attendance appointment hospital pharmacy medicine delivery order shipment government aadhaar passport tax property service maintenance subscription}`;
+    const references = [];
+    let pageToken = '';
+    do {
+      const listParams = new URLSearchParams({ q: query, maxResults: '50' });
+      if (pageToken) listParams.set('pageToken', pageToken);
+      const page = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
+      references.push(...(page.messages || []));
+      pageToken = page.nextPageToken || '';
+    } while (pageToken && references.length < 100);
+    const messages = await mapWithConcurrency(references.slice(0, 100), 3, async reference => {
       const params = new URLSearchParams({ format: 'metadata' });
       ['Subject', 'From', 'Date'].forEach(name => params.append('metadataHeaders', name));
       return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
-    }));
+    });
     return messages.map(message => {
       const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name).toLowerCase(), header.value]));
       const text = `${headers.subject || ''} ${message.snippet || ''}`;
@@ -1010,6 +1102,218 @@
     finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
   }
 
+  const workspaceScopes = {
+    drive: ['https://www.googleapis.com/auth/drive.file'],
+    contacts: ['https://www.googleapis.com/auth/contacts.readonly'],
+    calendar: ['https://www.googleapis.com/auth/calendar'],
+    tasks: ['https://www.googleapis.com/auth/tasks'],
+    classroom: ['https://www.googleapis.com/auth/classroom.courses.readonly', 'https://www.googleapis.com/auth/classroom.coursework.me.readonly'],
+    sheets: ['https://www.googleapis.com/auth/drive.file'],
+    docs: ['https://www.googleapis.com/auth/drive.file'],
+    slides: ['https://www.googleapis.com/auth/drive.file']
+  };
+
+  function workspaceAccount(target) {
+    const panel = target.closest('[data-google-service]');
+    const slotId = panel?.querySelector('[data-google-workspace-account]')?.value;
+    const account = (D.state.settings.googleSync?.accounts || []).find(item => item.slotId === slotId && item.email && item.consent);
+    if (!account) throw new Error('Choose a mapped, consenting Google account in Settings first.');
+    if (panel) HM.workspace.selected[panel.dataset.googleService] = slotId;
+    return account;
+  }
+
+  async function authorizeGoogleWorkspace(account, service) {
+    const scopes = workspaceScopes[service];
+    if (!scopes) throw new Error(`Google ${service} is not configured.`);
+    const cacheKey = `${account.slotId}:${service}`;
+    const cached = googleWorkspaceSessions.get(cacheKey);
+    if (cached?.expiresAt > Date.now() + 30000) return cached.accessToken;
+    const clientId = D.state.settings.googleSync?.clientId || '';
+    if (!/^[0-9]+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i.test(clientId)) throw new Error('Add a valid Google OAuth web client ID in Settings > App & data.');
+    const oauth2 = await waitForGoogleIdentity();
+    const tokenResponse = await new Promise((resolve, reject) => {
+      const client = oauth2.initTokenClient({
+        client_id: clientId,
+        scope: ['openid', 'email', ...scopes].join(' '),
+        include_granted_scopes: true,
+        login_hint: account.email,
+        prompt: 'select_account',
+        callback: response => response?.error ? reject(new Error(response.error_description || response.error)) : resolve(response),
+        error_callback: error => reject(new Error(error.type === 'popup_closed' ? 'Google account window was closed.' : 'Google authorization could not open.'))
+      });
+      client.requestAccessToken();
+    });
+    const user = await googleApi('https://openidconnect.googleapis.com/v1/userinfo', tokenResponse.access_token);
+    if (String(user.email || '').toLowerCase() !== account.email.toLowerCase()) {
+      oauth2.revoke(tokenResponse.access_token);
+      throw new Error(`Google authorized ${user.email || 'another account'}, not ${account.email}.`);
+    }
+    googleWorkspaceSessions.set(cacheKey, { accessToken: tokenResponse.access_token, expiresAt: Date.now() + (+tokenResponse.expires_in || 3600) * 1000 });
+    return tokenResponse.access_token;
+  }
+
+  function isoDueDate(value) {
+    if (!value?.year) return '';
+    return `${value.year}-${String(value.month || 1).padStart(2, '0')}-${String(value.day || 1).padStart(2, '0')}`;
+  }
+
+  async function listGoogleTasks(token) {
+    const lists = await googleApi('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=10', token);
+    const taskLists = (lists.items || []).slice(0, 7);
+    const batches = await mapWithConcurrency(taskLists, 3, async list => {
+      const payload = await googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(list.id)}/tasks?showCompleted=true&showHidden=false&maxResults=25`, token);
+      return (payload.items || []).map(item => ({ ...item, taskListId: list.id, listTitle: list.title }));
+    });
+    return { lists: taskLists, tasks: batches.flat().slice(0, 100) };
+  }
+
+  async function createGoogleTask(token, title) {
+    const { items = [] } = await googleApi('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=10', token);
+    if (!items.length) throw new Error('This Google account has no Tasks list. Create one in Google Tasks first.');
+    return googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(items[0].id)}/tasks`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
+  }
+
+  async function runGoogleWorkspaceAction(target, forcedAction = '') {
+    const action = forcedAction || target.dataset.googleAction;
+    const panel = target.closest('[data-google-service]');
+    const button = target.matches('button') ? target : null;
+    try {
+      if (button) { button.disabled = true; button.classList.add('is-syncing'); }
+      if (action === 'note-add') {
+        const text = panel.querySelector('[data-google-note-text]').value.trim();
+        if (!text) throw new Error('Write the note first.');
+        D.state.quickNotes ||= [];
+        D.state.quickNotes.push({ id: D.uid('qn'), text, ownerId: panel.querySelector('[data-google-note-owner]').value, createdAt: new Date().toISOString(), status: 'active' });
+        save('Quick note added'); render(); return;
+      }
+      const account = workspaceAccount(target);
+      let service = panel?.dataset.googleService || '';
+      if (action === 'note-task') service = 'tasks';
+      if (action === 'note-doc') service = 'docs';
+      const token = await authorizeGoogleWorkspace(account, service);
+
+      if (action === 'drive-list') {
+        const params = new URLSearchParams({ q: 'trashed = false', pageSize: '50', orderBy: 'modifiedTime desc', fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink)' });
+        HM.workspace.cache.drive = (await googleApi(`https://www.googleapis.com/drive/v3/files?${params}`, token)).files || [];
+        toast(`${HM.workspace.cache.drive.length} accessible Drive files loaded`);
+      } else if (action === 'drive-upload') {
+        const file = target.files?.[0];
+        if (!file) throw new Error('Choose a document to upload.');
+        const uploaded = await googleApi('https://www.googleapis.com/upload/drive/v3/files?uploadType=media&fields=id', token, { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+        await googleApi(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(uploaded.id)}?fields=id,name,mimeType,modifiedTime,webViewLink`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name }) });
+        toast(`${file.name} uploaded to Google Drive`);
+        const params = new URLSearchParams({ q: 'trashed = false', pageSize: '50', orderBy: 'modifiedTime desc', fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink)' });
+        HM.workspace.cache.drive = (await googleApi(`https://www.googleapis.com/drive/v3/files?${params}`, token)).files || [];
+      } else if (action === 'drive-delete') {
+        if (!confirm('Delete this app-accessible file from Google Drive?')) return;
+        await googleApi(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(target.dataset.fileId)}`, token, { method: 'DELETE' });
+        HM.workspace.cache.drive = (HM.workspace.cache.drive || []).filter(file => file.id !== target.dataset.fileId);
+        toast('Drive file deleted');
+      } else if (action === 'contacts-list') {
+        const params = new URLSearchParams({ personFields: 'names,emailAddresses,phoneNumbers,organizations', pageSize: '100', sortOrder: 'FIRST_NAME_ASCENDING' });
+        const payload = await googleApi(`https://people.googleapis.com/v1/people/me/connections?${params}`, token);
+        HM.workspace.cache.contacts = (payload.connections || []).map(person => ({ id: person.resourceName, name: person.names?.[0]?.displayName || 'Unnamed contact', email: person.emailAddresses?.[0]?.value || '', phone: person.phoneNumbers?.[0]?.value || '', organization: person.organizations?.[0]?.name || '' }));
+        toast(`${HM.workspace.cache.contacts.length} contacts loaded for review`);
+      } else if (action === 'contact-import') {
+        const item = (HM.workspace.cache.contacts || []).find(contact => contact.id === target.dataset.contactId);
+        if (!item) throw new Error('Reload Google contacts and retry.');
+        if (!D.state.contacts.some(contact => contact.name === item.name && contact.phone === item.phone && contact.email === item.email)) D.state.contacts.push({ id: D.uid('c'), scope: 'home', name: item.name, category: item.organization || 'Google contact', phone: item.phone, email: item.email, hours: item.email || 'Imported from Google Contacts' });
+        save(`${item.name} imported to Home Directory`);
+      } else if (action === 'calendar-list') {
+        const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '30', timeMin: new Date().toISOString() });
+        HM.workspace.cache.calendar = (await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, token)).items || [];
+        toast(`${HM.workspace.cache.calendar.length} upcoming events loaded`);
+      } else if (action === 'calendar-create' || action === 'calendar-meet') {
+        const title = panel.querySelector('[data-google-event-title]').value.trim();
+        const startValue = panel.querySelector('[data-google-event-start]').value;
+        if (!title || !startValue) throw new Error('Enter an event title and start time.');
+        const start = new Date(startValue); const end = new Date(start.getTime() + 3600000);
+        const event = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
+        if (action === 'calendar-meet') event.conferenceData = { createRequest: { requestId: `hm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+        const suffix = action === 'calendar-meet' ? '?conferenceDataVersion=1' : '';
+        const created = await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events${suffix}`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event) });
+        HM.workspace.cache.calendar = [created, ...(HM.workspace.cache.calendar || [])];
+        toast(action === 'calendar-meet' ? 'Calendar event and Meet link created' : 'Google Calendar event created');
+      } else if (action === 'calendar-import') {
+        const item = (HM.workspace.cache.calendar || []).find(event => event.id === target.dataset.eventId);
+        if (!item) throw new Error('Reload Google Calendar and retry.');
+        if (!D.state.events.some(event => event.googleEventId === item.id && event.googleAccount === account.email)) D.state.events.push({ id: D.uid('e'), context: 'home', title: item.summary || 'Google Calendar event', category: 'Google Calendar', startAt: item.start?.dateTime || item.start?.date || '', venue: item.location || item.hangoutLink || '', notes: item.description || '', googleEventId: item.id, googleAccount: account.email });
+        save('Event imported to Family Calendar');
+      } else if (action === 'tasks-list') {
+        const result = await listGoogleTasks(token); HM.workspace.cache.taskLists = result.lists; HM.workspace.cache.tasks = result.tasks;
+        toast(`${result.tasks.length} Google tasks loaded`);
+      } else if (action === 'task-create') {
+        const title = panel.querySelector('[data-google-task-title]').value.trim();
+        if (!title) throw new Error('Enter a task title.');
+        await createGoogleTask(token, title); const result = await listGoogleTasks(token); HM.workspace.cache.taskLists = result.lists; HM.workspace.cache.tasks = result.tasks;
+        toast('Task created in Google Tasks');
+      } else if (action === 'task-toggle') {
+        const item = (HM.workspace.cache.tasks || []).find(task => task.id === target.dataset.taskId && task.taskListId === target.dataset.taskListId);
+        if (!item) throw new Error('Reload Google Tasks and retry.');
+        const updated = await googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(item.taskListId)}/tasks/${encodeURIComponent(item.id)}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: target.checked ? 'completed' : 'needsAction' }) });
+        Object.assign(item, updated); toast(target.checked ? 'Google task completed' : 'Google task reopened');
+      } else if (action === 'task-import') {
+        const item = (HM.workspace.cache.tasks || []).find(task => task.id === target.dataset.taskId);
+        if (!item) throw new Error('Reload Google Tasks and retry.');
+        if (!D.state.tasks.some(task => task.googleTaskId === item.id && task.googleAccount === account.email)) D.state.tasks.push({ id: D.uid('t'), context: 'home', type: 'task', title: item.title, category: item.listTitle || 'Google Tasks', assignee: D.state.people.find(person => person.id === account.personId)?.name || 'Family', dueAt: String(item.due || '').slice(0, 10), frequency: 'Once', priority: 'medium', status: item.status === 'completed' ? 'done' : 'todo', googleTaskId: item.id, googleAccount: account.email });
+        save('Google task imported to Household Tasks');
+      } else if (action === 'classroom-list') {
+        const courses = (await googleApi('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE&pageSize=30', token)).courses || [];
+        const batches = await mapWithConcurrency(courses.slice(0, 20), 3, async course => {
+          const payload = await googleApi(`https://classroom.googleapis.com/v1/courses/${encodeURIComponent(course.id)}/courseWork?pageSize=50&orderBy=dueDate%20asc`, token);
+          return (payload.courseWork || []).map(item => ({ ...item, courseName: course.name, courseId: course.id, dueDate: isoDueDate(item.dueDate), studentId: target.dataset.studentId }));
+        });
+        HM.workspace.cache.classroom = batches.flat().slice(0, 100); toast(`${HM.workspace.cache.classroom.length} Classroom items loaded`);
+      } else if (action === 'classroom-import') {
+        const item = (HM.workspace.cache.classroom || []).find(work => work.id === target.dataset.workId);
+        if (!item) throw new Error('Reload Classroom and retry.');
+        if (!D.state.academicDeliverables.some(work => work.googleCourseWorkId === item.id && work.googleCourseId === item.courseId)) D.state.academicDeliverables.push({ id: D.uid('ad'), studentId: item.studentId, title: item.title, subject: item.courseName, type: item.workType === 'ASSIGNMENT' ? 'Homework' : 'Coursework', dueDate: item.dueDate, teacher: item.courseName, status: 'todo', weight: 0, notes: item.description || 'Imported from Google Classroom', googleCourseWorkId: item.id, googleCourseId: item.courseId });
+        save('Classroom work imported to Assignments');
+      } else if (action === 'sheets-export') {
+        const name = `Home Manager money report ${new Date().toISOString().slice(0, 10)}`;
+        const spreadsheet = await googleApi('https://sheets.googleapis.com/v4/spreadsheets', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: { title: name }, sheets: [{ properties: { title: 'Family money' } }] }) });
+        const rows = [['Type', 'Date / period', 'Area', 'Description', 'Amount'], ...D.state.expenses.map(item => ['Expense', item.date, item.domain || item.category, item.title, +item.amount || 0]), ...D.state.budgets.map(item => ['Budget', item.period || '', item.domain, item.category || item.bucket, +item.amount || 0])];
+        await googleApi(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheet.spreadsheetId)}/values/Family%20money!A1:E${rows.length}?valueInputOption=RAW`, token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: rows }) });
+        HM.workspace.cache.sheets = { name, url: `https://docs.google.com/spreadsheets/d/${spreadsheet.spreadsheetId}/edit` }; toast('Google Sheets money report created');
+      } else if (action === 'docs-export' || action === 'note-doc') {
+        const note = action === 'note-doc' ? (D.state.quickNotes || []).find(item => item.id === target.dataset.noteId) : null;
+        const name = note ? `Home Manager note ${new Date().toISOString().slice(0, 10)}` : `Home Manager family book ${new Date().toISOString().slice(0, 10)}`;
+        const content = note ? note.text : D.state.wisdomEntries.map(item => `${item.title}\n${item.category} - ${item.author}\n${item.body}`).join('\n\n');
+        const doc = await googleApi('https://docs.googleapis.com/v1/documents', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name }) });
+        await googleApi(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(doc.documentId)}:batchUpdate`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: [{ insertText: { location: { index: 1 }, text: `${name}\n\n${content || 'No content recorded.'}` } }] }) });
+        HM.workspace.cache.docs = { name, url: `https://docs.google.com/document/d/${doc.documentId}/edit` }; toast('Google Doc created');
+      } else if (action === 'note-task') {
+        const note = (D.state.quickNotes || []).find(item => item.id === target.dataset.noteId);
+        if (!note) throw new Error('Quick note is no longer available.');
+        await createGoogleTask(token, note.text); toast('Quick note sent to Google Tasks');
+      } else if (action === 'slides-create') {
+        const assignment = D.state.academicDeliverables.find(item => item.id === panel.querySelector('[data-google-slide-work]').value);
+        if (!assignment) throw new Error('Choose an assignment first.');
+        const presentation = await googleApi('https://slides.googleapis.com/v1/presentations', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: assignment.title }) });
+        const current = await googleApi(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(presentation.presentationId)}`, token);
+        const pageId = current.slides?.[0]?.objectId;
+        if (pageId) {
+          const titleId = `hmTitle${Date.now()}`; const bodyId = `hmBody${Date.now()}`;
+          const requests = [
+            { createShape: { objectId: titleId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: pageId, size: { width: { magnitude: 8000000, unit: 'EMU' }, height: { magnitude: 1000000, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: 600000, translateY: 500000, unit: 'EMU' } } } },
+            { insertText: { objectId: titleId, insertionIndex: 0, text: assignment.title } },
+            { createShape: { objectId: bodyId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: pageId, size: { width: { magnitude: 8000000, unit: 'EMU' }, height: { magnitude: 3500000, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: 600000, translateY: 1800000, unit: 'EMU' } } } },
+            { insertText: { objectId: bodyId, insertionIndex: 0, text: `Subject: ${assignment.subject}\nDue: ${assignment.dueDate || 'Not set'}\n\nPlan\n1. Question and objective\n2. Evidence and method\n3. Findings\n4. Sources and reflection\n\n${assignment.notes || ''}` } }
+          ];
+          await googleApi(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(presentation.presentationId)}:batchUpdate`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests }) });
+        }
+        HM.workspace.cache.slides = { name: assignment.title, url: `https://docs.google.com/presentation/d/${presentation.presentationId}/edit` }; toast('Google Slides project deck created');
+      }
+      render();
+    } catch (error) {
+      toast(`Google action failed: ${error.message}`);
+      console.error(error);
+    } finally {
+      if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); }
+      if (target.matches('input[type="file"]')) target.value = '';
+    }
+  }
+
   function toggleTheme() {
     const options = V.natureBackgrounds.map(item => item[0]);
     const current = options.indexOf(D.state.settings.appBackground);
@@ -1019,7 +1323,7 @@
     render();
   }
   function applyTheme() {
-    const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'waterfall';
+    const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'sunrise';
     document.body.classList.remove('dark');
     document.body.dataset.nature = background;
     document.body.classList.toggle('collapsed', Boolean(D.state.settings.sidebarCollapsed));
@@ -1086,338 +1390,7 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
-  // Google Workspace Integration Handlers
-  if (window.HMGoogle) {
-    window.HMGoogle.onAuthUpdate(() => {
-      if (route.startsWith('settings')) render();
-    });
-  }
-
-  async function handleWorkspaceAction(action, target) {
-    if (!window.HMGoogle?.getUser()) {
-      toast('Please sign in with Google first.');
-      try {
-        await window.HMGoogle?.login();
-        render();
-      } catch (e) {
-        return;
-      }
-    }
-
-    try {
-      if (action === 'fetchDrive') {
-        const container = $('#wsContent-drive');
-        if (container) container.innerHTML = '<p class="empty">Loading Google Drive files...</p>';
-        const data = await window.HMGoogle.listDriveFiles(10);
-        const files = data.files || [];
-        if (container) {
-          container.innerHTML = files.length ? files.map(f => `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>${V.e(f.name)}</b>
-                <small>${f.mimeType ? V.e(f.mimeType.split('.').pop()) : 'File'} · ${f.modifiedTime ? D.date(f.modifiedTime) : ''}</small>
-              </div>
-              <a href="${V.e(f.webViewLink)}" target="_blank" rel="noopener" class="icon-action" title="Open file">${V.icon('external-link')}</a>
-              <button type="button" data-gw-delete-drive="${V.e(f.id)}" data-gw-file-name="${V.e(f.name)}" class="icon-action danger-action" title="Delete file">${V.icon('trash-2')}</button>
-            </div>
-          `).join('') : '<p class="empty">No files found in Google Drive.</p>';
-        }
-        toast('Drive files loaded');
-      } else if (action === 'uploadDrive') {
-        const name = prompt('Enter file name (e.g., Home_Notes.txt):', 'Home_Manager_Note.txt');
-        if (!name) return;
-        const content = prompt('Enter file text content:', 'Created from Home Manager');
-        if (content === null) return;
-        toast('Uploading file to Google Drive...');
-        const file = await window.HMGoogle.createDriveFile(name, content);
-        toast(`File "${name}" created in Google Drive!`);
-        handleWorkspaceAction('fetchDrive');
-      } else if (action === 'fetchContacts') {
-        const container = $('#wsContent-contacts');
-        if (container) container.innerHTML = '<p class="empty">Fetching Google Contacts...</p>';
-        const data = await window.HMGoogle.getContacts(15);
-        const connections = data.connections || [];
-        if (container) {
-          container.innerHTML = connections.length ? connections.map(c => {
-            const name = c.names?.[0]?.displayName || 'Unnamed Contact';
-            const email = c.emailAddresses?.[0]?.value || '';
-            const phone = c.phoneNumbers?.[0]?.value || '';
-            return `
-              <div class="workspace-list-item">
-                <div class="grow">
-                  <b>${V.e(name)}</b>
-                  <small>${V.e(email || phone || 'No details')}</small>
-                </div>
-                <button type="button" data-gw-import-contact="${V.e(name)}" data-gw-contact-email="${V.e(email)}" data-gw-contact-phone="${V.e(phone)}" class="primary" style="font-size:10px; padding:3px 6px;">Import</button>
-              </div>
-            `;
-          }).join('') : '<p class="empty">No Google Contacts found.</p>';
-        }
-        toast('Google Contacts loaded');
-      } else if (action === 'fetchCalendar') {
-        const container = $('#wsContent-calendar');
-        if (container) container.innerHTML = '<p class="empty">Loading Google Calendar events...</p>';
-        const data = await window.HMGoogle.getCalendarEvents(10);
-        const items = data.items || [];
-        if (container) {
-          container.innerHTML = items.length ? items.map(ev => {
-            const start = ev.start?.dateTime || ev.start?.date || '';
-            return `
-              <div class="workspace-list-item">
-                <div class="grow">
-                  <b>${V.e(ev.summary || 'Untitled Event')}</b>
-                  <small>${start ? D.date(start) : ''} ${ev.location ? `· ${V.e(ev.location)}` : ''}</small>
-                </div>
-                ${ev.htmlLink ? `<a href="${V.e(ev.htmlLink)}" target="_blank" rel="noopener" class="icon-action" title="Open event">${V.icon('external-link')}</a>` : ''}
-              </div>
-            `;
-          }).join('') : '<p class="empty">No upcoming Google Calendar events.</p>';
-        }
-        toast('Calendar events loaded');
-      } else if (action === 'createCalEvent') {
-        const title = prompt('Event summary/title:', 'Family Gathering');
-        if (!title) return;
-        const now = new Date();
-        const startStr = prompt('Start Date & Time (YYYY-MM-DD THH:MM):', `${now.toISOString().slice(0, 10)}T10:00`);
-        if (!startStr) return;
-        const endStr = prompt('End Date & Time (YYYY-MM-DD THH:MM):', `${now.toISOString().slice(0, 10)}T11:00`);
-        if (!endStr) return;
-        const ev = await window.HMGoogle.createCalendarEvent(title, startStr, endStr);
-        toast(`Calendar event "${title}" created!`);
-        handleWorkspaceAction('fetchCalendar');
-      } else if (action === 'createMeet') {
-        const title = prompt('Google Meet Title:', 'Family & Study Sync');
-        if (!title) return;
-        const now = new Date();
-        const startStr = `${now.toISOString().slice(0, 10)}T10:00`;
-        const endStr = `${now.toISOString().slice(0, 10)}T11:00`;
-        toast('Creating Google Meet link...');
-        const res = await window.HMGoogle.createGoogleMeet(title, startStr, endStr);
-        const meetUri = res.hangoutLink || res.conferenceData?.entryPoints?.find(p => p.entryPointType === 'video')?.uri;
-        const container = $('#wsContent-meet');
-        if (container && meetUri) {
-          container.innerHTML = `
-            <div class="workspace-list-item" style="flex-direction:column; align-items:flex-start; gap:6px;">
-              <b>${V.e(title)}</b>
-              <small>Meet link active!</small>
-              <a href="${V.e(meetUri)}" target="_blank" rel="noopener" class="primary button" style="text-decoration:none; padding:6px 10px; font-size:12px; font-weight:bold; color:#fff; display:inline-flex; align-items:center; gap:6px;">
-                ${V.icon('video')}<span>Join Google Meet</span>
-              </a>
-            </div>
-          `;
-        }
-        toast('Google Meet link generated!');
-      } else if (action === 'fetchClassroom') {
-        const container = $('#wsContent-classroom');
-        if (container) container.innerHTML = '<p class="empty">Loading Google Classroom courses...</p>';
-        const data = await window.HMGoogle.getClassroomCourses();
-        const courses = data.courses || [];
-        if (container) {
-          container.innerHTML = courses.length ? courses.map(c => `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>${V.e(c.name)}</b>
-                <small>${V.e(c.section || 'Active Course')}</small>
-              </div>
-              ${c.alternateLink ? `<a href="${V.e(c.alternateLink)}" target="_blank" rel="noopener" class="icon-action" title="Open Classroom">${V.icon('external-link')}</a>` : ''}
-            </div>
-          `).join('') : '<p class="empty">No active Google Classroom courses found.</p>';
-        }
-        toast('Google Classroom courses loaded');
-      } else if (action === 'fetchTasks') {
-        const container = $('#wsContent-tasks');
-        if (container) container.innerHTML = '<p class="empty">Loading Google Tasks...</p>';
-        const data = await window.HMGoogle.getTasks();
-        const tasks = data.items || [];
-        if (container) {
-          container.innerHTML = tasks.length ? tasks.map(t => `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b style="${t.status === 'completed' ? 'text-decoration:line-through; opacity:0.6;' : ''}">${V.e(t.title || 'Untitled Task')}</b>
-                <small>${t.due ? `Due ${D.date(t.due)}` : 'No due date'}</small>
-              </div>
-              ${t.status !== 'completed' ? `<button type="button" data-gw-complete-task="${V.e(t.id)}" class="primary" style="font-size:10px; padding:3px 6px;">Done</button>` : `<span class="badge warning">Done</span>`}
-            </div>
-          `).join('') : '<p class="empty">No tasks in Google Tasks.</p>';
-        }
-        toast('Google Tasks loaded');
-      } else if (action === 'createTask') {
-        const title = prompt('Google Task Title:', 'Review Household Budget');
-        if (!title) return;
-        await window.HMGoogle.createTask(title);
-        toast(`Task "${title}" added to Google Tasks!`);
-        handleWorkspaceAction('fetchTasks');
-      } else if (action === 'createSheet') {
-        const title = prompt('New Google Sheet Title:', 'Home Financial Planner');
-        if (!title) return;
-        const sheet = await window.HMGoogle.createSpreadsheet(title);
-        const url = sheet.spreadsheetUrl;
-        const container = $('#wsContent-sheets');
-        if (container && url) {
-          container.innerHTML = `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>${V.e(title)}</b>
-                <small>Created in Google Sheets</small>
-              </div>
-              <a href="${V.e(url)}" target="_blank" rel="noopener" class="icon-action" title="Open Sheet">${V.icon('external-link')}</a>
-            </div>
-          `;
-        }
-        toast(`Google Sheet "${title}" created!`);
-      } else if (action === 'exportExpensesSheet') {
-        toast('Exporting Home Manager expenses to Google Sheets...');
-        const sheet = await window.HMGoogle.createSpreadsheet(`Home Manager Expenses Backup - ${new Date().toISOString().slice(0, 10)}`);
-        const expenses = D.state.expenses || [];
-        const rows = [
-          ['Category', 'Title / Description', 'Amount', 'Date', 'Status'],
-          ...expenses.map(x => [x.category || 'General', x.title || '', x.amount || 0, x.dateAt || '', x.status || ''])
-        ];
-        await window.HMGoogle.appendSheetValues(sheet.spreadsheetId, 'Sheet1!A1', rows);
-        const container = $('#wsContent-sheets');
-        if (container && sheet.spreadsheetUrl) {
-          container.innerHTML = `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>Expenses Exported (${expenses.length} records)</b>
-                <small>Google Sheet ready</small>
-              </div>
-              <a href="${V.e(sheet.spreadsheetUrl)}" target="_blank" rel="noopener" class="primary button" style="text-decoration:none; padding:4px 8px; font-size:11px; color:#fff;">Open Sheet</a>
-            </div>
-          `;
-        }
-        toast('Exported expenses to Google Sheets!');
-      } else if (action === 'createDoc') {
-        const title = prompt('Google Doc Title:', 'Family Knowledge Guide');
-        if (!title) return;
-        const content = prompt('Initial Document Text:', 'Home Manager Wisdom & Notes');
-        const doc = await window.HMGoogle.createDoc(title, content || '');
-        const url = `https://docs.google.com/document/d/${doc.documentId}/edit`;
-        const container = $('#wsContent-docs');
-        if (container) {
-          container.innerHTML = `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>${V.e(title)}</b>
-                <small>Google Doc created</small>
-              </div>
-              <a href="${V.e(url)}" target="_blank" rel="noopener" class="icon-action" title="Open Doc">${V.icon('external-link')}</a>
-            </div>
-          `;
-        }
-        toast(`Google Doc "${title}" created!`);
-      } else if (action === 'createSlide') {
-        const title = prompt('Presentation Title:', 'Family Annual Project Deck');
-        if (!title) return;
-        const pres = await window.HMGoogle.createPresentation(title);
-        const url = `https://docs.google.com/presentation/d/${pres.presentationId}/edit`;
-        const container = $('#wsContent-slides');
-        if (container) {
-          container.innerHTML = `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>${V.e(title)}</b>
-                <small>Google Slide presentation created</small>
-              </div>
-              <a href="${V.e(url)}" target="_blank" rel="noopener" class="icon-action" title="Open Slide">${V.icon('external-link')}</a>
-            </div>
-          `;
-        }
-        toast(`Google Slides "${title}" created!`);
-      } else if (action === 'fetchKeepTasks') {
-        const container = $('#wsContent-keep');
-        if (container) container.innerHTML = '<p class="empty">Syncing Quick Notes with Google Tasks...</p>';
-        const data = await window.HMGoogle.getTasks();
-        const items = data.items || [];
-        if (container) {
-          container.innerHTML = items.length ? items.map(k => `
-            <div class="workspace-list-item">
-              <div class="grow">
-                <b>${V.e(k.title)}</b>
-                <small>${k.notes ? V.e(k.notes) : 'Quick note'}</small>
-              </div>
-            </div>
-          `).join('') : '<p class="empty">No quick notes synced.</p>';
-        }
-        toast('Quick notes synced!');
-      }
-    } catch (err) {
-      console.error(err);
-      toast(`Google action error: ${err.message}`);
-    }
-  }
-
   document.addEventListener('click', event => {
-    // Handle Google Auth buttons
-    if (event.target.closest('#gsiLoginBtn') || event.target.closest('[data-gw-login]')) {
-      if (window.HMGoogle) {
-        window.HMGoogle.login().then(() => {
-          toast('Successfully signed in with Google!');
-          render();
-        }).catch(err => {
-          toast(`Sign in failed: ${err.message}`);
-        });
-      }
-      return;
-    }
-
-    if (event.target.closest('#googleSignOutBtn')) {
-      if (window.HMGoogle) {
-        window.HMGoogle.logout().then(() => {
-          toast('Signed out of Google');
-          render();
-        });
-      }
-      return;
-    }
-
-    const gwAct = event.target.closest('[data-gw-act]');
-    if (gwAct) {
-      handleWorkspaceAction(gwAct.dataset.gwAct, gwAct);
-      return;
-    }
-
-    const gwDeleteDrive = event.target.closest('[data-gw-delete-drive]');
-    if (gwDeleteDrive) {
-      const fileId = gwDeleteDrive.dataset.gwDeleteDrive;
-      const fileName = gwDeleteDrive.dataset.gwFileName || 'file';
-      window.HMGoogle.deleteDriveFile(fileId, fileName).then(deleted => {
-        if (deleted) {
-          toast(`Deleted "${fileName}" from Google Drive`);
-          handleWorkspaceAction('fetchDrive');
-        }
-      }).catch(err => toast(err.message));
-      return;
-    }
-
-    const gwImportContact = event.target.closest('[data-gw-import-contact]');
-    if (gwImportContact) {
-      const name = gwImportContact.dataset.gwImportContact;
-      const email = gwImportContact.dataset.gwContactEmail;
-      const phone = gwImportContact.dataset.gwContactPhone;
-      D.state.people.push({
-        id: D.uid('p'),
-        name,
-        email,
-        phone,
-        householdRole: 'Contact',
-        relation: 'Google Import'
-      });
-      save(`Imported ${name} into Home Manager directory`);
-      render();
-      return;
-    }
-
-    const gwCompleteTask = event.target.closest('[data-gw-complete-task]');
-    if (gwCompleteTask) {
-      const taskId = gwCompleteTask.dataset.gwCompleteTask;
-      window.HMGoogle.completeTask(taskId).then(() => {
-        toast('Task marked completed in Google Tasks!');
-        handleWorkspaceAction('fetchTasks');
-      }).catch(err => toast(err.message));
-      return;
-    }
-
     const closeDialog = event.target.closest('[data-close-dialog]');
     if (closeDialog) {
       const dialog = document.getElementById(closeDialog.dataset.closeDialog);
