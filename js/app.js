@@ -341,7 +341,6 @@
     if (movedStudyRoute) { go(movedStudyRoute); return; }
     const first = route.split('/')[0];
     if (['home', 'community', 'study'].includes(first)) {
-    if (['home', 'community', 'study'].includes(first)) {
       workspace = first;
       D.state.settings.activeWorkspace = workspace;
       D.save();
