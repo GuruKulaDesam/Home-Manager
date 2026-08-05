@@ -1,0 +1,6 @@
+{
+  "name": "Home Manager",
+  "description": "A private, local-first command center for home, community and study life.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

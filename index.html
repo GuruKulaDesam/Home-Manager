@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#edf7f3">
+  <meta name="description" content="A private, local-first command center for home, community and study life.">
+  <title>Home Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://unpkg.com">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to content</a>
+  <aside id="sidebar" aria-label="Primary navigation">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"><i data-lucide="mountain-snow"></i></span>
+      <div><b>Home Manager</b><small>Life, clearly organised</small></div>
+    </div>
+    <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
+    <nav id="nav"></nav>
+    <div class="sidebar-bottom">
+      <button type="button" id="helpNav" data-route="global/questions" title="Help and Guide" aria-label="Open Help and Guide"><i data-lucide="circle-help"></i><span>Help & Guide</span></button>
+      <button type="button" id="settingsNav" data-route="settings/household" title="Settings" aria-label="Open Settings"><i data-lucide="settings-2"></i><span>Settings</span></button>
+      <button type="button" id="collapse" class="collapse-button" title="Collapse navigation" aria-label="Collapse navigation"><i data-lucide="panel-left-close"></i></button>
+    </div>
+  </aside>
+
+  <button id="backdrop" aria-label="Close navigation"></button>
+
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="topbar">
+        <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
+        <div class="page-identity">
+          <small id="breadcrumb">Home Manager</small>
+          <h1 id="pageTitle">Today</h1>
+        </div>
+        <div id="headerKpis" class="header-kpis" aria-label="Current household signals"></div>
+      </div>
+    </header>
+    <main id="content" tabindex="-1"></main>
+  </div>
+
+  <aside id="utilityRail" class="utility-rail" aria-label="Quick tools">
+    <button type="button" id="quickAdd" class="primary" title="Add item" aria-label="Add item"><i data-lucide="plus"></i></button>
+    <button type="button" id="globalSearch" class="icon-button" title="Search (Ctrl+K)" aria-label="Search records and help" aria-haspopup="dialog" aria-controls="searchDialog"><i data-lucide="search"></i></button>
+    <button type="button" id="notifications" class="icon-button has-indicator" title="Notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
+    <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i></button>
+    <span class="utility-spacer"></span>
+    <button type="button" id="theme" class="icon-button" title="Next mountain background" aria-label="Choose next mountain background"><i data-lucide="palette"></i></button>
+    <span class="avatar" title="Local profile" aria-label="Local profile">S</span>
+  </aside>
+
+  <aside id="notificationPanel" class="notification-panel" aria-label="Notifications" aria-hidden="true">
+    <div class="panel-heading"><div><small>Attention</small><h2>Household signals</h2></div><button type="button" id="closeNotifications" class="icon-button" aria-label="Close notifications"><i data-lucide="x"></i></button></div>
+    <div id="notificationList"></div>
+  </aside>
+
+  <dialog id="emergencyDialog" class="emergency-dialog" aria-labelledby="emergencyTitle">
+    <div class="dialog-head"><div><small>INDIA · EXTERNAL HELP</small><h2 id="emergencyTitle">Emergency help</h2><p>Call the appropriate official service. Home Manager does not dispatch assistance.</p></div><button type="button" data-close-dialog="emergencyDialog" aria-label="Close emergency help"><i data-lucide="x"></i></button></div>
+    <div id="emergencyBody"></div>
+  </dialog>
+
+  <nav id="bottomNav" aria-label="Mobile navigation"></nav>
+
+  <dialog id="formDialog" class="side-drawer" aria-labelledby="formTitle">
+    <form id="entityForm" method="dialog">
+      <span class="drawer-accent" aria-hidden="true"></span>
+      <div class="dialog-head"><div><small id="formContext"></small><h2 id="formTitle">Add item</h2><p>Complete the details below. Your data stays in this browser.</p></div><button type="button" data-close-dialog="formDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div id="formFields" class="drawer-body"></div>
+      <menu class="drawer-footer"><button type="button" data-close-dialog="formDialog">Cancel</button><button value="default" class="primary"><i data-lucide="check"></i><span>Save item</span></button></menu>
+    </form>
+  </dialog>
+
+  <dialog id="searchDialog" class="search-dialog" aria-label="Search Home Manager">
+    <form method="dialog">
+      <div class="search-box"><i data-lucide="search"></i><label class="sr-only" for="searchInput">Search records or product help</label><input id="searchInput" autocomplete="off" placeholder="Search records or ask how the app works"><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div id="searchResults" aria-live="polite"></div>
+    </form>
+  </dialog>
+
+  <dialog id="bookReaderDialog" class="book-reader-dialog" aria-labelledby="bookReaderTitle">
+    <div class="book-reader-head">
+      <div><small id="bookReaderContext">PRIVATE LIBRARY</small><h2 id="bookReaderTitle">Textbook reader</h2><p id="bookReaderMeta"></p></div>
+      <button type="button" data-close-dialog="bookReaderDialog" aria-label="Close textbook reader"><i data-lucide="x"></i></button>
+    </div>
+    <div class="book-reader-layout">
+      <aside class="book-reader-tools" aria-label="Reading tools">
+        <section><small>READING POSITION</small><div class="reader-page-control"><button type="button" data-book-page-delta="-1" aria-label="Previous page"><i data-lucide="chevron-left"></i></button><label>Page<input id="bookCurrentPage" type="number" min="1" value="1"></label><button type="button" data-book-page-delta="1" aria-label="Next page"><i data-lucide="chevron-right"></i></button></div><label class="reader-total-pages">Total pages (optional)<input id="bookTotalPages" type="number" min="0" value="0"></label><div id="bookReadProgress" class="reader-progress">Page 1</div></section>
+        <section class="reader-review-actions"><button type="button" id="bookBookmark"><i data-lucide="bookmark"></i><span>Bookmark page</span></button><button type="button" id="bookReviewed"><i data-lucide="badge-check"></i><span>Mark reviewed</span></button></section>
+        <section class="reader-notes"><label for="bookNote"><small>REVIEW NOTE FOR THIS PAGE</small></label><textarea id="bookNote" rows="4" placeholder="Summary, question, formula or point to revisit"></textarea><button type="button" id="saveBookNote" class="primary"><i data-lucide="save"></i><span>Save note</span></button><div id="bookNotes" aria-live="polite"></div></section>
+        <button type="button" id="removeBookFile" class="reader-remove"><i data-lucide="trash-2"></i><span>Remove PDF from this device</span></button>
+      </aside>
+      <section class="book-document" aria-label="Textbook document"><iframe id="bookFrame" title="Textbook PDF"></iframe></section>
+    </div>
+  </dialog>
+  <input id="bookFileInput" class="sr-only" type="file" accept="application/pdf,.pdf" aria-label="Choose textbook PDF">
+
+  <dialog id="quickDialog" class="side-drawer quick-drawer" aria-labelledby="quickTitle">
+    <form method="dialog">
+      <span class="drawer-accent" aria-hidden="true"></span>
+      <div class="dialog-head"><div><small>Create</small><h2 id="quickTitle">Add to Home Manager</h2><p>Choose what you want to organise.</p></div><button type="button" data-close-dialog="quickDialog" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div id="quickActions" class="quick-grid drawer-body"></div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="js/data.js"></script>
+  <script src="js/life.js"></script>
+  <script src="js/questions.js"></script>
+  <script type="module" src="js/google.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
