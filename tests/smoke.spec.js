@@ -275,8 +275,8 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await expect(page.locator('#googleSyncSettings')).toContainText('4 active this session');
   await expect(page.locator('[data-google-sync]')).toContainText('Sync all accounts');
   await page.locator('[data-google-sync]').click();
-  await expect(page.locator('.integration-queue')).toContainText('Family train booking');
-  await expect(page.locator('.integration-queue')).toContainText('School exam timetable');
+  await expect.poll(() => page.evaluate(() => HM.data.state.syncSuggestions.length)).toBe(10);
+  await expect(page.locator('.integration-queue')).toContainText('0 pending');
   expect(maxGmailDetails).toBeLessThanOrEqual(3);
   expect(gmailAttempts.get('gmail-1')).toBe(2);
   await page.goto(`${app}#/global/intelligence`);
@@ -290,9 +290,8 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await page.locator('[data-filter]').fill('gmail-9');
   await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(1);
   await page.locator('[data-filter]').fill('');
-  await page.locator('.inbox-decision [data-sync-apply]').first().click();
   await page.locator('[data-status-filter]').selectOption('applied');
-  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(1);
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(9);
   const appliedSchoolEvent = await page.evaluate(() => HM.data.state.events.find(item => item.title.includes('School exam timetable')));
   expect(appliedSchoolEvent.startAt).toContain('2026-08-12');
   await page.goto(`${app}#/home/money/reports`);
@@ -312,7 +311,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
   ]);
 });
 
-test('Android SMS backup is analysed locally with OTP exclusion and review apply', async ({ page }) => {
+test('Android SMS backup excludes OTPs and auto-applies trusted family updates', async ({ page }) => {
   await page.goto(`${app}#/settings/app`);
   await page.locator('#smsConsent').check();
   await page.locator('#phoneSmsSettings button[type="submit"]').click();
@@ -323,20 +322,19 @@ test('Android SMS backup is analysed locally with OTP exclusion and review apply
     <sms address="BANK" date="1785931200000" body="Your OTP is 874221 and expires in 5 minutes" contact_name="Bank" />
   </smses>`;
   await page.locator('#smsImport').setInputFiles({ name: 'phone-sms.xml', mimeType: 'application/xml', buffer: Buffer.from(smsXml) });
-  await expect(page.locator('.integration-queue')).toContainText('3 pending');
-  await expect(page.locator('.integration-queue')).toContainText('Electricity bill');
+  await expect.poll(() => page.evaluate(() => HM.data.state.settings.phoneSms.importedCount)).toBe(4);
+  await expect(page.locator('.integration-queue')).toContainText('0 pending');
   await expect(page.locator('.integration-queue')).not.toContainText('874221');
-  await expect(page.locator('.integration-queue')).toContainText('...7890');
-  const billSuggestion = page.locator('.sync-suggestion').filter({ hasText: 'Electricity bill' });
-  await billSuggestion.getByRole('button', { name: 'Apply' }).click();
   const imported = await page.evaluate(() => ({
     sms: HM.data.state.settings.phoneSms.importedCount,
     bill: HM.data.state.lifeRecords.find(item => item.domain === 'bills' && item.provider === 'Power provider'),
-    pending: HM.data.state.syncSuggestions.filter(item => item.status === 'pending').length
+    pending: HM.data.state.syncSuggestions.filter(item => item.status === 'pending').length,
+    billSummary: HM.data.state.syncSuggestions.find(item => item.source === 'sms' && item.category === 'bills')?.summary
   }));
   expect(imported.sms).toBe(4);
   expect(imported.bill).toMatchObject({ domain: 'bills', amount: 1850, status: 'pending' });
-  expect(imported.pending).toBe(2);
+  expect(imported.pending).toBe(0);
+  expect(imported.billSummary).toContain('...7890');
 });
 
 test('Google Workspace tools live in the family modules that own them', async ({ page }) => {
