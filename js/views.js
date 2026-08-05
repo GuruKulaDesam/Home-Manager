@@ -1,6 +1,7 @@
 (function () {
   const D = HM.data;
   const e = D.esc;
+  let activeRenderRoute = '';
 
   const groups = {
     today: { label: 'Today', icon: 'sparkles', note: 'What needs attention now', route: 'global/overview', items: [
@@ -622,15 +623,18 @@
     const activeId = profiles.some(item => item.personId === D.state.settings.activeLearnerId) ? D.state.settings.activeLearnerId : profiles[0]?.personId;
     if (activeId && activeId !== D.state.settings.activeLearnerId) D.state.settings.activeLearnerId = activeId;
     const profile = profiles.find(item => item.personId === activeId) || { personId: '', name: 'Student', grade: 6, subjects: [], targetPercent: 75 };
+    const selectedSubject = D.state.settings.learningSubjectTabs?.[activeRenderRoute] || 'All subjects';
+    const inSubject = item => selectedSubject === 'All subjects' || item.subject === selectedSubject;
     return {
       activeId,
       profile,
       profiles,
-      syllabus: (D.state.syllabusItems || []).filter(item => item.studentId === activeId),
-      plans: (D.state.studyPlans || []).filter(item => item.studentId === activeId),
-      deliverables: (D.state.academicDeliverables || []).filter(item => item.studentId === activeId),
-      assessments: (D.state.academicAssessments || []).filter(item => item.studentId === activeId),
-      practice: (D.state.practiceLogs || []).filter(item => item.studentId === activeId),
+      selectedSubject,
+      syllabus: (D.state.syllabusItems || []).filter(item => item.studentId === activeId && inSubject(item)),
+      plans: (D.state.studyPlans || []).filter(item => item.studentId === activeId && inSubject(item)),
+      deliverables: (D.state.academicDeliverables || []).filter(item => item.studentId === activeId && inSubject(item)),
+      assessments: (D.state.academicAssessments || []).filter(item => item.studentId === activeId && inSubject(item)),
+      practice: (D.state.practiceLogs || []).filter(item => item.studentId === activeId && inSubject(item)),
       sessions: (D.state.focusSessions || []).filter(item => !item.studentId || item.studentId === activeId),
       school: D.state.schoolProfile || {},
       timetable: (D.state.schoolTimetable || []).filter(item => item.studentId === activeId),
@@ -652,11 +656,36 @@
     return Math.round(schoolDays.filter(item => ['present', 'late'].includes(item.status)).length / schoolDays.length * 100);
   };
 
+  function examReadinessPanel(context) {
+    if (+context.profile.grade !== 12) return '';
+    const tracks = [
+      { name: 'CBSE Class XII', subjects: context.profile.subjects, iconName: 'school' },
+      { name: 'JEE Main', subjects: ['Physics', 'Chemistry', 'Mathematics'], iconName: 'target' }
+    ];
+    const trackCards = tracks.map(track => {
+      const rows = track.subjects.filter(subject => context.selectedSubject === 'All subjects' || context.selectedSubject === subject).map(subject => {
+        const syllabus = context.syllabus.filter(item => item.subject === subject);
+        const tests = context.assessments.filter(item => item.subject === subject && item.status !== 'scheduled' && (track.name.startsWith('CBSE') ? item.exam !== 'JEE Main' : item.exam === 'JEE Main' || /JEE/i.test(item.type || '')));
+        const practice = context.practice.filter(item => item.subject === subject && (track.name.startsWith('CBSE') ? item.exam !== 'JEE Main' : item.exam === 'JEE Main' || /JEE/i.test(item.source || '')));
+        const syllabusScore = averageOf(syllabus.map(item => item.mastery));
+        const testScore = tests.length ? averageOf(tests.map(assessmentPercent)) : 0;
+        const accuracy = practice.length ? practicePercent(practice) : 0;
+        const volume = Math.min(100, Math.round(practice.reduce((sum, item) => sum + (+item.attempted || 0), 0) / (track.name === 'JEE Main' ? 1.5 : .75)));
+        const score = Math.round(syllabusScore * .35 + testScore * .3 + accuracy * .25 + volume * .1);
+        return `<div class="exam-readiness-row"><b>${e(subject)}</b><span title="Syllabus">${syllabusScore}%</span><span title="Tests">${testScore}%</span><span title="Accuracy">${accuracy}%</span><span title="Practice volume">${volume}%</span><strong>${score}%</strong></div>`;
+      }).join('');
+      return `<section class="panel exam-track"><div class="section-head"><div><h2>${icon(track.iconName)} ${e(track.name)} readiness</h2><p>Syllabus · tests/mocks · accuracy · practice volume</p></div></div><div class="exam-readiness-head"><b>Subject</b><span>Syllabus</span><span>Tests</span><span>Accuracy</span><span>Volume</span><strong>Ready</strong></div>${rows || '<p class="empty">This exam does not include the selected subject.</p>'}</section>`;
+    }).join('');
+    return `<div class="exam-readiness-grid">${trackCards}</div><section class="panel assessment-note"><span>${icon('shield-check')}</span><div><b>Readiness is evidence, not a prediction.</b><p>Log CBSE papers and JEE Main mocks under the correct exam track. Review chapter mastery, timed accuracy, unfinished practical/internal work and recurring errors every week.</p></div></section>`;
+  }
+
   function learnerBar(context) {
     const p = context.profile;
     const bar = `<section class="learner-bar"><div class="learner-switch" role="group" aria-label="Choose student">${context.profiles.map((profile, index) => `<button data-learner="${e(profile.personId)}" class="student-tone-${index + 1} ${profile.personId === context.activeId ? 'active' : ''}" aria-pressed="${profile.personId === context.activeId}"><span>${e(profile.name[0])}</span><span><b>${e(profile.name)}</b><small>Peepal - CBSE Class ${e(profile.grade)}</small></span></button>`).join('')}</div><div class="learner-target"><span>${icon('target')}</span><span><small>Academic target</small><b>${e(p.targetPercent)}%</b></span><button class="icon-action" data-edit="academicProfile" data-id="${e(p.id)}" data-student="${e(p.personId)}" aria-label="Edit ${e(p.name)} profile">${icon('pencil')}</button></div></section>`;
-    const extension = context.learningExtension === 'curriculum' ? reflectionPanel(context) : context.learningExtension === 'planner' ? schoolPlannerPanel(context) : context.learningExtension === 'reports' ? schoolReportPanel(context) : '';
-    return bar + (context.showSchoolHub ? schoolHub(context) : '') + extension;
+    const extension = context.learningExtension === 'curriculum' ? reflectionPanel(context) : context.learningExtension === 'planner' ? schoolPlannerPanel(context) : context.learningExtension === 'reports' ? examReadinessPanel(context) + schoolReportPanel(context) : '';
+    const subjects = ['All subjects', ...context.profile.subjects];
+    const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${context.selectedSubject === subject ? 'active' : ''}" aria-pressed="${context.selectedSubject === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
+    return bar + subjectTabs + (context.showSchoolHub ? schoolHub(context) : '') + extension;
   }
 
   function schoolHub(context) {
@@ -686,7 +715,8 @@
   }
 
   function subjectReadiness(context) {
-    return context.profile.subjects.map(subject => {
+    const subjects = context.selectedSubject && context.selectedSubject !== 'All subjects' ? [context.selectedSubject] : context.profile.subjects;
+    return subjects.map(subject => {
       const syllabus = context.syllabus.filter(item => item.subject === subject);
       const assessments = context.assessments.filter(item => item.subject === subject && item.status !== 'scheduled');
       const practice = context.practice.filter(item => item.subject === subject);
@@ -715,7 +745,7 @@
     const c = academicContext();
     const subjects = c.profile.subjects;
     const learner = learnerBar(c);
-    const books = textbookCatalog.filter(book => book.grade === +c.profile.grade);
+    const books = textbookCatalog.filter(book => book.grade === +c.profile.grade && (c.selectedSubject === 'All subjects' || book.subject === c.selectedSubject));
     const reading = D.state.readingProgress || [];
     const bookCards = books.map((book, index) => {
       const progress = reading.find(item => item.studentId === c.activeId && item.bookId === book.id);
@@ -868,6 +898,7 @@
   }
 
   function render(route) {
+    activeRenderRoute = route;
     if (route === 'global/overview') return unified();
     if (route === 'global/intelligence') return inboxIntelligence();
     if (route === 'global/questions') return questionHub();

@@ -115,12 +115,14 @@
 
   async function hydrateBookshelf() {
     const cards = [...document.querySelectorAll('[data-book-card]')];
+    let readyCount = 0;
     await Promise.all(cards.map(async card => {
       const state = card.querySelector('[data-book-state]');
       const open = card.querySelector('[data-book-open]');
       const importLabel = card.querySelector('[data-book-import-label]');
       try {
         const file = await getBookFile(card.dataset.bookCard);
+        if (file) readyCount += 1;
         card.classList.toggle('book-ready', Boolean(file));
         open.disabled = !file;
         state.textContent = file ? `Ready offline - ${file.name}` : 'PDF not added on this device';
@@ -131,6 +133,8 @@
         console.error(error);
       }
     }));
+    const summary = document.querySelector('[data-book-library-summary]') || document.querySelector('.textbook-heading p');
+    if (summary) summary.textContent = `${readyCount} of ${cards.length} PDFs ready offline · ${cards.length - readyCount} missing`;
   }
 
   function renderReaderNotes() {
@@ -402,8 +406,8 @@
     syllabus: source => [field('Subject', 'subject', 'text', academicSubjects(source)), field('Chapter / learning outcome', 'title'), field('Term', 'term', 'text', ['Term 1', 'Term 2', 'Full year']), field('Competency', 'competency', 'text', ['Concept', 'Application', 'Analysis', 'Communication', 'Practical']), field('Status', 'status', 'text', ['not-started', 'learning', 'revision', 'mastered']), field('Mastery %', 'mastery', 'number'), field('Planned hours', 'plannedHours', 'number')],
     studyPlan: source => [field('Date', 'date', 'date'), field('Start time', 'startTime', 'time'), field('Minutes', 'minutes', 'number'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Activity', 'activity'), field('Study method', 'method', 'text', ['Active recall', 'Written practice', 'Timed practice', 'Teach-back', 'Read-recall', 'Practical', 'Revision']), field('Status', 'status', 'text', ['planned', 'done', 'missed'])],
     deliverable: source => [field('Assignment / project', 'title'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Type', 'type', 'text', ['Homework', 'Worksheet', 'Project', 'Practical', 'Portfolio', 'Internal assessment']), field('Due date', 'dueDate', 'date'), field('Teacher', 'teacher', 'text', null, false), field('Status', 'status', 'text', ['todo', 'progress', 'submitted', 'done']), field('Marks / weight', 'weight', 'number', null, false), area('Instructions / notes', 'notes', false)],
-    assessment: source => [field('Assessment', 'title'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Type', 'type', 'text', ['Class quiz', 'School test', 'Periodic test', 'Pre-board', 'Board pattern', 'Practical']), field('Date', 'date', 'date'), field('Status', 'status', 'text', ['scheduled', 'completed']), field('Theory score', 'score', 'number'), field('Theory maximum', 'maxScore', 'number'), field('Target score', 'target', 'number'), field('Practical / internal score', 'practicalScore', 'number', null, false), field('Practical / internal maximum', 'practicalMax', 'number', null, false)],
-    practiceLog: source => [field('Date', 'date', 'date'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Source', 'source', 'text', ['NCERT exercise', 'NCERT exemplar', 'CBSE competency questions', 'CBSE question bank', 'Board sample paper', 'Previous-year paper', 'School worksheet', 'Reading / writing practice']), field('Questions attempted', 'attempted', 'number'), field('Correct', 'correct', 'number'), field('Minutes', 'minutes', 'number'), field('Main error type', 'errorType', 'text', ['Concept', 'Application', 'Calculation', 'Recall', 'Inference', 'Format', 'Time management', 'Careless error'])],
+    assessment: source => [field('Assessment', 'title'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Exam track', 'exam', 'text', ['CBSE', 'JEE Main', 'School']), field('Type', 'type', 'text', ['Class quiz', 'School test', 'Periodic test', 'Pre-board', 'Board pattern', 'JEE chapter test', 'JEE full mock', 'Practical']), field('Date', 'date', 'date'), field('Status', 'status', 'text', ['scheduled', 'completed']), field('Theory score', 'score', 'number'), field('Theory maximum', 'maxScore', 'number'), field('Target score', 'target', 'number'), field('Practical / internal score', 'practicalScore', 'number', null, false), field('Practical / internal maximum', 'practicalMax', 'number', null, false)],
+    practiceLog: source => [field('Date', 'date', 'date'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Exam track', 'exam', 'text', ['CBSE', 'JEE Main', 'School']), field('Source', 'source', 'text', ['NCERT exercise', 'NCERT exemplar', 'CBSE competency questions', 'CBSE question bank', 'Board sample paper', 'JEE Main previous-year questions', 'JEE Main mock', 'Previous-year paper', 'School worksheet', 'Reading / writing practice']), field('Questions attempted', 'attempted', 'number'), field('Correct', 'correct', 'number'), field('Minutes', 'minutes', 'number'), field('Main error type', 'errorType', 'text', ['Concept', 'Application', 'Calculation', 'Recall', 'Inference', 'Format', 'Time management', 'Careless error'])],
     schoolTimetable: source => [field('Day', 'day', 'text', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']), field('Period', 'period', 'number'), field('Starts', 'startTime', 'time'), field('Ends', 'endTime', 'time'), field('Subject', 'subject', 'text', academicSubjects(source)), field('Session type', 'type', 'text', ['Academic', 'Laboratory', 'Physical education', 'Club', 'Library', 'Tutor time']), field('Tutor', 'tutor', 'text', null, false), field('Learning space', 'space', 'text', null, false)],
     schoolEvent: () => [field('School item', 'title'), field('Type', 'type', 'text', ['Exam', 'Student-Parent-Tutor meeting', 'Holiday', 'School activity', 'Submission', 'Trip', 'Notice']), field('Date', 'date', 'date'), field('Time', 'time', 'time', null, false), field('Location', 'location', 'text', null, false), field('Status', 'status', 'text', ['planned', 'done', 'cancelled']), area('Notes', 'notes', false)],
     attendance: () => [field('Date', 'date', 'date'), field('Attendance', 'status', 'text', ['present', 'absent', 'leave', 'late', 'holiday']), area('Note', 'note', false)],
@@ -497,8 +501,8 @@
       case 'syllabus': state.syllabusItems.push({ id: id('sy'), studentId: meta.student || state.settings.activeLearnerId, subject: values.subject, title: values.title, term: values.term, competency: values.competency, status: values.status, mastery: Math.min(100, Math.max(0, +values.mastery || 0)), plannedHours: Math.max(0, +values.plannedHours || 0) }); break;
       case 'studyPlan': state.studyPlans.push({ id: id('sp'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, startTime: values.startTime, minutes: Math.max(5, +values.minutes || 30), subject: values.subject, activity: values.activity, method: values.method, status: values.status }); break;
       case 'deliverable': state.academicDeliverables.push({ id: id('ad'), studentId: meta.student || state.settings.activeLearnerId, title: values.title, subject: values.subject, type: values.type, dueDate: values.dueDate, teacher: values.teacher, status: values.status, weight: Math.max(0, +values.weight || 0), notes: values.notes }); break;
-      case 'assessment': state.academicAssessments.push({ id: id('as'), studentId: meta.student || state.settings.activeLearnerId, title: values.title, subject: values.subject, type: values.type, date: values.date, status: values.status, score: +values.score || 0, maxScore: +values.maxScore || 0, target: +values.target || 0, practicalScore: +values.practicalScore || 0, practicalMax: +values.practicalMax || 0 }); break;
-      case 'practiceLog': state.practiceLogs.push({ id: id('pr'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, source: values.source, attempted: +values.attempted || 0, correct: Math.min(+values.attempted || 0, +values.correct || 0), minutes: +values.minutes || 0, errorType: values.errorType }); break;
+      case 'assessment': state.academicAssessments.push({ id: id('as'), studentId: meta.student || state.settings.activeLearnerId, title: values.title, subject: values.subject, exam: values.exam || 'CBSE', type: values.type, date: values.date, status: values.status, score: +values.score || 0, maxScore: +values.maxScore || 0, target: +values.target || 0, practicalScore: +values.practicalScore || 0, practicalMax: +values.practicalMax || 0 }); break;
+      case 'practiceLog': state.practiceLogs.push({ id: id('pr'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, exam: values.exam || 'CBSE', source: values.source, attempted: +values.attempted || 0, correct: Math.min(+values.attempted || 0, +values.correct || 0), minutes: +values.minutes || 0, errorType: values.errorType }); break;
       case 'schoolTimetable': state.schoolTimetable.push({ id: id('tt'), studentId: meta.student || state.settings.activeLearnerId, day: values.day, period: Math.max(1, +values.period || 1), startTime: values.startTime, endTime: values.endTime, subject: values.subject, type: values.type, tutor: values.tutor, space: values.space }); break;
       case 'schoolEvent': state.schoolEvents.push({ id: id('se'), studentId: meta.student || state.settings.activeLearnerId, title: values.title, type: values.type, date: values.date, time: values.time, location: values.location, status: values.status, notes: values.notes }); break;
       case 'attendance': state.attendanceRecords.push({ id: id('at'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, status: values.status, note: values.note }); break;
@@ -1449,6 +1453,14 @@
     }
     const learner = event.target.closest('[data-learner]');
     if (learner) { D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); return; }
+    const learningSubject = event.target.closest('[data-learning-subject]');
+    if (learningSubject) {
+      D.state.settings.learningSubjectTabs ||= {};
+      D.state.settings.learningSubjectTabs[route] = learningSubject.dataset.learningSubject;
+      save('Subject view changed');
+      render();
+      return;
+    }
     const workspaceTarget = event.target.closest('[data-workspace]');
     if (workspaceTarget) { workspace = workspaceTarget.dataset.workspace; go(workspace + '/overview'); return; }
     const create = event.target.closest('[data-create]');

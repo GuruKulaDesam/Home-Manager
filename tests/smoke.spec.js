@@ -132,6 +132,21 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('#content')).toContainText('PDF not added on this device');
 });
 
+test('Learning pages use persistent subject tabs and show CBSE and JEE readiness', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  await expect(page.locator('.subject-tabs')).toContainText('Physics');
+  await page.getByRole('button', { name: 'Physics', exact: true }).click();
+  await expect(page.locator('[data-book-card]')).toHaveCount(2);
+  await expect(page.locator('[data-book-card]')).toContainText(['Physics Part I', 'Physics Part II']);
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+  await page.goto(`${app}#/study/reports`);
+  await expect(page.locator('.exam-track')).toHaveCount(2);
+  await expect(page.locator('.exam-readiness-grid')).toContainText('CBSE Class XII readiness');
+  await expect(page.locator('.exam-readiness-grid')).toContainText('JEE Main readiness');
+});
+
 test('a private PDF can be read, bookmarked and reviewed without upload', async ({ page }) => {
   await page.goto(`${app}#/study/curriculum`);
   await page.locator('[data-learner="p4"]').click();
