@@ -2,9 +2,13 @@
   "name": "home-manager-static",
   "private": true,
   "scripts": {
-    "test": "playwright test tests/smoke.spec.js --reporter=line --workers=1"
+    "test": "playwright test tests/smoke.spec.js --reporter=line --workers=1",
+    "deploy": "firebase deploy --only hosting"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1"
+  },
+  "dependencies": {
+    "firebase-tools": "^15.25.1"
   }
 }

@@ -341,15 +341,16 @@
     if (movedStudyRoute) { go(movedStudyRoute); return; }
     const first = route.split('/')[0];
     if (['home', 'community', 'study'].includes(first)) {
+    if (['home', 'community', 'study'].includes(first)) {
       workspace = first;
       D.state.settings.activeWorkspace = workspace;
       D.save();
     }
     renderNav();
-    const title = V.titles[route] || ['Today', 'Home Manager'];
+    const title = V.titles[route] || ['Today', 'LotusNaga Divine Nest'];
     $('#breadcrumb').textContent = settingsSection() ? 'Settings' : V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
-    document.title = title[0] + ' - Home Manager';
+    document.title = title[0] + ' - LotusNaga Divine Nest';
     $('#content').innerHTML = V.render(route);
     bindView();
     renderNotifications();
