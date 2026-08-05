@@ -19,6 +19,8 @@
       "inputs/**",
       "docs/**",
       "android-companion/**",
+      "scripts/**",
+      "**/*.idsig",
       "*.log",
       "package.json",
       "package-lock.json",
