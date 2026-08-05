@@ -169,6 +169,7 @@ function normalize(value){
   const migrateLegacyBackground=!inputSettings.backgroundDefaultVersion&&(!inputSettings.appBackground||inputSettings.appBackground==='waterfall');
   next.settings={
     ...next.settings,
+    ...clone(inputSettings),
     theme:'light',
     appBackground:migrateLegacyBackground?'sunrise':validBackgrounds.includes(inputSettings.appBackground)?inputSettings.appBackground:'sunrise',
     backgroundDefaultVersion:2,
