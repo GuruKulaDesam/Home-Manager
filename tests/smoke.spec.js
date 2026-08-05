@@ -212,7 +212,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
   for (let index = 0; index < familyEmails.length; index += 1) {
     const row = page.locator(`[data-google-account="google-${index + 1}"]`);
     await row.locator('[data-google-connect]').click();
-    await expect(row).toContainText('Active this session');
+    await expect(row).toContainText('Gmail sync active');
   }
   await expect(page.locator('#googleSyncSettings')).toContainText('4 active this session');
   await expect(page.locator('[data-google-sync]')).toContainText('Sync all accounts');
@@ -279,4 +279,99 @@ test('Android SMS backup is analysed locally with OTP exclusion and review apply
   expect(imported.sms).toBe(4);
   expect(imported.bill).toMatchObject({ domain: 'bills', amount: 1850, status: 'pending' });
   expect(imported.pending).toBe(2);
+});
+
+test('Google Workspace tools live in the family modules that own them', async ({ page }) => {
+  await page.goto(`${app}#/settings/app`);
+  await page.evaluate(() => {
+    HM.data.state.settings.googleSync.clientId = '123456789-example.apps.googleusercontent.com';
+    HM.data.state.settings.googleSync.accounts = [{ slotId: 'google-1', personId: 'p1', email: 'father@example.com', consent: true, status: 'pending', lastSync: '' }];
+    HM.data.save();
+  });
+
+  const routes = [
+    ['home/tasks', 'tasks', 'Google Tasks'],
+    ['home/calendar', 'calendar', 'Google Calendar & Meet'],
+    ['home/life/documents', 'drive', 'Family documents in Drive'],
+    ['home/directory', 'contacts', 'Google Contacts'],
+    ['home/money/reports', 'sheets', 'Google Sheets report'],
+    ['home/wisdom', 'docs', 'Google Docs family book'],
+    ['study/assignments', 'classroom', 'Google Classroom'],
+    ['study/assignments', 'slides', 'Google Slides project deck']
+  ];
+  for (const [route, service, heading] of routes) {
+    await page.goto(`${app}#/${route}`);
+    await expect(page.locator(`[data-google-service="${service}"]`)).toContainText(heading);
+  }
+
+  await page.goto(`${app}#/global/overview`);
+  await page.locator('[data-google-note-text]').fill('Confirm the school transport timing');
+  await page.locator('[data-google-action="note-add"]').click();
+  await expect(page.locator('[data-google-service="notes"]')).toContainText('Confirm the school transport timing');
+  expect(await page.evaluate(() => HM.data.state.quickNotes.length)).toBe(1);
+
+  await page.goto(`${app}#/settings/app`);
+  await expect(page.locator('#googleSyncSettings')).toContainText('Family account mapping');
+  await expect(page.locator('#googleSyncSettings')).not.toContainText('10-in-1');
+});
+
+test('Calendar creates a real Google event with an optional Meet conference', async ({ page }) => {
+  let createRequest;
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: 'father@example.com' }) }));
+  await page.route('https://www.googleapis.com/calendar/v3/calendars/primary/events**', async route => {
+    if (route.request().method() === 'POST') {
+      createRequest = { url: route.request().url(), body: route.request().postDataJSON() };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'event-1', summary: createRequest.body.summary, start: createRequest.body.start, hangoutLink: 'https://meet.google.com/abc-defg-hij' }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) });
+  });
+  await page.goto(`${app}#/home/calendar`);
+  await page.evaluate(() => {
+    HM.data.state.settings.googleSync.clientId = '123456789-example.apps.googleusercontent.com';
+    HM.data.state.settings.googleSync.accounts = [{ slotId: 'google-1', personId: 'p1', email: 'father@example.com', consent: true, status: 'pending', lastSync: '' }];
+    HM.data.save();
+  });
+  await page.reload();
+  await page.evaluate(() => { window.google = { accounts: { oauth2: { initTokenClient: config => ({ requestAccessToken: () => config.callback({ access_token: 'calendar-token', expires_in: 3600 }) }), revoke: () => {} } } }; });
+  await page.locator('[data-google-event-title]').fill('Family study review');
+  await page.locator('[data-google-event-start]').fill('2026-08-10T18:30');
+  await page.locator('[data-google-action="calendar-meet"]').click();
+  await expect(page.locator('[data-google-service="calendar"]')).toContainText('Meet ready');
+  expect(createRequest.url).toContain('conferenceDataVersion=1');
+  expect(createRequest.body.summary).toBe('Family study review');
+  expect(createRequest.body.conferenceData.createRequest.conferenceSolutionKey.type).toBe('hangoutsMeet');
+});
+
+test('Contacts and Tasks review Google data before importing local records', async ({ page }) => {
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: 'mother@example.com' }) }));
+  await page.route('https://people.googleapis.com/v1/people/me/connections**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connections: [{ resourceName: 'people/1', names: [{ displayName: 'School Office' }], emailAddresses: [{ value: 'office@school.test' }], phoneNumbers: [{ value: '+91 422 123 4567' }], organizations: [{ name: 'Peepal Prodigy School' }] }] }) }));
+  await page.route('https://tasks.googleapis.com/tasks/v1/users/@me/lists**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [{ id: 'list-1', title: 'Family' }] }) }));
+  await page.route('https://tasks.googleapis.com/tasks/v1/lists/list-1/tasks**', route => {
+    if (route.request().method() === 'PATCH') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'gt-1', title: 'Renew library card', status: 'completed' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [{ id: 'gt-1', title: 'Renew library card', status: 'needsAction', due: '2026-08-15T00:00:00.000Z' }] }) });
+  });
+  await page.goto(`${app}#/settings/app`);
+  await page.evaluate(() => {
+    HM.data.state.settings.googleSync.clientId = '123456789-example.apps.googleusercontent.com';
+    HM.data.state.settings.googleSync.accounts = [{ slotId: 'google-2', personId: 'p2', email: 'mother@example.com', consent: true, status: 'pending', lastSync: '' }];
+    HM.data.save();
+  });
+  await page.reload();
+  await page.evaluate(() => { window.google = { accounts: { oauth2: { initTokenClient: config => ({ requestAccessToken: () => config.callback({ access_token: 'workspace-token', expires_in: 3600 }) }), revoke: () => {} } } }; });
+
+  await page.goto(`${app}#/home/directory`);
+  await page.locator('[data-google-action="contacts-list"]').click();
+  await expect(page.locator('[data-google-service="contacts"]')).toContainText('School Office');
+  await page.locator('[data-google-action="contact-import"]').click();
+  await expect(page.locator('#content')).toContainText('Peepal Prodigy School');
+  expect(await page.evaluate(() => HM.data.state.contacts.some(contact => contact.email === 'office@school.test'))).toBe(true);
+
+  await page.goto(`${app}#/home/tasks`);
+  await page.locator('[data-google-action="tasks-list"]').click();
+  await expect(page.locator('[data-google-service="tasks"]')).toContainText('Renew library card');
+  await page.locator('[data-google-action="task-import"]').click();
+  await expect(page.locator('#content')).toContainText('Renew library card');
+  expect(await page.evaluate(() => HM.data.state.tasks.some(task => task.googleTaskId === 'gt-1' && task.assignee === 'Mother'))).toBe(true);
 });

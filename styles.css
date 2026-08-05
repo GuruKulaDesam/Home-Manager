@@ -1184,6 +1184,35 @@ body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-image: url("assets/
   .learning-lenses > span:nth-child(even) { background: var(--band-even); }
 }
 
+.google-workflow { margin-top: 14px; border-top: 3px solid #0f9d58; }
+.google-workflow.google-calendar, .google-workflow.google-tasks { border-top-color: #4285f4; }
+.google-workflow.google-classroom, .google-workflow.google-sheets { border-top-color: #16a765; }
+.google-workflow.google-docs { border-top-color: #3367d6; }
+.google-workflow.google-slides, .google-workflow.google-notes { border-top-color: #f9ab00; }
+.google-workflow .section-head { align-items: end; }
+.google-account-picker { display: grid; gap: 3px; min-width: min(320px, 100%); color: var(--muted); font-size: 11px; font-weight: 700; }
+.google-account-picker select { width: 100%; min-height: 38px; }
+.google-workflow-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.google-workflow-controls > input { min-width: 210px; flex: 1; }
+.google-workflow-controls > select { min-width: 210px; }
+.google-workflow-controls .file-button { display: inline-flex; align-items: center; gap: 6px; }
+.google-workflow-results { margin-top: 12px; border-top: 1px solid var(--line); }
+.google-workflow-results .row:nth-child(odd) { background: var(--band-odd); }
+.google-workflow-results .row:nth-child(even) { background: var(--band-even); }
+.google-workflow-results .row { padding-inline: 9px; }
+.google-workflow-results .row > button { flex: none; }
+.google-workflow-results input[type="checkbox"] { width: 18px; height: 18px; }
+.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--button-bg); color: var(--text); font-size: 12px; font-weight: 700; text-decoration: none; }
+
+@media (max-width: 720px) {
+  .google-workflow .section-head { align-items: stretch; flex-direction: column; }
+  .google-workflow .section-head > div, .google-account-picker { width: 100%; min-width: 0; }
+  .google-workflow-controls, .google-workflow-controls > button, .google-workflow-controls > label { width: 100%; }
+  .google-workflow-controls > button, .google-workflow-controls > label { justify-content: center; }
+  .google-workflow-results .row { align-items: flex-start; flex-wrap: wrap; }
+  .google-workflow-results .row .grow { min-width: calc(100% - 48px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }

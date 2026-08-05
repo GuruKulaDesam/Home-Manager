@@ -12,6 +12,8 @@
   let activeBookReader = null;
   let activeBookUrl = '';
   const googleSessions = new Map();
+  const googleWorkspaceSessions = new Map();
+  HM.workspace = { cache: {}, selected: {} };
   (D.state.settings.googleSync?.accounts || []).forEach(account => { if (account.status === 'connected') account.status = 'pending'; });
   if (!['home', 'community', 'study'].includes(workspace)) workspace = D.state.settings.activeWorkspace || 'home';
 
@@ -576,6 +578,16 @@
       const item = D.state.academicDeliverables.find(record => record.id === select.dataset.deliverableStatus);
       if (item) { item.status = select.value; save('Assignment status updated'); render(); }
     });
+    document.querySelectorAll('[data-google-workspace-account]').forEach(select => select.onchange = () => {
+      const service = select.closest('[data-google-service]')?.dataset.googleService;
+      if (service) HM.workspace.selected[service] = select.value;
+    });
+    document.querySelectorAll('[data-google-action]').forEach(button => button.addEventListener(button.matches('input[type="checkbox"]') ? 'change' : 'click', () => runGoogleWorkspaceAction(button)));
+    document.querySelectorAll('[data-google-drive-file]').forEach(input => input.onchange = () => { if (input.files?.[0]) runGoogleWorkspaceAction(input, 'drive-upload'); });
+    document.querySelectorAll('[data-note-archive]').forEach(button => button.onclick = () => {
+      const note = (D.state.quickNotes || []).find(item => item.id === button.dataset.noteArchive);
+      if (note) { note.status = 'archived'; save('Quick note archived'); render(); }
+    });
     if ($('#exportData')) $('#exportData').onclick = exportData;
     if ($('#importData')) $('#importData').onchange = importData;
     if ($('#resetData')) $('#resetData').onclick = () => { if (confirm('Reset all local Home Manager data?')) { D.reset(); applyTheme(); render(); toast('Demonstration data restored'); } };
@@ -1087,6 +1099,218 @@
       render();
     } catch (error) { toast(`Google sync failed: ${error.message}`); }
     finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
+  }
+
+  const workspaceScopes = {
+    drive: ['https://www.googleapis.com/auth/drive.file'],
+    contacts: ['https://www.googleapis.com/auth/contacts.readonly'],
+    calendar: ['https://www.googleapis.com/auth/calendar'],
+    tasks: ['https://www.googleapis.com/auth/tasks'],
+    classroom: ['https://www.googleapis.com/auth/classroom.courses.readonly', 'https://www.googleapis.com/auth/classroom.coursework.me.readonly'],
+    sheets: ['https://www.googleapis.com/auth/drive.file'],
+    docs: ['https://www.googleapis.com/auth/drive.file'],
+    slides: ['https://www.googleapis.com/auth/drive.file']
+  };
+
+  function workspaceAccount(target) {
+    const panel = target.closest('[data-google-service]');
+    const slotId = panel?.querySelector('[data-google-workspace-account]')?.value;
+    const account = (D.state.settings.googleSync?.accounts || []).find(item => item.slotId === slotId && item.email && item.consent);
+    if (!account) throw new Error('Choose a mapped, consenting Google account in Settings first.');
+    if (panel) HM.workspace.selected[panel.dataset.googleService] = slotId;
+    return account;
+  }
+
+  async function authorizeGoogleWorkspace(account, service) {
+    const scopes = workspaceScopes[service];
+    if (!scopes) throw new Error(`Google ${service} is not configured.`);
+    const cacheKey = `${account.slotId}:${service}`;
+    const cached = googleWorkspaceSessions.get(cacheKey);
+    if (cached?.expiresAt > Date.now() + 30000) return cached.accessToken;
+    const clientId = D.state.settings.googleSync?.clientId || '';
+    if (!/^[0-9]+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i.test(clientId)) throw new Error('Add a valid Google OAuth web client ID in Settings > App & data.');
+    const oauth2 = await waitForGoogleIdentity();
+    const tokenResponse = await new Promise((resolve, reject) => {
+      const client = oauth2.initTokenClient({
+        client_id: clientId,
+        scope: ['openid', 'email', ...scopes].join(' '),
+        include_granted_scopes: true,
+        login_hint: account.email,
+        prompt: 'select_account',
+        callback: response => response?.error ? reject(new Error(response.error_description || response.error)) : resolve(response),
+        error_callback: error => reject(new Error(error.type === 'popup_closed' ? 'Google account window was closed.' : 'Google authorization could not open.'))
+      });
+      client.requestAccessToken();
+    });
+    const user = await googleApi('https://openidconnect.googleapis.com/v1/userinfo', tokenResponse.access_token);
+    if (String(user.email || '').toLowerCase() !== account.email.toLowerCase()) {
+      oauth2.revoke(tokenResponse.access_token);
+      throw new Error(`Google authorized ${user.email || 'another account'}, not ${account.email}.`);
+    }
+    googleWorkspaceSessions.set(cacheKey, { accessToken: tokenResponse.access_token, expiresAt: Date.now() + (+tokenResponse.expires_in || 3600) * 1000 });
+    return tokenResponse.access_token;
+  }
+
+  function isoDueDate(value) {
+    if (!value?.year) return '';
+    return `${value.year}-${String(value.month || 1).padStart(2, '0')}-${String(value.day || 1).padStart(2, '0')}`;
+  }
+
+  async function listGoogleTasks(token) {
+    const lists = await googleApi('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=10', token);
+    const taskLists = (lists.items || []).slice(0, 7);
+    const batches = await mapWithConcurrency(taskLists, 3, async list => {
+      const payload = await googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(list.id)}/tasks?showCompleted=true&showHidden=false&maxResults=25`, token);
+      return (payload.items || []).map(item => ({ ...item, taskListId: list.id, listTitle: list.title }));
+    });
+    return { lists: taskLists, tasks: batches.flat().slice(0, 100) };
+  }
+
+  async function createGoogleTask(token, title) {
+    const { items = [] } = await googleApi('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=10', token);
+    if (!items.length) throw new Error('This Google account has no Tasks list. Create one in Google Tasks first.');
+    return googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(items[0].id)}/tasks`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
+  }
+
+  async function runGoogleWorkspaceAction(target, forcedAction = '') {
+    const action = forcedAction || target.dataset.googleAction;
+    const panel = target.closest('[data-google-service]');
+    const button = target.matches('button') ? target : null;
+    try {
+      if (button) { button.disabled = true; button.classList.add('is-syncing'); }
+      if (action === 'note-add') {
+        const text = panel.querySelector('[data-google-note-text]').value.trim();
+        if (!text) throw new Error('Write the note first.');
+        D.state.quickNotes ||= [];
+        D.state.quickNotes.push({ id: D.uid('qn'), text, ownerId: panel.querySelector('[data-google-note-owner]').value, createdAt: new Date().toISOString(), status: 'active' });
+        save('Quick note added'); render(); return;
+      }
+      const account = workspaceAccount(target);
+      let service = panel?.dataset.googleService || '';
+      if (action === 'note-task') service = 'tasks';
+      if (action === 'note-doc') service = 'docs';
+      const token = await authorizeGoogleWorkspace(account, service);
+
+      if (action === 'drive-list') {
+        const params = new URLSearchParams({ q: 'trashed = false', pageSize: '50', orderBy: 'modifiedTime desc', fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink)' });
+        HM.workspace.cache.drive = (await googleApi(`https://www.googleapis.com/drive/v3/files?${params}`, token)).files || [];
+        toast(`${HM.workspace.cache.drive.length} accessible Drive files loaded`);
+      } else if (action === 'drive-upload') {
+        const file = target.files?.[0];
+        if (!file) throw new Error('Choose a document to upload.');
+        const uploaded = await googleApi('https://www.googleapis.com/upload/drive/v3/files?uploadType=media&fields=id', token, { method: 'POST', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+        await googleApi(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(uploaded.id)}?fields=id,name,mimeType,modifiedTime,webViewLink`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: file.name }) });
+        toast(`${file.name} uploaded to Google Drive`);
+        const params = new URLSearchParams({ q: 'trashed = false', pageSize: '50', orderBy: 'modifiedTime desc', fields: 'files(id,name,mimeType,modifiedTime,size,webViewLink)' });
+        HM.workspace.cache.drive = (await googleApi(`https://www.googleapis.com/drive/v3/files?${params}`, token)).files || [];
+      } else if (action === 'drive-delete') {
+        if (!confirm('Delete this app-accessible file from Google Drive?')) return;
+        await googleApi(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(target.dataset.fileId)}`, token, { method: 'DELETE' });
+        HM.workspace.cache.drive = (HM.workspace.cache.drive || []).filter(file => file.id !== target.dataset.fileId);
+        toast('Drive file deleted');
+      } else if (action === 'contacts-list') {
+        const params = new URLSearchParams({ personFields: 'names,emailAddresses,phoneNumbers,organizations', pageSize: '100', sortOrder: 'FIRST_NAME_ASCENDING' });
+        const payload = await googleApi(`https://people.googleapis.com/v1/people/me/connections?${params}`, token);
+        HM.workspace.cache.contacts = (payload.connections || []).map(person => ({ id: person.resourceName, name: person.names?.[0]?.displayName || 'Unnamed contact', email: person.emailAddresses?.[0]?.value || '', phone: person.phoneNumbers?.[0]?.value || '', organization: person.organizations?.[0]?.name || '' }));
+        toast(`${HM.workspace.cache.contacts.length} contacts loaded for review`);
+      } else if (action === 'contact-import') {
+        const item = (HM.workspace.cache.contacts || []).find(contact => contact.id === target.dataset.contactId);
+        if (!item) throw new Error('Reload Google contacts and retry.');
+        if (!D.state.contacts.some(contact => contact.name === item.name && contact.phone === item.phone && contact.email === item.email)) D.state.contacts.push({ id: D.uid('c'), scope: 'home', name: item.name, category: item.organization || 'Google contact', phone: item.phone, email: item.email, hours: item.email || 'Imported from Google Contacts' });
+        save(`${item.name} imported to Home Directory`);
+      } else if (action === 'calendar-list') {
+        const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '30', timeMin: new Date().toISOString() });
+        HM.workspace.cache.calendar = (await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, token)).items || [];
+        toast(`${HM.workspace.cache.calendar.length} upcoming events loaded`);
+      } else if (action === 'calendar-create' || action === 'calendar-meet') {
+        const title = panel.querySelector('[data-google-event-title]').value.trim();
+        const startValue = panel.querySelector('[data-google-event-start]').value;
+        if (!title || !startValue) throw new Error('Enter an event title and start time.');
+        const start = new Date(startValue); const end = new Date(start.getTime() + 3600000);
+        const event = { summary: title, start: { dateTime: start.toISOString() }, end: { dateTime: end.toISOString() } };
+        if (action === 'calendar-meet') event.conferenceData = { createRequest: { requestId: `hm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+        const suffix = action === 'calendar-meet' ? '?conferenceDataVersion=1' : '';
+        const created = await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events${suffix}`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(event) });
+        HM.workspace.cache.calendar = [created, ...(HM.workspace.cache.calendar || [])];
+        toast(action === 'calendar-meet' ? 'Calendar event and Meet link created' : 'Google Calendar event created');
+      } else if (action === 'calendar-import') {
+        const item = (HM.workspace.cache.calendar || []).find(event => event.id === target.dataset.eventId);
+        if (!item) throw new Error('Reload Google Calendar and retry.');
+        if (!D.state.events.some(event => event.googleEventId === item.id && event.googleAccount === account.email)) D.state.events.push({ id: D.uid('e'), context: 'home', title: item.summary || 'Google Calendar event', category: 'Google Calendar', startAt: item.start?.dateTime || item.start?.date || '', venue: item.location || item.hangoutLink || '', notes: item.description || '', googleEventId: item.id, googleAccount: account.email });
+        save('Event imported to Family Calendar');
+      } else if (action === 'tasks-list') {
+        const result = await listGoogleTasks(token); HM.workspace.cache.taskLists = result.lists; HM.workspace.cache.tasks = result.tasks;
+        toast(`${result.tasks.length} Google tasks loaded`);
+      } else if (action === 'task-create') {
+        const title = panel.querySelector('[data-google-task-title]').value.trim();
+        if (!title) throw new Error('Enter a task title.');
+        await createGoogleTask(token, title); const result = await listGoogleTasks(token); HM.workspace.cache.taskLists = result.lists; HM.workspace.cache.tasks = result.tasks;
+        toast('Task created in Google Tasks');
+      } else if (action === 'task-toggle') {
+        const item = (HM.workspace.cache.tasks || []).find(task => task.id === target.dataset.taskId && task.taskListId === target.dataset.taskListId);
+        if (!item) throw new Error('Reload Google Tasks and retry.');
+        const updated = await googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(item.taskListId)}/tasks/${encodeURIComponent(item.id)}`, token, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: target.checked ? 'completed' : 'needsAction' }) });
+        Object.assign(item, updated); toast(target.checked ? 'Google task completed' : 'Google task reopened');
+      } else if (action === 'task-import') {
+        const item = (HM.workspace.cache.tasks || []).find(task => task.id === target.dataset.taskId);
+        if (!item) throw new Error('Reload Google Tasks and retry.');
+        if (!D.state.tasks.some(task => task.googleTaskId === item.id && task.googleAccount === account.email)) D.state.tasks.push({ id: D.uid('t'), context: 'home', type: 'task', title: item.title, category: item.listTitle || 'Google Tasks', assignee: D.state.people.find(person => person.id === account.personId)?.name || 'Family', dueAt: String(item.due || '').slice(0, 10), frequency: 'Once', priority: 'medium', status: item.status === 'completed' ? 'done' : 'todo', googleTaskId: item.id, googleAccount: account.email });
+        save('Google task imported to Household Tasks');
+      } else if (action === 'classroom-list') {
+        const courses = (await googleApi('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE&pageSize=30', token)).courses || [];
+        const batches = await mapWithConcurrency(courses.slice(0, 20), 3, async course => {
+          const payload = await googleApi(`https://classroom.googleapis.com/v1/courses/${encodeURIComponent(course.id)}/courseWork?pageSize=50&orderBy=dueDate%20asc`, token);
+          return (payload.courseWork || []).map(item => ({ ...item, courseName: course.name, courseId: course.id, dueDate: isoDueDate(item.dueDate), studentId: target.dataset.studentId }));
+        });
+        HM.workspace.cache.classroom = batches.flat().slice(0, 100); toast(`${HM.workspace.cache.classroom.length} Classroom items loaded`);
+      } else if (action === 'classroom-import') {
+        const item = (HM.workspace.cache.classroom || []).find(work => work.id === target.dataset.workId);
+        if (!item) throw new Error('Reload Classroom and retry.');
+        if (!D.state.academicDeliverables.some(work => work.googleCourseWorkId === item.id && work.googleCourseId === item.courseId)) D.state.academicDeliverables.push({ id: D.uid('ad'), studentId: item.studentId, title: item.title, subject: item.courseName, type: item.workType === 'ASSIGNMENT' ? 'Homework' : 'Coursework', dueDate: item.dueDate, teacher: item.courseName, status: 'todo', weight: 0, notes: item.description || 'Imported from Google Classroom', googleCourseWorkId: item.id, googleCourseId: item.courseId });
+        save('Classroom work imported to Assignments');
+      } else if (action === 'sheets-export') {
+        const name = `Home Manager money report ${new Date().toISOString().slice(0, 10)}`;
+        const spreadsheet = await googleApi('https://sheets.googleapis.com/v4/spreadsheets', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ properties: { title: name }, sheets: [{ properties: { title: 'Family money' } }] }) });
+        const rows = [['Type', 'Date / period', 'Area', 'Description', 'Amount'], ...D.state.expenses.map(item => ['Expense', item.date, item.domain || item.category, item.title, +item.amount || 0]), ...D.state.budgets.map(item => ['Budget', item.period || '', item.domain, item.category || item.bucket, +item.amount || 0])];
+        await googleApi(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheet.spreadsheetId)}/values/Family%20money!A1:E${rows.length}?valueInputOption=RAW`, token, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: rows }) });
+        HM.workspace.cache.sheets = { name, url: `https://docs.google.com/spreadsheets/d/${spreadsheet.spreadsheetId}/edit` }; toast('Google Sheets money report created');
+      } else if (action === 'docs-export' || action === 'note-doc') {
+        const note = action === 'note-doc' ? (D.state.quickNotes || []).find(item => item.id === target.dataset.noteId) : null;
+        const name = note ? `Home Manager note ${new Date().toISOString().slice(0, 10)}` : `Home Manager family book ${new Date().toISOString().slice(0, 10)}`;
+        const content = note ? note.text : D.state.wisdomEntries.map(item => `${item.title}\n${item.category} - ${item.author}\n${item.body}`).join('\n\n');
+        const doc = await googleApi('https://docs.googleapis.com/v1/documents', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: name }) });
+        await googleApi(`https://docs.googleapis.com/v1/documents/${encodeURIComponent(doc.documentId)}:batchUpdate`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests: [{ insertText: { location: { index: 1 }, text: `${name}\n\n${content || 'No content recorded.'}` } }] }) });
+        HM.workspace.cache.docs = { name, url: `https://docs.google.com/document/d/${doc.documentId}/edit` }; toast('Google Doc created');
+      } else if (action === 'note-task') {
+        const note = (D.state.quickNotes || []).find(item => item.id === target.dataset.noteId);
+        if (!note) throw new Error('Quick note is no longer available.');
+        await createGoogleTask(token, note.text); toast('Quick note sent to Google Tasks');
+      } else if (action === 'slides-create') {
+        const assignment = D.state.academicDeliverables.find(item => item.id === panel.querySelector('[data-google-slide-work]').value);
+        if (!assignment) throw new Error('Choose an assignment first.');
+        const presentation = await googleApi('https://slides.googleapis.com/v1/presentations', token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: assignment.title }) });
+        const current = await googleApi(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(presentation.presentationId)}`, token);
+        const pageId = current.slides?.[0]?.objectId;
+        if (pageId) {
+          const titleId = `hmTitle${Date.now()}`; const bodyId = `hmBody${Date.now()}`;
+          const requests = [
+            { createShape: { objectId: titleId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: pageId, size: { width: { magnitude: 8000000, unit: 'EMU' }, height: { magnitude: 1000000, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: 600000, translateY: 500000, unit: 'EMU' } } } },
+            { insertText: { objectId: titleId, insertionIndex: 0, text: assignment.title } },
+            { createShape: { objectId: bodyId, shapeType: 'TEXT_BOX', elementProperties: { pageObjectId: pageId, size: { width: { magnitude: 8000000, unit: 'EMU' }, height: { magnitude: 3500000, unit: 'EMU' } }, transform: { scaleX: 1, scaleY: 1, translateX: 600000, translateY: 1800000, unit: 'EMU' } } } },
+            { insertText: { objectId: bodyId, insertionIndex: 0, text: `Subject: ${assignment.subject}\nDue: ${assignment.dueDate || 'Not set'}\n\nPlan\n1. Question and objective\n2. Evidence and method\n3. Findings\n4. Sources and reflection\n\n${assignment.notes || ''}` } }
+          ];
+          await googleApi(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(presentation.presentationId)}:batchUpdate`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ requests }) });
+        }
+        HM.workspace.cache.slides = { name: assignment.title, url: `https://docs.google.com/presentation/d/${presentation.presentationId}/edit` }; toast('Google Slides project deck created');
+      }
+      render();
+    } catch (error) {
+      toast(`Google action failed: ${error.message}`);
+      console.error(error);
+    } finally {
+      if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); }
+      if (target.matches('input[type="file"]')) target.value = '';
+    }
   }
 
   function toggleTheme() {
