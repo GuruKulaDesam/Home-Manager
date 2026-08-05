@@ -1,5 +1,13 @@
 # Home Manager Unified
 
+## Permanent family database
+
+The app can synchronize its complete structured state through a shared Firebase Firestore vault. Create a vault under **Settings → App & data**, then share the generated link only with trusted family members. The same link works from Firebase Hosting, GitHub Pages, other browsers, and other devices. Changes are cached locally for offline use and synchronize when connectivity returns; if two devices edit the same data simultaneously, the most recent document save wins.
+
+Vault access uses Firebase Anonymous Authentication plus an unguessable 256-bit key in the shared URL. Firestore rules prevent listing vaults and reject access outside the exact keyed state document. Structured settings and family records are synchronized. Passwords, passcodes, secrets, OTPs, credential fields, OAuth tokens, raw SMS backup files, and textbook PDF files are not uploaded.
+
+Firebase project setup is declared in `firebase.json` and `firestore.rules`. Anonymous Authentication must remain enabled for the `home-manager-2026` project.
+
 One dependency-free application combining the meaningful capabilities from all repositories under `GuruKulaDesam` and `shishyan`.
 
 ## Product structure

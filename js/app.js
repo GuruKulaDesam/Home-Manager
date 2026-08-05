@@ -590,7 +590,21 @@
     });
     if ($('#exportData')) $('#exportData').onclick = exportData;
     if ($('#importData')) $('#importData').onchange = importData;
-    if ($('#resetData')) $('#resetData').onclick = () => { if (confirm('Reset all local Home Manager data?')) { D.reset(); applyTheme(); render(); toast('Demonstration data restored'); } };
+    if ($('#resetData')) $('#resetData').onclick = () => { if (confirm(HM.cloud?.getStatus?.().connected ? 'Reset the shared family database to demonstration data for everyone?' : 'Reset all local Home Manager data?')) { D.reset(); applyTheme(); render(); toast('Demonstration data restored'); } };
+    if ($('#familyVaultForm')) $('#familyVaultForm').onsubmit = event => {
+      event.preventDefault();
+      try { HM.cloud.connectVault(new FormData(event.currentTarget).get('vaultId')); }
+      catch (error) { toast(error.message); }
+    };
+    if ($('#createFamilyVault')) $('#createFamilyVault').onclick = () => HM.cloud.createVault();
+    if ($('#copyFamilyVault')) $('#copyFamilyVault').onclick = async () => {
+      try { await navigator.clipboard.writeText($('#familyVaultUrl').value); toast('Shared family link copied'); }
+      catch { $('#familyVaultUrl').select(); toast('Copy the selected family link'); }
+    };
+    if ($('#saveFamilyVault')) $('#saveFamilyVault').onclick = async () => { await HM.cloud.writeState(); toast('Family database saved'); };
+    if ($('#disconnectFamilyVault')) $('#disconnectFamilyVault').onclick = () => {
+      if (confirm('Stop using the shared family database on this browser? Local data will remain.')) HM.cloud.disconnectVault();
+    };
     if ($('#householdSettings')) $('#householdSettings').onsubmit = event => {
       event.preventDefault();
       Object.assign(D.state.settings, Object.fromEntries(new FormData(event.currentTarget)));
@@ -1576,6 +1590,13 @@
   $('#collapse').onclick = () => { D.state.settings.sidebarCollapsed = !D.state.settings.sidebarCollapsed; D.save(); applyTheme(); };
   $('#bottomNav').onclick = event => { if (event.target.closest('#bottomMore')) { document.body.classList.add('menu-open'); $('#menu').setAttribute('aria-expanded', 'true'); } };
   window.addEventListener('hashchange', render);
+  window.addEventListener('hm-cloud-status', () => { if (route === 'settings/app') render(); });
+  window.addEventListener('hm-cloud-state', () => {
+    activeGroup = D.state.settings.activeGroup || 'today';
+    applyTheme();
+    render();
+    toast('Family database updated');
+  });
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }

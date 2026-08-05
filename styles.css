@@ -1203,6 +1203,18 @@ body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-image: url("assets/
 .google-workflow-results .row > button { flex: none; }
 .google-workflow-results input[type="checkbox"] { width: 18px; height: 18px; }
 .button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--button-bg); color: var(--text); font-size: 12px; font-weight: 700; text-decoration: none; }
+.family-vault { border-top: 4px solid #2563eb; }
+.family-vault.vault-connected { border-top-color: #16a765; }
+.family-vault.vault-error { border-top-color: #dc2626; }
+.vault-status { margin: 12px 0; padding: 11px 12px; border-radius: 8px; background: var(--band-odd); }
+.vault-status span { display: flex; align-items: center; gap: 9px; }
+.vault-status svg { width: 20px; color: #2563eb; }
+.vault-share, .vault-connect { display: grid; gap: 10px; }
+.vault-share label, .vault-connect label { display: grid; gap: 5px; color: var(--muted); font-size: 11px; font-weight: 800; }
+.vault-share input, .vault-connect input { width: 100%; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.vault-actions, .vault-connect { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; }
+.vault-connect label { min-width: min(440px, 100%); flex: 1; }
+.vault-warning { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
 
 @media (max-width: 720px) {
   .google-workflow .section-head { align-items: stretch; flex-direction: column; }
@@ -1211,6 +1223,8 @@ body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-image: url("assets/
   .google-workflow-controls > button, .google-workflow-controls > label { justify-content: center; }
   .google-workflow-results .row { align-items: flex-start; flex-wrap: wrap; }
   .google-workflow-results .row .grow { min-width: calc(100% - 48px); }
+  .vault-actions, .vault-actions button, .vault-connect, .vault-connect button { width: 100%; }
+  .vault-actions button, .vault-connect button { justify-content: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {

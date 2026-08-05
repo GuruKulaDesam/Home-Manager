@@ -1,10 +1,30 @@
 {
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-south1",
+    "rules": "firestore.rules"
+  },
   "hosting": {
     "public": ".",
     "ignore": [
       "firebase.json",
+      ".firebaserc",
+      ".git/**",
+      ".firebase/**",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "private-data/**",
+      "test-results/**",
+      "tests/**",
+      "inputs/**",
+      "docs/**",
+      "*.log",
+      "package.json",
+      "package-lock.json",
+      "firestore.rules",
+      "README.md",
+      "CONSOLIDATION.md",
+      "CNAME"
     ]
   }
 }
