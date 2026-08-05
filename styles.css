@@ -674,6 +674,10 @@ textarea { min-height: 96px; resize: vertical; }
 .subject-tabs { display: flex; gap: 5px; margin: -3px 0 13px; padding: 5px 2px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
 .subject-tabs button { min-height: 35px; flex: 0 0 auto; padding: 7px 13px; color: var(--ink-soft); border: 1px solid var(--line); border-radius: 999px; background: var(--glass-soft); font-size: 11px; font-weight: 800; }
 .subject-tabs button.active { color: #fff; border-color: var(--tone-2); background: var(--tone-2); box-shadow: var(--shadow-sm); }
+.learning-section-tabs { display: grid; grid-template-columns: repeat(7, minmax(92px, 1fr)); gap: 5px; margin: -7px 0 14px; overflow-x: auto; }
+.learning-section-tabs button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; color: var(--ink-soft); border: 1px solid var(--line); background: var(--glass-soft); font-size: 10px; font-weight: 800; }
+.learning-section-tabs button svg { width: 15px; height: 15px; }
+.learning-section-tabs button.active { color: var(--tone-2); border-color: var(--tone-2); background: var(--tone-2-soft); }
 .exam-readiness-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 .exam-track h2 { display: flex; align-items: center; gap: 7px; }
 .exam-track h2 svg { width: 18px; height: 18px; color: var(--tone-2); }
@@ -1229,6 +1233,7 @@ body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-image: url("assets/
 .vault-warning { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
 
 @media (max-width: 720px) {
+  .learning-section-tabs { grid-template-columns: repeat(7, minmax(105px, 1fr)); }
   .exam-readiness-grid { grid-template-columns: 1fr; }
   .exam-readiness-head, .exam-readiness-row { grid-template-columns: minmax(90px, 1.2fr) repeat(5, minmax(45px, .6fr)); min-width: 430px; }
   .exam-track { overflow-x: auto; }

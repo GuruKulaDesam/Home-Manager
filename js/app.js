@@ -11,6 +11,7 @@
   let activeTimerMinutes = 25;
   let activeBookReader = null;
   let activeBookUrl = '';
+  let activeBookObjectUrl = false;
   const googleSessions = new Map();
   const googleWorkspaceSessions = new Map();
   HM.workspace = { cache: {}, selected: {} };
@@ -121,6 +122,16 @@
       const open = card.querySelector('[data-book-open]');
       const importLabel = card.querySelector('[data-book-import-label]');
       try {
+        const book = V.textbookCatalog.find(item => item.id === card.dataset.bookCard);
+        if (book?.pdfFiles?.length) {
+          readyCount += 1;
+          card.classList.add('book-ready');
+          open.disabled = false;
+          state.textContent = `Bundled offline - ${book.pdfFiles.length} sections`;
+          importLabel.textContent = 'Bundled';
+          card.querySelector('[data-book-import]').disabled = true;
+          return;
+        }
         const file = await getBookFile(card.dataset.bookCard);
         if (file) readyCount += 1;
         card.classList.toggle('book-ready', Boolean(file));
@@ -166,19 +177,26 @@
     const book = V.textbookCatalog.find(item => item.id === bookId);
     if (!book) return;
     try {
-      const stored = await getBookFile(bookId);
-      if (!stored?.blob) { chooseBookFile(bookId, studentId); return; }
-      if (activeBookUrl) URL.revokeObjectURL(activeBookUrl);
-      activeBookUrl = URL.createObjectURL(stored.blob);
+      const bundled = book.pdfFiles?.length ? book.pdfFiles : null;
+      const stored = bundled ? null : await getBookFile(bookId);
+      if (!bundled && !stored?.blob) { chooseBookFile(bookId, studentId); return; }
+      if (activeBookObjectUrl && activeBookUrl) URL.revokeObjectURL(activeBookUrl);
+      activeBookObjectUrl = !bundled;
+      activeBookUrl = bundled ? bundled[0].url : URL.createObjectURL(stored.blob);
       activeBookReader = { book, studentId };
       const profile = D.state.academicProfiles.find(item => item.personId === studentId);
       const progress = readingProgress(bookId, studentId);
+      if (bundled && bundled.some(part => part.url === progress.currentPart)) activeBookUrl = progress.currentPart;
       if (progress.status === 'not-started') progress.status = 'reading';
       progress.lastOpened = new Date().toISOString();
       D.save();
       $('#bookReaderContext').textContent = `${profile?.name || 'Student'} - CLASS ${book.grade} - ${book.subject}`;
       $('#bookReaderTitle').textContent = book.title;
-      $('#bookReaderMeta').textContent = `${book.publisher} - ${stored.name} - stored only in this browser`;
+      $('#bookReaderMeta').textContent = bundled ? `${book.publisher} - official PDFs bundled for offline reading` : `${book.publisher} - ${stored.name} - stored only in this browser`;
+      $('#bookPartSection').hidden = !bundled;
+      $('#bookPart').innerHTML = bundled ? bundled.map((part, index) => `<option value="${index}">${D.esc(part.label)}</option>`).join('') : '';
+      if (bundled) $('#bookPart').value = String(Math.max(0, bundled.findIndex(part => part.url === activeBookUrl)));
+      $('#removeBookFile').hidden = Boolean(bundled);
       $('#bookNote').value = '';
       refreshBookReader(true);
       renderReaderNotes();
@@ -1455,8 +1473,8 @@
     if (learner) { D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); return; }
     const learningSubject = event.target.closest('[data-learning-subject]');
     if (learningSubject) {
-      D.state.settings.learningSubjectTabs ||= {};
-      D.state.settings.learningSubjectTabs[route] = learningSubject.dataset.learningSubject;
+      D.state.settings.activeLearningSubject ||= {};
+      D.state.settings.activeLearningSubject[D.state.settings.activeLearnerId] = learningSubject.dataset.learningSubject;
       save('Subject view changed');
       render();
       return;
@@ -1521,6 +1539,17 @@
     form.reset();
   };
   $('#bookFileInput').onchange = importBookFile;
+  $('#bookPart').onchange = () => {
+    if (!activeBookReader?.book.pdfFiles) return;
+    const part = activeBookReader.book.pdfFiles[+$('#bookPart').value || 0];
+    if (!part) return;
+    activeBookUrl = part.url;
+    const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
+    progress.currentPart = part.url;
+    progress.currentPage = 1;
+    D.save();
+    refreshBookReader(true);
+  };
   $('#bookCurrentPage').onchange = event => {
     if (!activeBookReader) return;
     const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
@@ -1585,8 +1614,9 @@
   };
   $('#bookReaderDialog').addEventListener('close', () => {
     $('#bookFrame').src = 'about:blank';
-    if (activeBookUrl) URL.revokeObjectURL(activeBookUrl);
+    if (activeBookObjectUrl && activeBookUrl) URL.revokeObjectURL(activeBookUrl);
     activeBookUrl = '';
+    activeBookObjectUrl = false;
     activeBookReader = null;
     if (route === 'study/curriculum') render();
   });

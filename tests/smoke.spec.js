@@ -134,14 +134,22 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
 
 test('Learning pages use persistent subject tabs and show CBSE and JEE readiness', async ({ page }) => {
   await page.goto(`${app}#/study/curriculum`);
+  await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
   await expect(page.locator('.subject-tabs')).toContainText('Physics');
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
   await expect(page.locator('[data-book-card]')).toHaveCount(2);
   await expect(page.locator('[data-book-card]')).toContainText(['Physics Part I', 'Physics Part II']);
+  await expect(page.locator('[data-book-card="g12-physics-1"] [data-book-state]')).toContainText('Bundled offline');
+  await page.locator('[data-book-open="g12-physics-1"]').click();
+  await expect(page.locator('#bookReaderDialog')).toBeVisible();
+  await expect(page.locator('#bookPart option')).toHaveCount(10);
+  await expect(page.locator('#bookFrame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph101\.pdf/);
+  await page.locator('#bookReaderDialog [data-close-dialog]').click();
   await page.reload();
   await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
   await page.goto(`${app}#/study/reports`);
+  await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.exam-track')).toHaveCount(2);
   await expect(page.locator('.exam-readiness-grid')).toContainText('CBSE Class XII readiness');
   await expect(page.locator('.exam-readiness-grid')).toContainText('JEE Main readiness');
