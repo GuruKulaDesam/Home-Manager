@@ -657,7 +657,7 @@
           ...previous,
           mode: 'direct', clientId,
           autoSync: values.has('autoSync'), calendarSync: values.has('calendarSync'), emailAnalysis: values.has('emailAnalysis'), driveBackup: values.has('driveBackup'),
-          reviewPolicy: values.get('reviewPolicy') === 'rules' ? 'rules' : 'review', lookbackDays: +values.get('lookbackDays') || 30,
+          reviewPolicy: 'trusted', lookbackDays: +values.get('lookbackDays') || 30,
           categories: values.getAll('syncCategory'),
           accounts: Array.from(form.querySelectorAll('[data-google-account]')).map((row, index) => {
             const slotId = row.dataset.googleAccount || `google-${index + 1}`;
@@ -914,9 +914,9 @@
     return { id: D.uid('sg'), source: 'sms', sourceRef, personId: ownerId, category, title: `${categoryLabels[category]}${sender ? ` from ${sender}` : ''}`, summary: safeMessageSummary(body), sender, receivedAt: message.receivedAt, amount: amountMatch ? +amountMatch[1].replace(/,/g, '') || 0 : 0, status: 'pending' };
   }
 
-  function mergeSuggestions(items, fallbackSource = 'gmail') {
+  function mergeSuggestions(items, fallbackSource = 'gmail', autoApplyTrusted = false) {
     D.state.syncSuggestions ||= [];
-    let added = 0;
+    const result = { added: 0, applied: 0, pending: 0 };
     items.slice(0, 500).forEach(item => {
       const category = integrationCategories.includes(item.category) ? item.category : 'home';
       const source = ['gmail', 'calendar', 'sms'].includes(item.source) ? item.source : fallbackSource;
@@ -926,10 +926,13 @@
       const summary = safeMessageSummary(item.summary || item.snippet || '');
       const receivedAt = normalizeMessageDate(item.receivedAt || item.startAt || item.date);
       const decision = integrationDecision(category, `${title} ${summary}`, receivedAt);
-      D.state.syncSuggestions.push({ id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), status: 'pending', ...decision, processedAt: new Date().toISOString() });
-      added += 1;
+      const suggestion = { id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), status: 'pending', trusted: autoApplyTrusted, ...decision, processedAt: new Date().toISOString() };
+      D.state.syncSuggestions.push(suggestion);
+      result.added += 1;
+      if (autoApplyTrusted && materializeIntegrationSuggestion(suggestion)) result.applied += 1;
+      else result.pending += 1;
     });
-    return added;
+    return result;
   }
 
   async function importSmsBackup(event) {
@@ -940,11 +943,11 @@
     try {
       const messages = await parseSmsBackup(file);
       const suggestions = (await Promise.all(messages.map(message => analyzeSms(message, settings.ownerId, settings.categories || integrationCategories)))).filter(Boolean);
-      const added = mergeSuggestions(suggestions, 'sms');
+      const result = mergeSuggestions(suggestions, 'sms', true);
       settings.lastImport = new Date().toISOString();
       settings.importedCount = (settings.importedCount || 0) + messages.length;
       settings.sourceName = file.name;
-      save(`${messages.length} messages analysed; ${added} new updates need review`);
+      save(`${messages.length} messages analysed; ${result.applied} trusted updates synced automatically`);
       render();
     } catch (error) {
       console.error(error);
@@ -952,9 +955,8 @@
     } finally { event.currentTarget.value = ''; }
   }
 
-  function applyIntegrationSuggestion(id) {
-    const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
-    if (!item) return;
+  function materializeIntegrationSuggestion(item) {
+    if (!item || item.status !== 'pending') return false;
     const date = String(item.actionDate || item.receivedAt || new Date().toISOString()).slice(0, 10);
     const eventTime = item.actionDate ? `${date}T09:00` : String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
     if (item.source === 'calendar' || item.category === 'school') {
@@ -966,6 +968,13 @@
       D.state.tasks.push({ id: D.uid('t'), context: 'home', type: 'reminder', title: item.title, category: item.category === 'deliveries' ? 'Delivery' : 'Home service', assignee: D.state.people.find(person => person.id === item.personId)?.name || 'Family', dueAt: date, frequency: 'Once', priority: 'medium', status: 'todo', notes: item.summary });
     }
     item.status = 'applied';
+    item.appliedAt = new Date().toISOString();
+    return true;
+  }
+
+  function applyIntegrationSuggestion(id) {
+    const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
+    if (!materializeIntegrationSuggestion(item)) return;
     save('Imported update added to its family section');
     render();
   }
@@ -1133,8 +1142,8 @@
         account.lastSync = new Date().toISOString();
         account.status = 'connected';
       }
-      const added = mergeSuggestions(suggestions, 'gmail');
-      save(added ? `${added} Google updates need review` : 'Google sync completed with no new updates');
+      const result = mergeSuggestions(suggestions, 'gmail', true);
+      save(result.added ? `${result.applied} trusted Google updates synced automatically` : 'Google sync completed with no new updates');
       render();
     } catch (error) { toast(`Google sync failed: ${error.message}`); }
     finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
