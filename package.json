@@ -1,19 +1,14 @@
 {
   "name": "home-manager-static",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "node server.js",
-    "build": "echo 'No build step required'",
-    "start": "node server.js",
-    "lint": "echo 'No linting required'",
-    "test": "playwright test tests/smoke.spec.js --reporter=line --workers=1"
+    "test": "playwright test tests/smoke.spec.js --reporter=line --workers=1",
+    "deploy": "firebase deploy --only hosting"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1"
   },
   "dependencies": {
-    "express": "^5.2.1",
-    "firebase": "^12.17.1"
+    "firebase-tools": "^15.25.1"
   }
 }

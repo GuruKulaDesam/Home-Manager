@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#edf7f3">
   <meta name="description" content="A private, local-first command center for home, community and study life.">
-  <title>Home Manager</title>
+  <title>Our Divine Nest</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
   <aside id="sidebar" aria-label="Primary navigation">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><i data-lucide="mountain-snow"></i></span>
-      <div><b>Home Manager</b><small>Life, clearly organised</small></div>
+      <div><b>Our Divine Nest</b><small>Life, clearly organised</small></div>
     </div>
     <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
     <nav id="nav"></nav>
@@ -35,7 +35,7 @@
       <div class="topbar">
         <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
         <div class="page-identity">
-          <small id="breadcrumb">Home Manager</small>
+          <small id="breadcrumb">Our Divine Nest</small>
           <h1 id="pageTitle">Today</h1>
         </div>
         <div id="headerKpis" class="header-kpis" aria-label="Current household signals"></div>
@@ -89,6 +89,7 @@
     </div>
     <div class="book-reader-layout">
       <aside class="book-reader-tools" aria-label="Reading tools">
+        <section id="bookPartSection" hidden><label for="bookPart"><small>BOOK SECTION</small></label><select id="bookPart" aria-label="Choose book section"></select></section>
         <section><small>READING POSITION</small><div class="reader-page-control"><button type="button" data-book-page-delta="-1" aria-label="Previous page"><i data-lucide="chevron-left"></i></button><label>Page<input id="bookCurrentPage" type="number" min="1" value="1"></label><button type="button" data-book-page-delta="1" aria-label="Next page"><i data-lucide="chevron-right"></i></button></div><label class="reader-total-pages">Total pages (optional)<input id="bookTotalPages" type="number" min="0" value="0"></label><div id="bookReadProgress" class="reader-progress">Page 1</div></section>
         <section class="reader-review-actions"><button type="button" id="bookBookmark"><i data-lucide="bookmark"></i><span>Bookmark page</span></button><button type="button" id="bookReviewed"><i data-lucide="badge-check"></i><span>Mark reviewed</span></button></section>
         <section class="reader-notes"><label for="bookNote"><small>REVIEW NOTE FOR THIS PAGE</small></label><textarea id="bookNote" rows="4" placeholder="Summary, question, formula or point to revisit"></textarea><button type="button" id="saveBookNote" class="primary"><i data-lucide="save"></i><span>Save note</span></button><div id="bookNotes" aria-live="polite"></div></section>
@@ -113,8 +114,8 @@
   <script src="js/data.js"></script>
   <script src="js/life.js"></script>
   <script src="js/questions.js"></script>
-  <script type="module" src="js/google.js"></script>
   <script src="js/views.js"></script>
+  <script type="module" src="js/cloud.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

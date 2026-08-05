@@ -1,10 +1,11 @@
 (function () {
   const D = HM.data;
   const e = D.esc;
+  let activeRenderRoute = '';
 
   const groups = {
     today: { label: 'Today', icon: 'sparkles', note: 'What needs attention now', route: 'global/overview', items: [
-      ['Today', 'sparkles', 'global/overview'], ['Help & Guide', 'circle-help', 'global/questions']
+      ['Today', 'sparkles', 'global/overview'], ['Inbox intelligence', 'mail-search', 'global/intelligence'], ['Help & Guide', 'circle-help', 'global/questions']
     ]},
     household: { label: 'Household', icon: 'house', note: 'Run the home', route: 'home/overview', items: [
       ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
@@ -19,7 +20,7 @@
       ['Overview', 'heart-handshake', 'home/care'], ['Health', 'heart-pulse', 'home/life/health'], ['Medicines', 'pill', 'home/life/medicines'], ['Appointments', 'stethoscope', 'home/life/appointments'], ['Elder care', 'accessibility', 'home/life/elders'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
     ]},
     learning: { label: 'Learning', icon: 'graduation-cap', note: 'Study and development', route: 'study/overview', items: [
-      ['Dashboard', 'graduation-cap', 'study/overview'], ['Books & curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice'], ['Reports', 'chart-spline', 'study/reports']
+      ['Tracking', 'activity', 'study/overview'], ['Books', 'book-open', 'study/books'], ['Curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice']
     ]},
     community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
       ['Overview', 'map', 'community/overview'], ['Updates', 'newspaper', 'community/feed'], ['Events & polls', 'calendar-heart', 'community/participate'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic issues', 'ticket-check', 'community/tickets'], ['Local services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
@@ -49,19 +50,33 @@
     { id: 'g7-hindi', grade: 7, subject: 'Hindi', title: 'Malhar', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?ghml1=0-10' },
     { id: 'g7-skills', grade: 7, subject: 'Kaushal Bodh', title: 'Kaushal Bodh', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gekb1=0-7' },
     { id: 'g7-tamil', grade: 7, subject: 'Tamil', title: 'Tamil course book', publisher: 'Peepal-issued', sourceUrl: 'https://crm.peepalprodigy.cloud/' },
-    { id: 'g12-math-1', grade: 12, subject: 'Mathematics', title: 'Mathematics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh1=0-6' },
-    { id: 'g12-math-2', grade: 12, subject: 'Mathematics', title: 'Mathematics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh2=0-7' },
-    { id: 'g12-physics-1', grade: 12, subject: 'Physics', title: 'Physics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph1=0-8' },
-    { id: 'g12-physics-2', grade: 12, subject: 'Physics', title: 'Physics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph2=0-6' },
-    { id: 'g12-chemistry-1', grade: 12, subject: 'Chemistry', title: 'Chemistry Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech1=0-5' },
-    { id: 'g12-chemistry-2', grade: 12, subject: 'Chemistry', title: 'Chemistry Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech2=0-5' },
-    { id: 'g12-english-1', grade: 12, subject: 'English Core', title: 'Flamingo', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lefl1=0-13' },
-    { id: 'g12-english-2', grade: 12, subject: 'English Core', title: 'Vistas', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?levt1=0-6' },
-    { id: 'g12-cs', grade: 12, subject: 'Computer Science', title: 'Computer Science', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lecs1=0-13' }
+    { id: 'g12-math-1', code: 'lemh1', grade: 12, subject: 'Mathematics', title: 'Mathematics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh1=0-6' },
+    { id: 'g12-math-2', code: 'lemh2', grade: 12, subject: 'Mathematics', title: 'Mathematics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh2=0-7' },
+    { id: 'g12-physics-1', code: 'leph1', grade: 12, subject: 'Physics', title: 'Physics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph1=0-8' },
+    { id: 'g12-physics-2', code: 'leph2', grade: 12, subject: 'Physics', title: 'Physics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph2=0-6' },
+    { id: 'g12-chemistry-1', code: 'lech1', grade: 12, subject: 'Chemistry', title: 'Chemistry Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech1=0-5' },
+    { id: 'g12-chemistry-2', code: 'lech2', grade: 12, subject: 'Chemistry', title: 'Chemistry Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech2=0-5' },
+    { id: 'g12-english-1', code: 'lefl1', grade: 12, subject: 'English Core', title: 'Flamingo', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lefl1=0-13' },
+    { id: 'g12-english-2', code: 'levt1', grade: 12, subject: 'English Core', title: 'Vistas', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?levt1=0-6' },
+    { id: 'g12-cs', code: 'lecs1', grade: 12, subject: 'Computer Science', title: 'Computer Science', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lecs1=0-13' }
   ];
+
+  const bundledBookParts = {
+    lemh1: ['01','02','03','04','05','06','a1','a2','an','ps'], lemh2: ['01','02','03','04','05','06','07','an','ps'],
+    leph1: ['01','02','03','04','05','06','07','08','an','ps'], leph2: ['01','02','03','04','05','06','an','ps'],
+    lech1: ['01','02','03','04','05','a1','an','ps'], lech2: ['01','02','03','04','05','an','ps'],
+    lefl1: ['01','02','03','04','05','06','07','08','11','12','13','14','15','ps'], levt1: ['01','02','03','04','05','06','ps'],
+    lecs1: ['01','02','03','04','05','06','07','08','09','10','11','12','13','ps']
+  };
+  textbookCatalog.forEach(book => {
+    if (!book.code) return;
+    const nested = book.code === 'lefl1' ? '/lefl1dd' : '';
+    book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: part === 'ps' ? 'Prelims' : part === 'an' ? 'Answers' : part.startsWith('a') ? `Appendix ${part.slice(1) || 1}` : `Chapter ${Number(part)}`, url: `assets/textbooks/class-12/${book.code}${nested}/${book.code}${part}.pdf`, order: index + 1 }));
+  });
 
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
+    'global/intelligence': ['Inbox Intelligence', 'Decisions from family Gmail signals'],
     'global/questions': ['Help & Guide', 'Purpose, workflows and product answers'],
     'global/settings': ['Settings', 'Appearance, data and privacy'],
     'home/overview': ['Home Overview', 'Your household at a glance'],
@@ -92,6 +107,7 @@
     'community/guides': ['Civic Guides', 'Self-service local information'],
     'community/participate': ['Events & Polls', 'Plans and local preferences'],
     'study/overview': ['Learning Dashboard', 'Peepal and CBSE progress'],
+    'study/books': ['Books', 'Focused local textbook library'],
     'study/curriculum': ['Books & Curriculum', 'Textbooks, reading review and CBSE outcomes'],
     'study/planner': ['Study Planner', 'School day and home study'],
     'study/assignments': ['Assignments', 'Homework, projects and practicals'],
@@ -134,6 +150,69 @@
 
   function empty(message, kind, label) {
     return `<div class="empty"><p>${e(message)}</p>${kind ? `<button class="primary" data-create="${kind}">${icon('plus')}<span>${e(label)}</span></button>` : ''}</div>`;
+  }
+
+  function workspacePanel(service, iconName, title, description, controls, results = '', preferredPersonId = '') {
+    const accounts = (D.state.settings.googleSync?.accounts || []).filter(account => account.email && account.consent);
+    if (!accounts.length && service === 'notes') return `<section class="panel google-workflow google-notes" data-google-service="notes"><div class="section-head"><div><span class="section-kicker">QUICK NOTES</span><h2>${e(title)}</h2><p>${e(description)}</p></div><button data-route="settings/app">Set up Google sharing</button></div><div class="google-workflow-controls">${controls}</div>${results ? `<div class="google-workflow-results">${results}</div>` : ''}</section>`;
+    if (!accounts.length) return `<section class="panel google-workflow google-${e(service)}"><div class="section-head"><div><span class="section-kicker">GOOGLE ${e(service.toUpperCase())}</span><h2>${e(title)}</h2><p>Map a consenting family Google account before using this workflow.</p></div><button data-route="settings/app">Set up accounts</button></div></section>`;
+    const selected = HM.workspace?.selected?.[service] || accounts.find(account => account.personId === preferredPersonId)?.slotId || accounts[0].slotId;
+    return `<section class="panel google-workflow google-${e(service)}" data-google-service="${e(service)}"><div class="section-head"><div><span class="section-kicker">GOOGLE ${e(service.toUpperCase())}</span><h2>${e(title)}</h2><p>${e(description)}</p></div><label class="google-account-picker"><span>Family account</span><select data-google-workspace-account aria-label="Google account for ${e(title)}">${accounts.map(account => `<option value="${e(account.slotId)}" ${account.slotId === selected ? 'selected' : ''}>${e(D.state.people.find(person => person.id === account.personId)?.name || account.email)} - ${e(account.email)}</option>`).join('')}</select></label></div><div class="google-workflow-controls">${controls}</div>${results ? `<div class="google-workflow-results">${results}</div>` : ''}</section>`;
+  }
+
+  function quickNotesPanel() {
+    const notes = (D.state.quickNotes || []).filter(item => item.status !== 'archived').sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 7);
+    const results = notes.length ? notes.map(item => `<div class="row"><span class="source-icon">${icon('sticky-note')}</span><div class="grow"><b>${e(item.text)}</b><small>${D.date(item.createdAt)} - ${e(D.state.people.find(person => person.id === item.ownerId)?.name || 'Family')}</small></div><button data-google-action="note-task" data-note-id="${e(item.id)}">${icon('list-checks')}<span>Tasks</span></button><button data-google-action="note-doc" data-note-id="${e(item.id)}">${icon('file-text')}<span>Docs</span></button><button class="icon-action" data-note-archive="${e(item.id)}" aria-label="Archive note">${icon('archive')}</button></div>`).join('') : '<p class="empty">No quick notes. Capture a thought without leaving Today.</p>';
+    return workspacePanel('notes', 'sticky-note', 'Quick Notes', 'Notes stay in Home Manager. Send one to Google Tasks or Docs when it needs a shared destination.', `<input data-google-note-text maxlength="500" placeholder="Write a family note"><select data-google-note-owner aria-label="Note owner">${D.state.people.map(person => `<option value="${e(person.id)}">${e(person.name)}</option>`).join('')}</select><button class="primary" data-google-action="note-add">${icon('plus')}<span>Add note</span></button>`, results);
+  }
+
+  function drivePanel() {
+    const files = HM.workspace?.cache?.drive || [];
+    const results = files.length ? files.map(file => `<div class="row"><span class="source-icon">${icon('file')}</span><div class="grow"><b>${e(file.name)}</b><small>${e(file.mimeType || 'File')} - ${file.modifiedTime ? D.date(file.modifiedTime) : 'No date'}</small></div>${file.webViewLink ? `<a class="button-link" href="${e(file.webViewLink)}" target="_blank" rel="noopener noreferrer">Open</a>` : ''}<button class="icon-action danger-action" data-google-action="drive-delete" data-file-id="${e(file.id)}" aria-label="Delete ${e(file.name)}">${icon('trash-2')}</button></div>`).join('') : '<p class="empty">No app-created or explicitly selected Drive files loaded.</p>';
+    return workspacePanel('drive', 'hard-drive', 'Family documents in Drive', 'Browse only files this app created or you explicitly shared with it. Uploads remain in the selected account.', `<button data-google-action="drive-list">${icon('refresh-cw')}<span>Refresh files</span></button><label class="primary file-button">${icon('upload')}<span>Upload document</span><input data-google-drive-file type="file" hidden></label>`, results);
+  }
+
+  function contactsPanel() {
+    const contacts = HM.workspace?.cache?.contacts || [];
+    const results = contacts.length ? contacts.map(contact => `<div class="row"><span class="source-icon">${icon('contact')}</span><div class="grow"><b>${e(contact.name)}</b><small>${e(contact.email || contact.phone || 'No contact detail')}</small></div><button data-google-action="contact-import" data-contact-id="${e(contact.id)}">${icon('user-plus')}<span>Import</span></button></div>`).join('') : '<p class="empty">No Google contacts loaded.</p>';
+    return workspacePanel('contacts', 'contact', 'Google Contacts', 'Review contacts from one family account and import only the people needed in the Home Directory.', `<button class="primary" data-google-action="contacts-list">${icon('refresh-cw')}<span>Load contacts</span></button>`, results);
+  }
+
+  function calendarPanel() {
+    const events = HM.workspace?.cache?.calendar || [];
+    const results = events.length ? events.map(item => `<div class="row"><span class="source-icon">${icon(item.hangoutLink ? 'video' : 'calendar-days')}</span><div class="grow"><b>${e(item.summary || 'Untitled event')}</b><small>${D.date(item.start?.dateTime || item.start?.date)}${item.hangoutLink ? ' - Meet ready' : ''}</small></div><button data-google-action="calendar-import" data-event-id="${e(item.id)}">${icon('download')}<span>Import</span></button></div>`).join('') : '<p class="empty">No Google Calendar events loaded.</p>';
+    return workspacePanel('calendar', 'calendar-sync', 'Google Calendar & Meet', 'Read upcoming events or create a family event. Meet links are created as part of the calendar event.', `<button data-google-action="calendar-list">${icon('refresh-cw')}<span>Load upcoming</span></button><input data-google-event-title maxlength="120" placeholder="Event title"><input data-google-event-start type="datetime-local" aria-label="Event start"><button class="primary" data-google-action="calendar-create">${icon('calendar-plus')}<span>Create event</span></button><button data-google-action="calendar-meet">${icon('video')}<span>Create with Meet</span></button>`, results);
+  }
+
+  function tasksPanel() {
+    const tasks = HM.workspace?.cache?.tasks || [];
+    const results = tasks.length ? tasks.map(item => `<div class="row"><input type="checkbox" data-google-action="task-toggle" data-task-id="${e(item.id)}" data-task-list-id="${e(item.taskListId)}" ${item.status === 'completed' ? 'checked' : ''} aria-label="Complete ${e(item.title)}"><div class="grow"><b>${e(item.title)}</b><small>${e(item.listTitle || 'Google Tasks')}${item.due ? ` - ${D.date(item.due)}` : ''}</small></div><button data-google-action="task-import" data-task-id="${e(item.id)}">${icon('download')}<span>Import</span></button></div>`).join('') : '<p class="empty">No Google tasks loaded.</p>';
+    return workspacePanel('tasks', 'list-checks', 'Google Tasks', 'Bring assigned work into the household list, create a Google task, or complete it from here.', `<button data-google-action="tasks-list">${icon('refresh-cw')}<span>Load tasks</span></button><input data-google-task-title maxlength="120" placeholder="New task"><button class="primary" data-google-action="task-create">${icon('plus')}<span>Create in Google</span></button>`, results);
+  }
+
+  function classroomPanel(studentId) {
+    const work = HM.workspace?.cache?.classroom || [];
+    const results = work.length ? work.map(item => `<div class="row"><span class="source-icon">${icon('school')}</span><div class="grow"><b>${e(item.title)}</b><small>${e(item.courseName)}${item.dueDate ? ` - due ${D.date(item.dueDate)}` : ''}</small></div><button data-google-action="classroom-import" data-work-id="${e(item.id)}">${icon('download')}<span>Import</span></button></div>`).join('') : '<p class="empty">No active Classroom work loaded for this learner.</p>';
+    return workspacePanel('classroom', 'school', 'Google Classroom', 'Load active coursework for the selected learner and review before importing it as an assignment.', `<button class="primary" data-google-action="classroom-list" data-student-id="${e(studentId)}">${icon('refresh-cw')}<span>Load coursework</span></button>`, results, studentId);
+  }
+
+  function sheetsPanel() {
+    const sheet = HM.workspace?.cache?.sheets;
+    const results = sheet ? `<div class="row"><span class="source-icon">${icon('file-spreadsheet')}</span><div class="grow"><b>${e(sheet.name)}</b><small>Expense and budget snapshot exported from current Home Manager records</small></div><a class="button-link" href="${e(sheet.url)}" target="_blank" rel="noopener noreferrer">Open sheet</a></div>` : '';
+    return workspacePanel('sheets', 'file-spreadsheet', 'Google Sheets report', 'Create a dated spreadsheet from the consolidated expense and budget data shown on this page.', `<button class="primary" data-google-action="sheets-export">${icon('file-spreadsheet')}<span>Export current report</span></button>`, results);
+  }
+
+  function docsPanel() {
+    const doc = HM.workspace?.cache?.docs;
+    const results = doc ? `<div class="row"><span class="source-icon">${icon('file-text')}</span><div class="grow"><b>${e(doc.name)}</b><small>Created from the current family wisdom entries</small></div><a class="button-link" href="${e(doc.url)}" target="_blank" rel="noopener noreferrer">Open document</a></div>` : '';
+    return workspacePanel('docs', 'file-text', 'Google Docs family book', 'Create a shareable document from recipes, traditions and family knowledge already reviewed here.', `<button class="primary" data-google-action="docs-export">${icon('file-plus-2')}<span>Create family book</span></button>`, results);
+  }
+
+  function slidesPanel(studentId) {
+    const deck = HM.workspace?.cache?.slides;
+    const assignments = (D.state.academicDeliverables || []).filter(item => item.studentId === studentId);
+    const results = deck ? `<div class="row"><span class="source-icon">${icon('presentation')}</span><div class="grow"><b>${e(deck.name)}</b><small>Project starter deck created in Google Slides</small></div><a class="button-link" href="${e(deck.url)}" target="_blank" rel="noopener noreferrer">Open deck</a></div>` : '';
+    return workspacePanel('slides', 'presentation', 'Google Slides project deck', 'Choose one Home Manager assignment and generate a structured title and planning slide in the learner account.', `<select data-google-slide-work aria-label="Assignment for presentation">${assignments.map(item => `<option value="${e(item.id)}">${e(item.title)}</option>`).join('')}</select><button class="primary" data-google-action="slides-create" data-student-id="${e(studentId)}" ${assignments.length ? '' : 'disabled'}>${icon('presentation')}<span>Create project deck</span></button>`, results, studentId);
   }
 
   function unified() {
@@ -209,7 +288,52 @@
             <button data-route="home/assets"><span class="brief-icon repair">${icon('wrench')}</span><span class="grow"><small>Repairs</small><b>${issues.filter(x => x.scope === 'household').length ? `${issues.filter(x => x.scope === 'household').length} open` : 'No open repairs'}</b></span>${icon('chevron-right')}</button>
           </section>
         </aside>
-      </div>`;
+      </div>${quickNotesPanel()}`;
+  }
+
+  const inboxCategoryConfig = {
+    bills: { label: 'Money & bills', icon: 'receipt-indian-rupee', route: 'home/money/reports', action: 'Pay or verify' },
+    school: { label: 'School & learning', icon: 'graduation-cap', route: 'study/reports', action: 'Review school action' },
+    health: { label: 'Health & care', icon: 'heart-pulse', route: 'home/life/appointments', action: 'Prepare care action' },
+    travel: { label: 'Travel', icon: 'luggage', route: 'home/life/travel', action: 'Confirm booking' },
+    deliveries: { label: 'Deliveries', icon: 'package-check', route: 'home/tasks', action: 'Track delivery' },
+    home: { label: 'Home services', icon: 'wrench', route: 'home/overview', action: 'Schedule service' },
+    government: { label: 'Government', icon: 'landmark', route: 'home/life/documents', action: 'Review or renew' }
+  };
+
+  function inboxStatus(value) {
+    const labels = { pending: 'Needs review', applied: 'Added to app', dismissed: 'Dismissed' };
+    const className = value === 'pending' ? 'warning' : value === 'dismissed' ? '' : 'connected';
+    return `<span class="badge ${className}">${e(labels[value] || 'Needs review')}</span>`;
+  }
+
+  function inboxIntelligence() {
+    const signals = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail').sort((a, b) => String(b.processedAt || b.receivedAt).localeCompare(String(a.processedAt || a.receivedAt)));
+    const pending = signals.filter(item => item.status === 'pending');
+    const applied = signals.filter(item => item.status === 'applied');
+    const attention = pending.filter(item => item.urgency === 'high' || (item.actionDate && item.actionDate <= today()));
+    const totalValue = signals.reduce((total, item) => total + (+item.amount || 0), 0);
+    const thirtyDaysAgo = new Date(); thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recent = signals.filter(item => String(item.receivedAt || item.processedAt) >= thirtyDaysAgo.toISOString());
+    const people = Object.fromEntries(D.state.people.map(person => [person.id, person]));
+    const accounts = D.state.settings.googleSync?.accounts || [];
+    const categories = Object.entries(inboxCategoryConfig).map(([key, config]) => {
+      const items = signals.filter(item => item.category === key);
+      return { key, config, items, pending: items.filter(item => item.status === 'pending').length, amount: items.reduce((total, item) => total + (+item.amount || 0), 0) };
+    });
+    const senders = Object.entries(signals.reduce((result, item) => { const sender = item.sender || 'Unknown sender'; result[sender] ||= { count: 0, pending: 0, amount: 0 }; result[sender].count += 1; result[sender].pending += item.status === 'pending' ? 1 : 0; result[sender].amount += +item.amount || 0; return result; }, {})).sort((a, b) => b[1].count - a[1].count).slice(0, 7);
+    const now = new Date(`${today()}T00:00`);
+    const weeks = Array.from({ length: 6 }, (_, index) => { const start = new Date(now); start.setDate(start.getDate() - (5 - index) * 7); const end = new Date(start); end.setDate(end.getDate() + 7); const count = signals.filter(item => { const value = new Date(item.receivedAt || item.processedAt); return value >= start && value < end; }).length; return { label: start.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }), count }; });
+    const maxWeek = Math.max(1, ...weeks.map(item => item.count));
+    const urgencyRank = { high: 0, medium: 1, normal: 2 };
+    const decisions = [...pending].sort((a, b) => (urgencyRank[a.urgency] ?? 2) - (urgencyRank[b.urgency] ?? 2) || String(a.actionDate || '9999').localeCompare(String(b.actionDate || '9999'))).slice(0, 7);
+    if (!signals.length) return `<section class="panel inbox-empty"><span>${icon('mail-search')}</span><div class="grow"><h2>No Gmail decisions yet</h2><p>Connect the family accounts and run Gmail sync. Matching household messages will appear here as local decision evidence.</p></div><button class="primary" data-route="settings/app">Configure Gmail</button></section>`;
+    return `<section class="metrics inbox-metrics">${metric('Gmail signals', signals.length, `${recent.length} in the last 30 days`, 'mail-search')}${metric('Needs a decision', pending.length, attention.length ? `${attention.length} time-sensitive` : 'No urgent items', 'list-checks')}${metric('Detected value', D.money(totalValue), 'Verify before recording', 'indian-rupee')}${metric('Added to app', applied.length, `${Math.round(applied.length / Math.max(1, signals.length) * 100)}% action rate`, 'badge-check')}</section>
+      <section class="inbox-category-grid" aria-label="Seven Gmail decision groups">${categories.map(item => `<button data-route="${item.config.route}" class="inbox-category category-${item.key}"><span>${icon(item.config.icon)}</span><span class="grow"><b>${e(item.config.label)}</b><small>${item.items.length} signals - ${item.pending} pending</small></span><strong>${item.amount ? D.money(item.amount) : item.items.length}</strong>${icon('chevron-right')}</button>`).join('')}</section>
+      <div class="grid-2 inbox-decision-grid"><section class="panel"><div class="section-head"><div><span class="section-kicker">DECIDE NEXT</span><h2>Family attention queue</h2><p>Ranked by urgency and extracted action date</p></div><span class="badge ${attention.length ? 'danger' : ''}">${attention.length} urgent</span></div>${decisions.length ? decisions.map(item => { const config = inboxCategoryConfig[item.category] || inboxCategoryConfig.home; const owner = people[item.personId]?.name || 'Family'; return `<article class="inbox-decision urgency-${e(item.urgency || 'normal')}"><span>${icon(config.icon)}</span><div class="grow"><small>${e(config.label)} - ${e(owner)}</small><b>${e(item.title)}</b><p>${e(item.summary || 'No summary retained.')}</p><em>${item.actionDate ? `Act by ${D.date(item.actionDate)}` : D.date(item.receivedAt)}${item.amount ? ` - ${D.money(item.amount)}` : ''}</em></div><div><button data-route="${config.route}" aria-label="Open ${e(config.label)}">${icon('arrow-up-right')}</button><button class="primary" data-sync-apply="${e(item.id)}">${icon('check')}<span>Apply</span></button></div></article>`; }).join('') : '<p class="empty">Every Gmail signal has been reviewed.</p>'}</section>
+        <section class="panel inbox-trend"><div class="section-head"><div><span class="section-kicker">VOLUME</span><h2>Six-week signal trend</h2><p>Matched household messages across four accounts</p></div></div><div class="chart" aria-label="Gmail signals by week">${weeks.map(item => `<div style="height:${Math.max(4, item.count / maxWeek * 100)}%"><b>${item.count}</b><span>${e(item.label)}</span></div>`).join('')}</div><div class="inbox-source-summary"><b>${accounts.length}/4</b><span>accounts mapped</span><b>${senders.length}</b><span>active senders shown</span></div></section></div>
+      <div class="grid-2"><section class="panel"><div class="section-head"><div><h2>Family account coverage</h2><p>Who receives each decision signal</p></div><button data-route="settings/app">Accounts</button></div>${accounts.map(account => { const items = signals.filter(item => item.personId === account.personId); const owner = people[account.personId]; return row(owner?.name || account.email || 'Unassigned', `${items.length} signals - ${items.filter(item => item.status === 'pending').length} pending`, `<b>${items.reduce((total, item) => total + (+item.amount || 0), 0) ? D.money(items.reduce((total, item) => total + (+item.amount || 0), 0)) : e(account.email || 'No email')}</b>`); }).join('') || '<p class="empty">Map family Gmail accounts in Settings.</p>'}</section><section class="panel"><div class="section-head"><div><h2>Frequent senders</h2><p>Use repeated signals to identify recurring obligations</p></div></div>${senders.map(([sender, summary]) => row(sender, `${summary.count} signals - ${summary.pending} pending`, summary.amount ? `<b>${D.money(summary.amount)}</b>` : '')).join('') || '<p class="empty">No sender pattern yet.</p>'}</section></div>
+      <section class="panel inbox-history"><div class="section-head"><div><span class="section-kicker">COMPLETE LOCAL HISTORY</span><h2>Processed Gmail evidence</h2><p>Subject, sender and snippet metadata only; full email bodies are not retained.</p></div><span class="context-badge">${signals.length} records</span></div><div class="toolbar inbox-toolbar"><input data-filter aria-label="Search Gmail history" placeholder="Search sender, title or summary"><select data-status-filter aria-label="Filter Gmail status"><option value="">All statuses</option><option value="pending">Needs review</option><option value="applied">Added to app</option><option value="dismissed">Dismissed</option></select><select data-category-filter aria-label="Filter Gmail category"><option value="">All 7 categories</option>${categories.map(item => `<option value="${item.key}">${e(item.config.label)}</option>`).join('')}</select></div><div class="inbox-table-wrap"><table class="table"><thead><tr><th>Signal</th><th>Family member</th><th>Category</th><th>Received / action</th><th>Value</th><th>Status</th><th>Decision</th></tr></thead><tbody>${signals.map(item => { const config = inboxCategoryConfig[item.category] || inboxCategoryConfig.home; const owner = people[item.personId]?.name || 'Family'; return `<tr data-filter-row data-status="${e(item.status)}" data-category="${e(item.category)}"><td data-label="Signal"><b>${e(item.title)}</b><small>${e(item.sender || 'Unknown sender')} - ${e(item.summary || 'No summary retained.')}</small></td><td data-label="Family member">${e(owner)}</td><td data-label="Category"><span class="badge">${e(config.label)}</span></td><td data-label="Received / action"><span>${D.date(item.receivedAt)}</span><small>${item.actionDate ? `Action ${D.date(item.actionDate)}` : 'No action date detected'}</small></td><td data-label="Value">${item.amount ? D.money(item.amount) : '-'}</td><td data-label="Status">${inboxStatus(item.status)}</td><td data-label="Decision">${item.status === 'pending' ? `<button class="primary" data-sync-apply="${e(item.id)}">${icon('check')}<span>${e(item.decision || config.action)}</span></button>` : `<button data-route="${config.route}">${icon('arrow-up-right')}<span>Open section</span></button>`}</td></tr>`; }).join('')}</tbody></table></div></section>`;
   }
 
   function questionResult(question, index = 0) {
@@ -259,7 +383,7 @@
 
   function taskView(context) {
     const items = D.state.tasks.filter(x => x.context === context);
-    return `<div class="toolbar"><label class="sr-only" for="taskFilter">Search tasks</label><input id="taskFilter" data-filter placeholder="Search ${e(context)} tasks"><select data-status-filter aria-label="Filter tasks by status"><option value="">All statuses</option><option value="todo">To do</option><option value="progress">In progress</option><option value="done">Done</option></select><button class="primary" data-create="task" data-context="${context}">${icon('plus')}<span>Task</span></button></div><section class="panel">${items.length ? `<table class="table"><thead><tr><th>Done</th><th>Task</th><th>Category</th><th>Assigned</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(x => `<tr data-filter-row data-status="${e(D.status(x.status))}"><td data-label="Done"><input type="checkbox" aria-label="Mark ${e(x.title)} complete" data-complete="task:${e(x.id)}" ${D.status(x.status) === 'done' ? 'checked' : ''}></td><td data-label="Task"><b>${e(x.title)}</b></td><td data-label="Category">${e(x.category)}</td><td data-label="Assigned">${e(x.assignee || 'Unassigned')}</td><td data-label="Due">${D.date(x.dueAt)}</td><td data-label="Status">${status(x.status)}</td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(x.title)}" data-edit="task" data-id="${e(x.id)}" data-context="${e(x.context)}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(x.title)}" data-delete="tasks:${e(x.id)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table>` : empty(`No ${context} tasks yet.`, 'task', 'Add task')}</section>`;
+    return `<div class="toolbar"><label class="sr-only" for="taskFilter">Search tasks</label><input id="taskFilter" data-filter placeholder="Search ${e(context)} tasks"><select data-status-filter aria-label="Filter tasks by status"><option value="">All statuses</option><option value="todo">To do</option><option value="progress">In progress</option><option value="done">Done</option></select><button class="primary" data-create="task" data-context="${context}">${icon('plus')}<span>Task</span></button></div><section class="panel">${items.length ? `<table class="table"><thead><tr><th>Done</th><th>Task</th><th>Category</th><th>Assigned</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(x => `<tr data-filter-row data-status="${e(D.status(x.status))}"><td data-label="Done"><input type="checkbox" aria-label="Mark ${e(x.title)} complete" data-complete="task:${e(x.id)}" ${D.status(x.status) === 'done' ? 'checked' : ''}></td><td data-label="Task"><b>${e(x.title)}</b></td><td data-label="Category">${e(x.category)}</td><td data-label="Assigned">${e(x.assignee || 'Unassigned')}</td><td data-label="Due">${D.date(x.dueAt)}</td><td data-label="Status">${status(x.status)}</td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(x.title)}" data-edit="task" data-id="${e(x.id)}" data-context="${e(x.context)}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(x.title)}" data-delete="tasks:${e(x.id)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table>` : empty(`No ${context} tasks yet.`, 'task', 'Add task')}</section>${context === 'home' ? tasksPanel() : ''}`;
   }
 
   let calendarCursor = new Date();
@@ -282,7 +406,7 @@
       cells += `<div class="calendar-day ${date === today() ? 'is-today' : ''}"><small>${dayNumber > 0 && dayNumber <= days ? dayNumber : ''}</small>${dayEvents.map(x => `<button class="event ${e(x.context)}" data-route="${eventRoute(x.context)}">${e(x.title)}</button>`).join('')}</div>`;
     }
     const monthEvents = events.filter(x => isoDay(x.startAt).startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).sort((a, b) => String(a.startAt).localeCompare(String(b.startAt)));
-    return `<div class="toolbar"><div><small>Calendar</small><h2>${calendarCursor.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</h2></div><div class="row-actions"><button data-calendar-shift="-1" aria-label="Previous month">${icon('chevron-left')}</button><button data-calendar-shift="today">Today</button><button data-calendar-shift="1" aria-label="Next month">${icon('chevron-right')}</button></div><button class="primary" data-create="event" data-context="${context === 'all' ? 'home' : context}">${icon('plus')}<span>Event</span></button></div><div class="calendar-wrap"><div class="calendar">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<div class="calendar-day calendar-label"><b>${x}</b></div>`).join('')}${cells}</div><div class="calendar-agenda">${monthEvents.length ? monthEvents.map(x => row(x.title, `${D.date(x.startAt, { weekday: 'short', day: 'numeric', month: 'short' })} - ${x.venue || 'No venue'}`, badge(x.context))).join('') : empty('No events this month.', 'event', 'Add event')}</div></div>`;
+    return `<div class="toolbar"><div><small>Calendar</small><h2>${calendarCursor.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</h2></div><div class="row-actions"><button data-calendar-shift="-1" aria-label="Previous month">${icon('chevron-left')}</button><button data-calendar-shift="today">Today</button><button data-calendar-shift="1" aria-label="Next month">${icon('chevron-right')}</button></div><button class="primary" data-create="event" data-context="${context === 'all' ? 'home' : context}">${icon('plus')}<span>Event</span></button></div><div class="calendar-wrap"><div class="calendar">${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<div class="calendar-day calendar-label"><b>${x}</b></div>`).join('')}${cells}</div><div class="calendar-agenda">${monthEvents.length ? monthEvents.map(x => row(x.title, `${D.date(x.startAt, { weekday: 'short', day: 'numeric', month: 'short' })} - ${x.venue || 'No venue'}`, badge(x.context))).join('') : empty('No events this month.', 'event', 'Add event')}</div></div>${context === 'all' ? calendarPanel() : ''}`;
   }
 
   function family() {
@@ -405,11 +529,16 @@
     return `<section class="metrics">${metric('Net worth', D.money(worth), 'Assets minus liabilities', 'scale')}${metric('Assets', D.money(assets), `${D.state.assets.length} records`, 'gem')}${metric('Liabilities', D.money(debts), `${D.state.liabilities.length} balances`, 'landmark')}${metric('Goal reserves', D.money(sum(D.state.moneyGoals, 'saved')), `${D.state.moneyGoals.length} goals`, 'piggy-bank')}</section><div class="grid-2"><section class="panel"><div class="section-head"><h2>Asset register</h2><button data-route="home/property">Property & assets</button></div>${D.state.assets.map(item => row(item.name, `${item.category} - ${item.status}`, `<b>${D.money(item.value)}</b>`)).join('')}</section><section class="panel"><div class="section-head"><h2>Liabilities</h2></div>${D.state.liabilities.map(item => row(item.title, `${item.type} - ${item.interestRate}%`, `<b>${D.money(item.balance)}</b><button data-route="${sourceRoute(item.domain)}">Source</button>`)).join('')}</section></div><section class="panel"><div class="section-head"><h2>Savings goals</h2></div>${D.state.moneyGoals.map(item => { const percent = clamp(Math.round((+item.saved || 0) / Math.max(1, +item.target || 1) * 100)); return `<button class="budget-report-row" data-route="${sourceRoute(item.domain)}"><span class="source-icon">${icon('target')}</span><span class="grow"><b>${e(item.title)}</b><small>${D.money(item.saved)} of ${D.money(item.target)} - ${D.money(item.contribution)}/month</small><span class="progress"><span style="width:${percent}%"></span></span></span><strong>${percent}%</strong>${icon('chevron-right')}</button>`; }).join('')}</section>`;
   }
 
-  function moneyReports() {
+  function moneyReportsBase() {
     const months = [...new Set(D.state.expenses.map(item => isoDay(item.date).slice(0, 7)))].filter(Boolean).sort().slice(-6);
     const current = currentExpenses();
     const watch = Object.entries(financeDomains).map(([domain, config]) => { const planned = sum(D.state.budgets.filter(item => item.domain === domain)); const actual = sum(currentExpenses(domain)); return { domain, config, planned, actual, percent: planned ? Math.round(actual / planned * 100) : 0 }; }).sort((a, b) => b.percent - a.percent);
-    return `<section class="metrics">${metric('Savings rate', `${Math.round((1 - sum(current) / Math.max(1, sum(D.state.incomes))) * 100)}%`, 'Income less recorded spending', 'trending-up')}${metric('Budget pressure', `${watch.filter(item => item.percent >= 80).length} areas`, 'At or above 80%', 'gauge')}${metric('Recurring annual', D.money(sum(HM.life.ensure().filter(item => +item.amount > 0).map(item => ({ amount: monthlyValue(item) * 12 })))), 'Estimated commitments', 'repeat-2')}${metric('Data coverage', `${Object.keys(financeDomains).filter(domain => D.state.budgets.some(item => item.domain === domain)).length}/7`, 'Family areas budgeted', 'scan-search')}</section><div class="grid-2"><section class="panel"><h2>Monthly spending trend</h2><div class="chart money-chart" aria-label="Monthly spending">${months.map(month => { const value = sum(D.state.expenses.filter(item => isoDay(item.date).startsWith(month))); const max = Math.max(...months.map(key => sum(D.state.expenses.filter(item => isoDay(item.date).startsWith(key)))), 1); return `<div style="height:${Math.max(4, value / max * 100)}%"><b>${D.money(value)}</b><span>${e(month.slice(5))}/${e(month.slice(2, 4))}</span></div>`; }).join('')}</div></section><section class="panel"><div class="section-head"><div><h2>Budget watchlist</h2><p>Areas nearest their limit</p></div></div>${watch.map(item => row(item.config.label, `${D.money(item.actual)} of ${D.money(item.planned)}`, `<strong class="${item.percent >= 100 ? 'negative' : ''}">${item.percent}%</strong><button data-route="${item.config.route}">Source</button>`)).join('')}</section></div>`;
+    const gmailBills = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.category === 'bills').sort((a, b) => String(b.receivedAt).localeCompare(String(a.receivedAt)));
+    return `<section class="metrics">${metric('Savings rate', `${Math.round((1 - sum(current) / Math.max(1, sum(D.state.incomes))) * 100)}%`, 'Income less recorded spending', 'trending-up')}${metric('Budget pressure', `${watch.filter(item => item.percent >= 80).length} areas`, 'At or above 80%', 'gauge')}${metric('Recurring annual', D.money(sum(HM.life.ensure().filter(item => +item.amount > 0).map(item => ({ amount: monthlyValue(item) * 12 })))), 'Estimated commitments', 'repeat-2')}${metric('Data coverage', `${Object.keys(financeDomains).filter(domain => D.state.budgets.some(item => item.domain === domain)).length}/7`, 'Family areas budgeted', 'scan-search')}</section><div class="grid-2"><section class="panel"><h2>Monthly spending trend</h2><div class="chart money-chart" aria-label="Monthly spending">${months.map(month => { const value = sum(D.state.expenses.filter(item => isoDay(item.date).startsWith(month))); const max = Math.max(...months.map(key => sum(D.state.expenses.filter(item => isoDay(item.date).startsWith(key)))), 1); return `<div style="height:${Math.max(4, value / max * 100)}%"><b>${D.money(value)}</b><span>${e(month.slice(5))}/${e(month.slice(2, 4))}</span></div>`; }).join('')}</div></section><section class="panel"><div class="section-head"><div><h2>Budget watchlist</h2><p>Areas nearest their limit</p></div></div>${watch.map(item => row(item.config.label, `${D.money(item.actual)} of ${D.money(item.planned)}`, `<strong class="${item.percent >= 100 ? 'negative' : ''}">${item.percent}%</strong><button data-route="${item.config.route}">Source</button>`)).join('')}</section></div><section class="panel module-inbox-brief"><div class="section-head"><div><span class="section-kicker">GMAIL EVIDENCE</span><h2>Bills, payments and renewals</h2><p>${gmailBills.length} detected signals - ${gmailBills.filter(item => item.status === 'pending').length} still need review - ${D.money(gmailBills.reduce((total, item) => total + (+item.amount || 0), 0))} detected value</p></div><button data-route="global/intelligence">Full inbox report</button></div>${gmailBills.length ? gmailBills.slice(0, 7).map(item => row(item.title, `${item.sender || 'Unknown sender'} - ${item.actionDate ? `act by ${D.date(item.actionDate)}` : D.date(item.receivedAt)}`, `${item.amount ? `<b>${D.money(item.amount)}</b>` : ''}${inboxStatus(item.status)}`)).join('') : '<p class="empty">No financial Gmail signals have been processed.</p>'}</section>`;
+  }
+
+  function moneyReports() {
+    return `${sheetsPanel()}${moneyReportsBase()}`;
   }
 
   function finance(view = 'overview') {
@@ -427,12 +556,12 @@
 
   function wisdom() {
     const leaderboard = D.state.people.map(person => ({ name: person.name, points: D.state.pointTransactions.filter(x => x.personId === person.id).reduce((sum, x) => sum + (+x.points || 0), 0) })).sort((a, b) => b.points - a.points);
-    return `<div class="grid-2"><section><div class="section-head"><h2>Family wisdom</h2><button class="primary" data-create="wisdom">${icon('plus')}<span>Entry</span></button></div><div class="cards" style="grid-template-columns:1fr">${D.state.wisdomEntries.map(x => `<article class="card"><span class="badge">${e(x.category)}</span><h3>${e(x.title)}</h3><p>${e(x.body)}</p><small>Preserved by ${e(x.author)}</small></article>`).join('')}</div></section><section class="panel"><h2>Recognition</h2>${leaderboard.map((x, index) => row(`#${index + 1} ${x.name}`, 'Family contribution points', `<b>${x.points} pts</b>`)).join('')}</section></div>`;
+    return `<div class="grid-2"><section><div class="section-head"><h2>Family wisdom</h2><button class="primary" data-create="wisdom">${icon('plus')}<span>Entry</span></button></div><div class="cards" style="grid-template-columns:1fr">${D.state.wisdomEntries.map(x => `<article class="card"><span class="badge">${e(x.category)}</span><h3>${e(x.title)}</h3><p>${e(x.body)}</p><small>Preserved by ${e(x.author)}</small></article>`).join('')}</div></section><section class="panel"><h2>Recognition</h2>${leaderboard.map((x, index) => row(`#${index + 1} ${x.name}`, 'Family contribution points', `<b>${x.points} pts</b>`)).join('')}</section></div>${docsPanel()}`;
   }
 
   function directory(scope) {
     const contacts = D.state.contacts.filter(x => x.scope === scope);
-    return `<div class="toolbar"><input data-filter aria-label="Search contacts" placeholder="Search contacts"><button class="primary" data-create="contact" data-scope="${scope}">${icon('user-plus')}<span>Contact</span></button></div><div class="cards">${contacts.length ? contacts.map(x => `<article class="card" data-filter-row><span class="badge">${e(x.category)}</span><h3>${e(x.name)}</h3><p>${e(x.hours)}</p><a href="tel:${e(String(x.phone).replace(/[^+\d]/g, ''))}">${e(x.phone)}</a></article>`).join('') : empty('No contacts saved.', 'contact', 'Add contact')}</div>`;
+    return `<div class="toolbar"><input data-filter aria-label="Search contacts" placeholder="Search contacts"><button class="primary" data-create="contact" data-scope="${scope}">${icon('user-plus')}<span>Contact</span></button></div><div class="cards">${contacts.length ? contacts.map(x => `<article class="card" data-filter-row><span class="badge">${e(x.category)}</span><h3>${e(x.name)}</h3><p>${e(x.hours)}</p>${x.phone ? `<a href="tel:${e(String(x.phone).replace(/[^+\d]/g, ''))}">${e(x.phone)}</a>` : x.email ? `<a href="mailto:${e(x.email)}">${e(x.email)}</a>` : '<small>No contact method saved</small>'}</article>`).join('') : empty('No contacts saved.', 'contact', 'Add contact')}</div>${scope === 'home' ? contactsPanel() : ''}`;
   }
 
   function lifeDueState(record) {
@@ -471,7 +600,7 @@
     const moneyOptions = ['vehicles', 'property'].includes(domain) ? ['liability'] : ['health', 'emergency'].includes(domain) ? ['goal'] : [];
     return `<section class="metrics compact-metrics">${metric('Records', records.length, config.title, config.icon)}${metric('Needs attention', alerts.length, 'Due or overdue', 'calendar-warning')}${metric('Tracked value', D.money(total), 'Current records', 'indian-rupee')}${metric('Completed', records.filter(record => ['done', 'paid', 'complete'].includes(record.status)).length, 'Closed items', 'circle-check-big')}</section>
       <div class="toolbar"><input data-filter aria-label="Search ${e(config.title)}" placeholder="Search ${e(config.title.toLowerCase())}"><select data-status-filter aria-label="Filter by status"><option value="">All statuses</option><option value="planning">Planning</option><option value="pending">Pending</option><option value="active">Active</option><option value="due">Due</option><option value="paid">Paid</option><option value="done">Done</option></select><button class="primary" data-create="life" data-domain="${domain}">${icon('plus')}<span>Add ${e(config.noun)}</span></button></div>
-      <section class="panel life-register">${records.length ? `<table class="table"><thead><tr><th>Record</th><th>Owner</th><th>Provider / reference</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>${records.map(record => { const dueState = lifeDueState(record); return `<tr data-filter-row data-status="${e(record.status)}"><td data-label="Record"><b>${e(record.title)}</b><small>${e(record.category || config.title)}</small></td><td data-label="Owner">${e(record.owner || 'Family')}</td><td data-label="Provider"><span>${e(record.provider || 'Not set')}</span><small>${e(record.reference || '')}</small></td><td data-label="Due"><span class="badge ${dueState === 'overdue' ? 'danger' : dueState === 'soon' ? 'warning' : ''}">${D.date(record.dueDate)}</span></td><td data-label="Amount">${record.amount ? D.money(record.amount) : '-'}</td><td data-label="Status"><button data-life-status="${e(record.id)}">${lifeStatus(record.status)}</button></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(record.title)}" data-edit="life" data-id="${e(record.id)}" data-domain="${domain}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(record.title)}" data-delete="lifeRecords:${e(record.id)}">${icon('trash-2')}</button></span></td></tr>`; }).join('')}</tbody></table>` : `<div class="empty"><p>No ${e(config.title.toLowerCase())} records yet.</p><button class="primary" data-create="life" data-domain="${domain}">${icon('plus')}<span>Add ${e(config.noun)}</span></button></div>`}</section>${sectionFinance(moneyDomain, moneyOptions)}`;
+      <section class="panel life-register">${records.length ? `<table class="table"><thead><tr><th>Record</th><th>Owner</th><th>Provider / reference</th><th>Due</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead><tbody>${records.map(record => { const dueState = lifeDueState(record); return `<tr data-filter-row data-status="${e(record.status)}"><td data-label="Record"><b>${e(record.title)}</b><small>${e(record.category || config.title)}</small></td><td data-label="Owner">${e(record.owner || 'Family')}</td><td data-label="Provider"><span>${e(record.provider || 'Not set')}</span><small>${e(record.reference || '')}</small></td><td data-label="Due"><span class="badge ${dueState === 'overdue' ? 'danger' : dueState === 'soon' ? 'warning' : ''}">${D.date(record.dueDate)}</span></td><td data-label="Amount">${record.amount ? D.money(record.amount) : '-'}</td><td data-label="Status"><button data-life-status="${e(record.id)}">${lifeStatus(record.status)}</button></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" aria-label="Edit ${e(record.title)}" data-edit="life" data-id="${e(record.id)}" data-domain="${domain}">${icon('pencil')}</button><button class="icon-action danger-action" aria-label="Delete ${e(record.title)}" data-delete="lifeRecords:${e(record.id)}">${icon('trash-2')}</button></span></td></tr>`; }).join('')}</tbody></table>` : `<div class="empty"><p>No ${e(config.title.toLowerCase())} records yet.</p><button class="primary" data-create="life" data-domain="${domain}">${icon('plus')}<span>Add ${e(config.noun)}</span></button></div>`}</section>${domain === 'documents' ? drivePanel() : ''}${sectionFinance(moneyDomain, moneyOptions)}`;
   }
 
   function communityOverview() {
@@ -508,15 +637,18 @@
     const activeId = profiles.some(item => item.personId === D.state.settings.activeLearnerId) ? D.state.settings.activeLearnerId : profiles[0]?.personId;
     if (activeId && activeId !== D.state.settings.activeLearnerId) D.state.settings.activeLearnerId = activeId;
     const profile = profiles.find(item => item.personId === activeId) || { personId: '', name: 'Student', grade: 6, subjects: [], targetPercent: 75 };
+    const selectedSubject = D.state.settings.activeLearningSubject?.[activeId] || D.state.settings.learningSubjectTabs?.[activeRenderRoute] || 'All subjects';
+    const inSubject = item => selectedSubject === 'All subjects' || item.subject === selectedSubject;
     return {
       activeId,
       profile,
       profiles,
-      syllabus: (D.state.syllabusItems || []).filter(item => item.studentId === activeId),
-      plans: (D.state.studyPlans || []).filter(item => item.studentId === activeId),
-      deliverables: (D.state.academicDeliverables || []).filter(item => item.studentId === activeId),
-      assessments: (D.state.academicAssessments || []).filter(item => item.studentId === activeId),
-      practice: (D.state.practiceLogs || []).filter(item => item.studentId === activeId),
+      selectedSubject,
+      syllabus: (D.state.syllabusItems || []).filter(item => item.studentId === activeId && inSubject(item)),
+      plans: (D.state.studyPlans || []).filter(item => item.studentId === activeId && inSubject(item)),
+      deliverables: (D.state.academicDeliverables || []).filter(item => item.studentId === activeId && inSubject(item)),
+      assessments: (D.state.academicAssessments || []).filter(item => item.studentId === activeId && inSubject(item)),
+      practice: (D.state.practiceLogs || []).filter(item => item.studentId === activeId && inSubject(item)),
       sessions: (D.state.focusSessions || []).filter(item => !item.studentId || item.studentId === activeId),
       school: D.state.schoolProfile || {},
       timetable: (D.state.schoolTimetable || []).filter(item => item.studentId === activeId),
@@ -538,11 +670,38 @@
     return Math.round(schoolDays.filter(item => ['present', 'late'].includes(item.status)).length / schoolDays.length * 100);
   };
 
+  function examReadinessPanel(context) {
+    if (+context.profile.grade !== 12) return '';
+    const tracks = [
+      { name: 'CBSE Class XII', subjects: context.profile.subjects, iconName: 'school' },
+      { name: 'JEE Main', subjects: ['Physics', 'Chemistry', 'Mathematics'], iconName: 'target' }
+    ];
+    const trackCards = tracks.map(track => {
+      const rows = track.subjects.filter(subject => context.selectedSubject === 'All subjects' || context.selectedSubject === subject).map(subject => {
+        const syllabus = context.syllabus.filter(item => item.subject === subject);
+        const tests = context.assessments.filter(item => item.subject === subject && item.status !== 'scheduled' && (track.name.startsWith('CBSE') ? item.exam !== 'JEE Main' : item.exam === 'JEE Main' || /JEE/i.test(item.type || '')));
+        const practice = context.practice.filter(item => item.subject === subject && (track.name.startsWith('CBSE') ? item.exam !== 'JEE Main' : item.exam === 'JEE Main' || /JEE/i.test(item.source || '')));
+        const syllabusScore = averageOf(syllabus.map(item => item.mastery));
+        const testScore = tests.length ? averageOf(tests.map(assessmentPercent)) : 0;
+        const accuracy = practice.length ? practicePercent(practice) : 0;
+        const volume = Math.min(100, Math.round(practice.reduce((sum, item) => sum + (+item.attempted || 0), 0) / (track.name === 'JEE Main' ? 1.5 : .75)));
+        const score = Math.round(syllabusScore * .35 + testScore * .3 + accuracy * .25 + volume * .1);
+        return `<div class="exam-readiness-row"><b>${e(subject)}</b><span title="Syllabus">${syllabusScore}%</span><span title="Tests">${testScore}%</span><span title="Accuracy">${accuracy}%</span><span title="Practice volume">${volume}%</span><strong>${score}%</strong></div>`;
+      }).join('');
+      return `<section class="panel exam-track"><div class="section-head"><div><h2>${icon(track.iconName)} ${e(track.name)} readiness</h2><p>Syllabus · tests/mocks · accuracy · practice volume</p></div></div><div class="exam-readiness-head"><b>Subject</b><span>Syllabus</span><span>Tests</span><span>Accuracy</span><span>Volume</span><strong>Ready</strong></div>${rows || '<p class="empty">This exam does not include the selected subject.</p>'}</section>`;
+    }).join('');
+    return `<div class="exam-readiness-grid">${trackCards}</div><section class="panel assessment-note"><span>${icon('shield-check')}</span><div><b>Readiness is evidence, not a prediction.</b><p>Log CBSE papers and JEE Main mocks under the correct exam track. Review chapter mastery, timed accuracy, unfinished practical/internal work and recurring errors every week.</p></div></section>`;
+  }
+
   function learnerBar(context) {
     const p = context.profile;
     const bar = `<section class="learner-bar"><div class="learner-switch" role="group" aria-label="Choose student">${context.profiles.map((profile, index) => `<button data-learner="${e(profile.personId)}" class="student-tone-${index + 1} ${profile.personId === context.activeId ? 'active' : ''}" aria-pressed="${profile.personId === context.activeId}"><span>${e(profile.name[0])}</span><span><b>${e(profile.name)}</b><small>Peepal - CBSE Class ${e(profile.grade)}</small></span></button>`).join('')}</div><div class="learner-target"><span>${icon('target')}</span><span><small>Academic target</small><b>${e(p.targetPercent)}%</b></span><button class="icon-action" data-edit="academicProfile" data-id="${e(p.id)}" data-student="${e(p.personId)}" aria-label="Edit ${e(p.name)} profile">${icon('pencil')}</button></div></section>`;
-    const extension = context.learningExtension === 'curriculum' ? reflectionPanel(context) : context.learningExtension === 'planner' ? schoolPlannerPanel(context) : context.learningExtension === 'reports' ? schoolReportPanel(context) : '';
-    return bar + (context.showSchoolHub ? schoolHub(context) : '') + extension;
+    const extension = context.learningExtension === 'reports' ? examReadinessPanel(context) : '';
+    const subjects = ['All subjects', ...context.profile.subjects];
+    const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${context.selectedSubject === subject ? 'active' : ''}" aria-pressed="${context.selectedSubject === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
+    const learningSections = [['Tracking','activity','study/overview'],['Books','book-open','study/books'],['Curriculum','book-open-check','study/curriculum'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Assessments','file-chart-column','study/assessments'],['Practice','brain-circuit','study/practice']];
+    const sectionTabs = activeRenderRoute.startsWith('study/') ? `<nav class="learning-section-tabs" aria-label="Learning sections">${learningSections.map(([label, iconName, route]) => `<button type="button" data-route="${route}" class="${activeRenderRoute === route ? 'active' : ''}" ${activeRenderRoute === route ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span></button>`).join('')}</nav>` : '';
+    return bar + subjectTabs + sectionTabs + extension;
   }
 
   function schoolHub(context) {
@@ -551,6 +710,7 @@
   }
 
   function reflectionPanel(context) {
+    if (context) return '';
     const recent = [...context.reflections].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 4);
     const lensIcons = ['scan-search', 'network', 'users-round', 'blocks', 'messages-square', 'trophy'];
     return `<div class="education-grid reflection-grid"><section class="panel"><div class="section-head"><div><h2>Peepal learning lenses</h2><p>School-published learning priorities</p></div><a class="icon-action" href="${e(context.profile.grade >= 11 ? context.school.seniorSecondaryUrl : context.school.secondaryUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open Peepal methodology">${icon('external-link')}</a></div><div class="learning-lenses">${(context.school.methods || []).map((method, index) => `<span><i>${icon(lensIcons[index] || 'sparkles')}</i><b>${e(method)}</b></span>`).join('')}</div></section><section class="panel"><div class="section-head"><div><h2>Daily self-assessment</h2><p>Strength, question and next step</p></div><button class="primary" data-create="reflection" data-student="${e(context.activeId)}">${icon('plus')}<span>Reflection</span></button></div>${recent.length ? recent.map(item => `<div class="reflection-row"><div class="grow"><b>${e(item.subject)} - ${D.date(item.date)}</b><small>Confidence ${item.confidence}/5 - Effort ${item.effort}/5 - Clarity ${item.clarity}/5</small><p>${e(item.nextStep)}</p></div><span class="row-actions"><button class="icon-action" data-edit="reflection" data-id="${e(item.id)}" data-student="${e(context.activeId)}" aria-label="Edit reflection">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="learningReflections:${e(item.id)}" aria-label="Delete reflection">${icon('trash-2')}</button></span></div>`).join('') : '<p class="empty">No self-assessment recorded.</p>'}</section></div>`;
@@ -572,7 +732,8 @@
   }
 
   function subjectReadiness(context) {
-    return context.profile.subjects.map(subject => {
+    const subjects = context.selectedSubject && context.selectedSubject !== 'All subjects' ? [context.selectedSubject] : context.profile.subjects;
+    return subjects.map(subject => {
       const syllabus = context.syllabus.filter(item => item.subject === subject);
       const assessments = context.assessments.filter(item => item.subject === subject && item.status !== 'scheduled');
       const practice = context.practice.filter(item => item.subject === subject);
@@ -593,7 +754,6 @@
     const upcomingExams = c.assessments.filter(item => item.status === 'scheduled' && item.date >= today()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const nextPlans = c.plans.filter(item => item.date >= today()).sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)).slice(0, 7);
     const weak = [...readiness].sort((a, b) => a.readiness - b.readiness).slice(0, 3);
-    c.showSchoolHub = true;
     return `${learnerBar(c)}<section class="metrics">${metric('Syllabus mastery', `${mastery}%`, `${c.syllabus.filter(item => item.status === 'mastered').length}/${c.syllabus.length} outcomes mastered`, 'book-open-check')}${metric('Assessment average', `${score}%`, `Target ${c.profile.targetPercent}%`, 'file-chart-column')}${metric('Open submissions', due.length, due.filter(item => item.dueDate <= today()).length ? 'Includes overdue work' : 'Homework and projects', 'clipboard-check')}${metric('Practice accuracy', `${practicePercent(c.practice)}%`, `${c.practice.reduce((sumValue, item) => sumValue + (+item.attempted || 0), 0)} questions logged`, 'brain-circuit')}</section><div class="grid-2 learning-dashboard"><section class="panel"><div class="section-head"><div><h2>Next study blocks</h2><p>A realistic plan for ${e(c.profile.name)}</p></div><button data-route="study/planner">Open planner</button></div>${nextPlans.length ? nextPlans.map(item => row(`${item.startTime} - ${item.activity}`, `${D.date(item.date, { weekday: 'short', day: 'numeric', month: 'short' })} - ${item.subject} - ${item.minutes} min`, academicStatus(item.status))).join('') : '<p class="empty">No study blocks planned.</p>'}</section><section class="panel"><div class="section-head"><div><h2>Priority subjects</h2><p>Lowest combined readiness first</p></div><button data-route="study/reports">Full report</button></div>${weak.map(item => `<div class="readiness-row"><span class="subject-dot"></span><div class="grow"><b>${e(item.subject)}</b><small>Mastery ${item.mastery}% - Tests ${item.test}% - Practice ${item.accuracy}%</small><div class="progress ${item.readiness < 60 ? 'over' : ''}"><span style="width:${clamp(item.readiness)}%"></span></div></div><strong>${item.readiness}%</strong></div>`).join('')}</section></div><section class="panel learning-actions"><div class="section-head"><div><h2>Do next</h2><p>Highest-impact actions based on current records</p></div></div><div class="action-strip">${upcomingExams.slice(0, 1).map(item => `<button data-route="study/assessments"><span>${icon('calendar-warning')}</span><span><small>UPCOMING EXAM</small><b>${e(item.subject)} - ${e(item.title)}</b><em>${D.date(item.date)}</em></span></button>`).join('')}${due.slice(0, 2).map(item => `<button data-route="study/assignments"><span>${icon('clipboard-check')}</span><span><small>SUBMISSION</small><b>${e(item.title)}</b><em>${D.date(item.dueDate)}</em></span></button>`).join('')}${weak.slice(0, 2).map(item => `<button data-route="study/practice"><span>${icon('brain-circuit')}</span><span><small>REINFORCE</small><b>${e(item.subject)}</b><em>${item.readiness}% ready</em></span></button>`).join('')}<button data-route="study/assessments"><span>${icon(c.profile.grade === 12 ? 'file-check-2' : 'notebook-tabs')}</span><span><small>${c.profile.grade === 12 ? 'BOARD PREP' : 'SCHOOL REVIEW'}</small><b>${c.profile.grade === 12 ? 'Check practical and theory gaps' : 'Review periodic-test gaps'}</b><em>Open assessment plan</em></span></button></div></section>${sectionFinance('learning', ['goal', 'education'])}`;
   }
 
@@ -601,7 +761,7 @@
     const c = academicContext();
     const subjects = c.profile.subjects;
     const learner = learnerBar(c);
-    const books = textbookCatalog.filter(book => book.grade === +c.profile.grade);
+    const books = textbookCatalog.filter(book => book.grade === +c.profile.grade && (c.selectedSubject === 'All subjects' || book.subject === c.selectedSubject));
     const reading = D.state.readingProgress || [];
     const bookCards = books.map((book, index) => {
       const progress = reading.find(item => item.studentId === c.activeId && item.bookId === book.id);
@@ -624,12 +784,17 @@
     return `${learnerBar(c)}<section class="metrics compact-metrics">${metric('Planned this week', `${Math.round(total / 60 * 10) / 10} h`, 'Sustainable load', 'calendar-clock')}${metric('Study blocks', plans.filter(item => item.date >= today()).length, 'Upcoming', 'list-checks')}${metric('Subjects covered', new Set(plans.filter(item => item.date >= today()).map(item => item.subject)).size, `of ${c.profile.subjects.length}`, 'library-big')}${metric('Completed blocks', plans.filter(item => item.status === 'done').length, 'Build consistency', 'badge-check')}</section><div class="section-head"><div><h2>Seven-day plan</h2><p>Short, specific sessions with rest between blocks</p></div><button class="primary" data-create="studyPlan" data-student="${e(c.activeId)}">${icon('plus')}<span>Study block</span></button></div><div class="study-week">${days.map(date => { const items = plans.filter(item => item.date === date); return `<section><header><small>${D.date(date, { weekday: 'short' })}</small><b>${D.date(date, { day: 'numeric', month: 'short' })}</b></header>${items.map(item => `<article><span class="plan-time">${e(item.startTime)}</span><b>${e(item.subject)}</b><p>${e(item.activity)}</p><small>${item.minutes} min - ${e(item.method)}</small><select data-plan-status="${e(item.id)}" aria-label="Update ${e(item.activity)}">${['planned', 'done', 'missed'].map(value => `<option ${item.status === value ? 'selected' : ''}>${value}</option>`).join('')}</select><span class="row-actions"><button class="icon-action" data-edit="studyPlan" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit block">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="studyPlans:${e(item.id)}" aria-label="Delete block">${icon('trash-2')}</button></span></article>`).join('') || '<p class="day-empty">Recovery / unplanned</p>'}</section>`; }).join('')}</div><section class="panel plan-guidance"><span>${icon('heart-pulse')}</span><div><b>Protect sleep and recovery</b><p>Use this planner to balance school, revision, exercise and sleep. More logged hours do not guarantee better marks; consistent retrieval practice and correction do.</p></div></section>`;
   }
 
-  function assignments() {
+  function assignmentsBase() {
     const c = academicContext();
     const items = [...c.deliverables].sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
     const open = items.filter(item => !['done', 'submitted'].includes(item.status));
     const weekEnd = new Date(`${today()}T00:00`); weekEnd.setDate(weekEnd.getDate() + 7);
     return `${learnerBar(c)}<section class="metrics compact-metrics">${metric('Open work', open.length, 'Needs action', 'clipboard-list')}${metric('Due in 7 days', open.filter(item => item.dueDate <= weekEnd.toISOString().slice(0, 10)).length, 'Plan early', 'calendar-warning')}${metric('Projects & practicals', items.filter(item => ['Project', 'Practical', 'Portfolio', 'Internal assessment'].includes(item.type)).length, c.profile.grade === 12 ? 'Board evidence' : 'Applied learning', 'flask-conical')}${metric('Submitted', items.filter(item => ['done', 'submitted'].includes(item.status)).length, 'Completed work', 'circle-check-big')}</section><div class="toolbar"><input data-filter aria-label="Search assignments" placeholder="Search assignments"><select id="subjectFilter" aria-label="Filter assignments by subject"><option value="">All subjects</option>${c.profile.subjects.map(subject => `<option>${e(subject)}</option>`).join('')}</select><select data-status-filter aria-label="Filter assignment status"><option value="">All statuses</option><option>todo</option><option>progress</option><option>submitted</option><option>done</option></select><button class="primary" data-create="deliverable" data-student="${e(c.activeId)}">${icon('plus')}<span>Assignment</span></button></div><section class="panel"><table class="table"><thead><tr><th>Work</th><th>Type</th><th>Teacher</th><th>Due</th><th>Status</th><th>Actions</th></tr></thead><tbody>${items.map(item => `<tr data-filter-row data-subject="${e(item.subject)}" data-status="${e(item.status)}"><td data-label="Work"><b>${e(item.title)}</b><small>${e(item.subject)} - ${e(item.notes || 'No notes')}</small></td><td data-label="Type"><span class="badge">${e(item.type)}</span></td><td data-label="Teacher">${e(item.teacher || '-')}</td><td data-label="Due"><span class="badge ${item.dueDate < today() && !['done', 'submitted'].includes(item.status) ? 'danger' : ''}">${D.date(item.dueDate)}</span></td><td data-label="Status"><select data-deliverable-status="${e(item.id)}" aria-label="Update ${e(item.title)}">${['todo', 'progress', 'submitted', 'done'].map(value => `<option ${item.status === value ? 'selected' : ''}>${value}</option>`).join('')}</select></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="deliverable" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.title)}">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="academicDeliverables:${e(item.id)}" aria-label="Delete ${e(item.title)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section>`;
+  }
+
+  function assignments() {
+    const c = academicContext();
+    return `${assignmentsBase()}<details class="learning-integrations"><summary>${icon('cloud')}<span><b>Google class tools</b><small>Classroom imports and project presentations</small></span>${icon('chevron-down')}</summary><div>${classroomPanel(c.activeId)}${slidesPanel(c.activeId)}</div></details>`;
   }
 
   function assessments() {
@@ -661,11 +826,12 @@
     const overall = averageOf(subjects.map(item => item.readiness));
     const focusMinutes = c.sessions.reduce((sumValue, item) => sumValue + (+item.minutes || 0), 0);
     const interventions = subjects.filter(item => item.readiness < c.profile.targetPercent - 10);
+    const schoolSignals = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.category === 'school').sort((a, b) => String(b.receivedAt).localeCompare(String(a.receivedAt)));
     const reviewItems = interventions.length ? interventions.slice(0, 4).map(item => {
       const action = item.mastery < item.test ? 'Re-teach the weakest concept, then check with three application questions.' : item.accuracy < item.test ? 'Review the error notebook and schedule one short correction set.' : 'Protect the planned revision block and confirm school feedback.';
       return `<div class="review-action"><span>${icon('arrow-up-right')}</span><div><b>${e(item.subject)}</b><p>${action}</p></div></div>`;
     }).join('') : `<div class="review-action"><span>${icon('circle-check-big')}</span><div><b>Progress is on target</b><p>Keep the weekly routine stable and ask the student to explain one thing learned well.</p></div></div>`;
-    return `${learnerBar(c)}<section class="metrics">${metric('Overall readiness', `${overall}%`, `Target ${c.profile.targetPercent}%`, 'gauge')}${metric('On-target subjects', subjects.filter(item => item.readiness >= c.profile.targetPercent).length, `of ${subjects.length}`, 'badge-check')}${metric('Focus recorded', `${focusMinutes} min`, 'Use with quality evidence', 'timer-reset')}${metric('Parent actions', interventions.length, interventions.length ? 'Review this week' : 'No urgent intervention', 'users-round')}</section><div class="grid-2"><section class="panel"><div class="section-head"><div><h2>Subject readiness</h2><p>Mastery 40% + assessments 40% + practice 20%</p></div></div>${subjects.map(item => `<div class="readiness-row"><span class="subject-dot"></span><div class="grow"><b>${e(item.subject)}</b><small>Curriculum ${item.mastery}% - Assessment ${item.test}% - Accuracy ${item.accuracy}%</small><div class="progress ${item.readiness < 60 ? 'over' : ''}"><span style="width:${clamp(item.readiness)}%"></span></div></div><strong>${item.readiness}%</strong></div>`).join('')}</section><section class="panel parent-review"><div class="section-head"><div><h2>Weekly parent review</h2><p>Support without micromanaging</p></div></div>${reviewItems}<div class="review-boundary"><b>Marks are evidence, not identity.</b><p>Use this dashboard to find support needs. Do not use it to compare siblings or punish a low score.</p></div></section></div><section class="panel"><div class="section-head"><div><h2>Readiness distribution</h2><p>Use the lowest bars to plan the next week</p></div></div><div class="chart readiness-chart" aria-label="Subject readiness">${subjects.map(item => `<div style="height:${Math.max(4, item.readiness)}%"><b>${item.readiness}%</b><span>${e(item.subject.split(' ')[0])}</span></div>`).join('')}</div></section>`;
+    return `${learnerBar(c)}<section class="metrics">${metric('Overall readiness', `${overall}%`, `Target ${c.profile.targetPercent}%`, 'gauge')}${metric('On-target subjects', subjects.filter(item => item.readiness >= c.profile.targetPercent).length, `of ${subjects.length}`, 'badge-check')}${metric('Focus recorded', `${focusMinutes} min`, 'Use with quality evidence', 'timer-reset')}${metric('Parent actions', interventions.length, interventions.length ? 'Review this week' : 'No urgent intervention', 'users-round')}</section><div class="grid-2"><section class="panel"><div class="section-head"><div><h2>Subject readiness</h2><p>Mastery 40% + assessments 40% + practice 20%</p></div></div>${subjects.map(item => `<div class="readiness-row"><span class="subject-dot"></span><div class="grow"><b>${e(item.subject)}</b><small>Curriculum ${item.mastery}% - Assessment ${item.test}% - Accuracy ${item.accuracy}%</small><div class="progress ${item.readiness < 60 ? 'over' : ''}"><span style="width:${clamp(item.readiness)}%"></span></div></div><strong>${item.readiness}%</strong></div>`).join('')}</section><section class="panel parent-review"><div class="section-head"><div><h2>Weekly parent review</h2><p>Support without micromanaging</p></div></div>${reviewItems}<div class="review-boundary"><b>Marks are evidence, not identity.</b><p>Use this dashboard to find support needs. Do not use it to compare siblings or punish a low score.</p></div></section></div><section class="panel"><div class="section-head"><div><h2>Readiness distribution</h2><p>Use the lowest bars to plan the next week</p></div></div><div class="chart readiness-chart" aria-label="Subject readiness">${subjects.map(item => `<div style="height:${Math.max(4, item.readiness)}%"><b>${item.readiness}%</b><span>${e(item.subject.split(' ')[0])}</span></div>`).join('')}</div></section><section class="panel module-inbox-brief"><div class="section-head"><div><span class="section-kicker">SCHOOL GMAIL EVIDENCE</span><h2>Parent decisions from school messages</h2><p>${schoolSignals.length} detected signals - ${schoolSignals.filter(item => item.status === 'pending').length} still need review</p></div><button data-route="global/intelligence">Full inbox report</button></div>${schoolSignals.length ? schoolSignals.slice(0, 7).map(item => row(item.title, `${item.sender || 'School'} - ${item.actionDate ? `act by ${D.date(item.actionDate)}` : D.date(item.receivedAt)}`, inboxStatus(item.status))).join('') : '<p class="empty">No school Gmail signals have been processed.</p>'}</section>`;
   }
 
   function settingsLink(title, note, route, iconName) {
@@ -676,98 +842,8 @@
     return `<nav class="settings-tabs" aria-label="Settings groups">${settingsGroups.map((item, index) => `<button type="button" data-route="settings/${item[0]}" class="tab-tone-${index + 1} ${activeSection === item[0] ? 'active' : ''}" ${activeSection === item[0] ? 'aria-current="page"' : ''} title="${e(item[3])}">${icon(item[2])}<span>${e(item[1])}</span></button>`).join('')}</nav>`;
   }
 
-  function googleWorkspaceHub() {
-    const user = window.HMGoogle?.getUser();
-    const isAuth = !!user;
-
-    const services = [
-      { id: 'drive', name: 'Google Drive', icon: 'hard-drive', color: 'drive', desc: 'Browse, upload and manage files & backups' },
-      { id: 'contacts', name: 'Google Contacts', icon: 'users', color: 'contacts', desc: 'Sync & import family & service contacts' },
-      { id: 'calendar', name: 'Google Calendar', icon: 'calendar', color: 'calendar', desc: 'Sync household events & schedule new events' },
-      { id: 'meet', name: 'Google Meet', icon: 'video', color: 'meet', desc: 'Instant video call links for family & study' },
-      { id: 'classroom', name: 'Google Classroom', icon: 'graduation-cap', color: 'classroom', desc: 'Fetch student courses & active assignments' },
-      { id: 'tasks', name: 'Google Tasks', icon: 'check-square', color: 'tasks', desc: 'Sync and manage Google task lists' },
-      { id: 'sheets', name: 'Google Sheets', icon: 'table', color: 'sheets', desc: 'Export budgets & view household spreadsheets' },
-      { id: 'docs', name: 'Google Docs', icon: 'file-text', color: 'docs', desc: 'Create & manage family wisdom & guides' },
-      { id: 'slides', name: 'Google Slides', icon: 'presentation', color: 'slides', desc: 'Create & preview school & family decks' },
-      { id: 'keep', name: 'Google Keep / Quick Notes', icon: 'sticky-note', color: 'keep', desc: 'Quick note-taking & task sync' }
-    ];
-
-    return `
-      <section class="panel google-workspace-panel" id="googleWorkspaceHub">
-        <div class="section-head">
-          <div>
-            <span class="section-kicker">GOOGLE WORKSPACE INTEGRATIONS</span>
-            <h2>10-in-1 Google Services Center</h2>
-            <p>Connect your Google Account to access Drive, Contacts, Calendar, Meet, Classroom, Tasks, Sheets, Docs, Slides, and Keep.</p>
-          </div>
-          <div id="googleAuthAction">
-            ${isAuth ? `
-              <div class="workspace-hub-user">
-                ${user.photoURL ? `<img class="workspace-user-avatar" src="${e(user.photoURL)}" alt="${e(user.displayName)}">` : `<span class="avatar">${e(user.displayName?.[0] || 'G')}</span>`}
-                <div>
-                  <b>${e(user.displayName || 'Google User')}</b>
-                  <small>${e(user.email)}</small>
-                </div>
-                <button type="button" id="googleSignOutBtn" class="danger-action">${icon('log-out')}<span>Sign out</span></button>
-              </div>
-            ` : `
-              <button class="gsi-material-button" id="gsiLoginBtn" type="button">
-                <div class="gsi-material-button-state"></div>
-                <div class="gsi-material-button-content-wrapper">
-                  <div class="gsi-material-button-icon">
-                    <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" style="display: block;">
-                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                      <path fill="none" d="M0 0h48v48H0z"></path>
-                    </svg>
-                  </div>
-                  <span class="gsi-material-button-contents">Sign in with Google</span>
-                </div>
-              </button>
-            `}
-          </div>
-        </div>
-
-        <div class="workspace-grid">
-          ${services.map(s => `
-            <div class="workspace-card" id="wsCard-${s.id}">
-              <div class="workspace-card-head">
-                <span class="workspace-card-icon ${s.color}">${icon(s.icon)}</span>
-                <div>
-                  <b>${e(s.name)}</b>
-                  <small>${e(s.desc)}</small>
-                </div>
-              </div>
-              <div class="workspace-list-items" id="wsContent-${s.id}">
-                ${isAuth ? `<p class="empty">Click action below to load data</p>` : `<p class="empty">Sign in to access ${e(s.name)}</p>`}
-              </div>
-              <div class="workspace-card-actions">
-                ${isAuth ? `
-                  ${s.id === 'drive' ? `<button type="button" data-gw-act="fetchDrive" class="primary">${icon('refresh-cw')}<span>Fetch Files</span></button><button type="button" data-gw-act="uploadDrive">${icon('upload')}<span>Upload File</span></button>` : ''}
-                  ${s.id === 'contacts' ? `<button type="button" data-gw-act="fetchContacts" class="primary">${icon('refresh-cw')}<span>Import Contacts</span></button>` : ''}
-                  ${s.id === 'calendar' ? `<button type="button" data-gw-act="fetchCalendar" class="primary">${icon('refresh-cw')}<span>Fetch Events</span></button><button type="button" data-gw-act="createCalEvent">${icon('plus')}<span>New Event</span></button>` : ''}
-                  ${s.id === 'meet' ? `<button type="button" data-gw-act="createMeet" class="primary">${icon('video')}<span>New Meet Link</span></button>` : ''}
-                  ${s.id === 'classroom' ? `<button type="button" data-gw-act="fetchClassroom" class="primary">${icon('refresh-cw')}<span>Fetch Courses</span></button>` : ''}
-                  ${s.id === 'tasks' ? `<button type="button" data-gw-act="fetchTasks" class="primary">${icon('refresh-cw')}<span>Fetch Tasks</span></button><button type="button" data-gw-act="createTask">${icon('plus')}<span>Add Task</span></button>` : ''}
-                  ${s.id === 'sheets' ? `<button type="button" data-gw-act="createSheet" class="primary">${icon('file-spreadsheet')}<span>New Sheet</span></button><button type="button" data-gw-act="exportExpensesSheet">${icon('export')}<span>Export Expenses</span></button>` : ''}
-                  ${s.id === 'docs' ? `<button type="button" data-gw-act="createDoc" class="primary">${icon('file-text')}<span>New Doc</span></button>` : ''}
-                  ${s.id === 'slides' ? `<button type="button" data-gw-act="createSlide" class="primary">${icon('presentation')}<span>New Presentation</span></button>` : ''}
-                  ${s.id === 'keep' ? `<button type="button" data-gw-act="fetchKeepTasks" class="primary">${icon('refresh-cw')}<span>Sync Quick Notes</span></button>` : ''}
-                ` : `
-                  <button type="button" class="gsi-material-button-trigger" data-gw-login style="font-size:11px; padding:4px 8px;">${icon('log-in')}<span>Sign in required</span></button>
-                `}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    `;
-  }
-
   function appSettings(intro, settings) {
+    const cloud = HM.cloud?.getStatus?.() || { status: 'loading', detail: 'Loading family database', connected: false, vaultId: '', shareUrl: '' };
     const sync = settings.googleSync || {};
     const sms = settings.phoneSms || {};
     const clientReady = /^[0-9]+-[a-z0-9_-]+\.apps\.googleusercontent\.com$/i.test(sync.clientId || '');
@@ -785,29 +861,35 @@
     const sourceIcon = source => source === 'sms' ? 'message-square-text' : source === 'calendar' ? 'calendar-sync' : 'mail-search';
     const queue = pending.length ? pending.slice(0, 7).map(item => `<article class="sync-suggestion"><span class="suggestion-source source-${e(item.source)}">${icon(sourceIcon(item.source))}</span><div class="grow"><small>${e(item.source)} - ${e(item.category)}${item.sender ? ` - ${e(item.sender)}` : ''}</small><b>${e(item.title)}</b><p>${e(item.summary || 'No message content retained.')}</p><em>${item.receivedAt ? D.date(item.receivedAt, { day: 'numeric', month: 'short', year: 'numeric' }) : 'No date'}${item.amount ? ` - ${D.money(item.amount)}` : ''}</em></div><div class="suggestion-actions"><button type="button" data-sync-dismiss="${e(item.id)}" aria-label="Dismiss ${e(item.title)}">${icon('x')}</button><button type="button" class="primary" data-sync-apply="${e(item.id)}">${icon('check')}<span>Apply</span></button></div></article>`).join('') : '<p class="empty">No imported updates need review.</p>';
     return `${intro}
-      ${googleWorkspaceHub()}
+      <section class="panel family-vault vault-${e(cloud.status)}"><div class="section-head"><div><span class="section-kicker">PERMANENT FAMILY DATABASE</span><h2>Shared family vault</h2><p>One private shared link keeps settings and family records synchronized across Firebase Hosting, GitHub Pages, browsers and devices.</p></div><span class="sync-state ${cloud.connected ? 'connected' : cloud.status === 'error' ? 'error' : 'pending'}">${e(cloud.status)}</span></div>
+        <div class="vault-status"><span>${icon(cloud.connected ? 'cloud-check' : cloud.status === 'error' ? 'cloud-alert' : 'cloud')}<b>${e(cloud.detail)}</b></span></div>
+        ${cloud.vaultId ? `<div class="vault-share"><label>Shared family link<input id="familyVaultUrl" readonly value="${e(cloud.shareUrl)}"></label><div class="vault-actions"><button type="button" id="copyFamilyVault">${icon('copy')}<span>Copy family link</span></button><button type="button" id="saveFamilyVault" class="primary">${icon('cloud-upload')}<span>Save now</span></button><button type="button" id="disconnectFamilyVault">${icon('unlink')}<span>Use local only</span></button></div></div>` : `<form id="familyVaultForm" class="vault-connect"><label>Existing shared family key<input name="vaultId" autocomplete="off" spellcheck="false" placeholder="Paste the 43-character family key"></label><button type="submit">${icon('link')}<span>Join vault</span></button><button type="button" id="createFamilyVault" class="primary">${icon('database-backup')}<span>Create family vault</span></button></form>`}
+        <p class="vault-warning">Anyone with the full shared link can read and change this family vault. Send it only to trusted family members. Passwords, OTPs, OAuth tokens, raw SMS files and PDF files are never uploaded.</p>
+      </section>
       <section class="panel appearance-panel"><div class="section-head"><div><h2>Mountain photograph</h2><p>Choose a mountain landscape for the entire app.</p></div><span class="context-badge">12 photos</span></div>
         <fieldset class="nature-picker"><legend class="sr-only">App background</legend>${natureBackgrounds.map(item => `<label class="nature-option nature-${item[0]}"><input type="radio" name="appBackground" value="${item[0]}" ${settings.appBackground === item[0] ? 'checked' : ''}><span aria-hidden="true">${icon('leaf')}</span><b>${item[1]}</b>${icon('check')}</label>`).join('')}</fieldset>
       </section>
-      <form id="googleSyncSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">GOOGLE ACCOUNTS</span><h2>Gmail, Calendar and Drive</h2><p>Connect all four family Google accounts directly in this browser. Imported updates always enter the review queue.</p></div><span class="sync-state ${clientReady ? connected ? 'connected' : 'pending' : 'required'}">${clientReady ? connected ? `${connected} active this session` : 'Ready to authorize' : 'OAuth client ID required'}</span></div>
+      <form id="googleSyncSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">GOOGLE ACCOUNT ACCESS</span><h2>Family account mapping</h2><p>Map four consenting accounts here. Calendar, Tasks, Drive, Contacts and Learning actions appear only in the family section that owns the work.</p></div><span class="sync-state ${clientReady ? connected ? 'connected' : 'pending' : 'required'}">${clientReady ? connected ? `${connected} active this session` : 'Ready to authorize' : 'OAuth client ID required'}</span></div>
         <div class="sync-summary" aria-label="Google sync configuration"><span>${icon('users-round')}<b>${accounts.length}</b><small>mapped accounts</small></span><span>${icon('calendar-sync')}<b>${sync.calendarSync ? 'On' : 'Off'}</b><small>calendar import</small></span><span>${icon('mail-search')}<b>${sync.emailAnalysis ? 'On' : 'Off'}</b><small>email detection</small></span></div>
         <label class="connector-field">Google OAuth web client ID<input id="googleClientId" name="clientId" autocomplete="off" placeholder="123456789-example.apps.googleusercontent.com" value="${e(sync.clientId || '')}"><small>This identifier is public, not a secret. Authorize <b>https://shishyan.github.io</b> as a JavaScript origin in Google Cloud.</small></label>
         <div class="sync-preferences"><label><input type="checkbox" name="calendarSync" ${sync.calendarSync ? 'checked' : ''}> Import Google Calendar events</label><label><input type="checkbox" name="emailAnalysis" ${sync.emailAnalysis ? 'checked' : ''}> Detect household updates in Gmail</label><label><input type="checkbox" name="driveBackup" ${sync.driveBackup ? 'checked' : ''}> Save JSON backup in private Drive app data</label></div>
-        <div class="section-head sync-subhead"><div><h3>Four Google accounts</h3><p>Map each account to its family member and obtain separate consent from every owner.</p></div></div><div class="google-members">${googleSlots.map((account, index) => { const owner = D.state.people.find(person => person.id === account.personId) || D.state.people[index] || D.state.people[0]; const ready = clientReady && account.email && account.consent; return `<div class="google-member" data-google-account="${e(account.slotId || `google-${index + 1}`)}"><span class="member-avatar">${index + 1}</span><div class="grow"><b>Google account ${index + 1}</b><select data-google-owner aria-label="Owner for Google account ${index + 1}">${D.state.people.map(person => `<option value="${e(person.id)}" ${owner?.id === person.id ? 'selected' : ''}>${e(person.name)} - ${e(person.householdRole)}</option>`).join('')}</select><input data-google-email type="email" autocomplete="email" placeholder="Google account email" value="${e(account.email || '')}"></div><label class="consent-check"><input data-google-consent type="checkbox" ${account.consent ? 'checked' : ''}><span>Owner consent</span></label><span class="sync-state ${e(account.status || 'pending')}">${e(account.status === 'connected' ? 'Active this session' : account.status === 'error' ? 'Needs attention' : 'Not connected')}</span><button type="button" data-google-connect="${e(account.slotId || `google-${index + 1}`)}" ${ready ? '' : 'disabled'}>${icon('cloud')}<span>${account.status === 'connected' ? 'Reconnect' : 'Connect'}</span></button></div>`; }).join('')}</div>
+        <div class="section-head sync-subhead"><div><h3>Four Google accounts</h3><p>Map each account to its family member and obtain separate consent from every owner.</p></div></div><div class="google-members">${googleSlots.map((account, index) => { const owner = D.state.people.find(person => person.id === account.personId) || D.state.people[index] || D.state.people[0]; const ready = clientReady && account.email && account.consent; return `<div class="google-member" data-google-account="${e(account.slotId || `google-${index + 1}`)}"><span class="member-avatar">${index + 1}</span><div class="grow"><b>Google account ${index + 1}</b><select data-google-owner aria-label="Owner for Google account ${index + 1}">${D.state.people.map(person => `<option value="${e(person.id)}" ${owner?.id === person.id ? 'selected' : ''}>${e(person.name)} - ${e(person.householdRole)}</option>`).join('')}</select><input data-google-email type="email" autocomplete="email" placeholder="Google account email" value="${e(account.email || '')}"></div><label class="consent-check"><input data-google-consent type="checkbox" ${account.consent ? 'checked' : ''}><span>Owner consent</span></label><span class="sync-state ${e(account.status || 'pending')}">${e(account.status === 'connected' ? 'Gmail sync active' : account.status === 'error' ? 'Needs attention' : 'Gmail sync inactive')}</span><button type="button" data-google-connect="${e(account.slotId || `google-${index + 1}`)}" ${ready ? '' : 'disabled'}>${icon('mail-check')}<span>${account.status === 'connected' ? 'Reconnect Gmail' : 'Connect Gmail'}</span></button></div>`; }).join('')}</div>
         <fieldset class="detection-groups"><legend>Detect from email</legend>${categories.map(item => `<label><input type="checkbox" name="syncCategory" value="${item[0]}" ${(sync.categories || []).includes(item[0]) ? 'checked' : ''}><span>${icon('check')} ${item[1]}</span></label>`).join('')}</fieldset>
-        <div class="sync-controls"><label>Look back<select name="lookbackDays"><option value="7" ${+sync.lookbackDays === 7 ? 'selected' : ''}>7 days</option><option value="30" ${+sync.lookbackDays === 30 ? 'selected' : ''}>30 days</option><option value="90" ${+sync.lookbackDays === 90 ? 'selected' : ''}>90 days</option></select></label><label>Apply policy<select name="reviewPolicy"><option value="review" selected>Review every suggestion</option></select></label><button type="button" data-google-sync ${clientReady && connected ? '' : 'disabled'}>${icon('refresh-cw')}<span>Sync all accounts</span></button><button type="submit" class="primary">${icon('save')}<span>Save</span></button></div>
+        <div class="sync-controls"><label>Look back<select name="lookbackDays"><option value="7" ${+sync.lookbackDays === 7 ? 'selected' : ''}>7 days</option><option value="30" ${+sync.lookbackDays === 30 ? 'selected' : ''}>30 days</option><option value="90" ${+sync.lookbackDays === 90 ? 'selected' : ''}>90 days</option></select></label><label>Apply policy<select name="reviewPolicy"><option value="trusted" selected>Auto-apply family accounts</option></select></label><button type="button" data-google-sync ${clientReady && connected ? '' : 'disabled'}>${icon('refresh-cw')}<span>Sync all accounts</span></button><button type="submit" class="primary">${icon('save')}<span>Save</span></button></div>
       </form>
-      <form id="phoneSmsSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">ANDROID PHONE SMS</span><h2>Local message import</h2><p>Import an Android SMS backup on this device. Message files are analysed locally and are never uploaded.</p></div><span class="sync-state ${sms.consent ? 'connected' : 'required'}">${sms.consent ? 'Local import enabled' : 'Owner consent required'}</span></div>
+      <form id="phoneSmsSettings" class="panel sync-settings"><div class="section-head"><div><span class="section-kicker">ANDROID PHONE SMS</span><h2>Direct SMS synchronization</h2><p>Install the private Android companion once. It reads consented messages locally and sends only structured family updates to this Firebase vault.</p></div><span class="sync-state ${cloud.vaultId ? 'connected' : 'required'}">${cloud.vaultId ? 'Companion ready' : 'Family vault required'}</span></div>
         <div class="sync-summary" aria-label="Phone SMS integration"><span>${icon('message-square-text')}<b>${sms.importedCount || 0}</b><small>messages analysed</small></span><span>${icon('list-checks')}<b>${smsPending}</b><small>SMS suggestions</small></span><span>${icon('clock-3')}<b>${sms.lastImport ? D.date(sms.lastImport) : 'Never'}</b><small>last import</small></span></div>
+        <div class="sms-import-row companion-download"><div><b>Our Divine Nest SMS companion 1.0</b><small>Android 8 or newer · 7 MB · private APK · signed download</small></div><a class="primary button" href="assets/downloads/our-divine-nest-sms.apk" download>${icon('download')}<span>Download Android APK</span></a>${cloud.vaultId ? `<a class="button" href="ourdivinenest://configure?vault=${encodeURIComponent(cloud.vaultId)}&owner=${encodeURIComponent(sms.ownerId || 'p1')}">${icon('link')}<span>Configure installed app</span></a>` : ''}</div>
+        <div class="sms-boundary">${icon('shield-check')}<p><b>Install:</b> download on the Android phone, allow this browser to install unknown apps when prompted, install, then return here and tap <b>Configure installed app</b>. Grant SMS permission inside the companion. Android may show a Play Protect warning because this is a private family APK.</p></div>
         <div class="sms-owner-row"><label>Phone owner<select name="smsOwner">${D.state.people.map(person => `<option value="${e(person.id)}" ${sms.ownerId === person.id ? 'selected' : ''}>${e(person.name)} - ${e(person.householdRole)}</option>`).join('')}</select></label><label class="consent-check"><input id="smsConsent" name="smsConsent" type="checkbox" ${sms.consent ? 'checked' : ''}><span>The phone owner consents to local message analysis</span></label></div>
         <fieldset class="detection-groups"><legend>Detect from SMS</legend>${categories.map(item => `<label><input type="checkbox" name="smsCategory" value="${item[0]}" ${(sms.categories || []).includes(item[0]) ? 'checked' : ''}><span>${icon('check')} ${item[1]}</span></label>`).join('')}</fieldset>
         <div class="sms-import-row"><div><b>Android backup file</b><small>Supports SMS Backup & Restore XML and structured JSON. OTP and verification messages are discarded.</small></div><label class="primary file-button ${sms.consent ? '' : 'disabled'}">${icon('file-up')}<span>Choose backup</span><input id="smsImport" type="file" accept=".xml,.json,text/xml,application/xml,application/json" hidden ${sms.consent ? '' : 'disabled'}></label><button type="submit">${icon('save')}<span>Save phone settings</span></button></div>
-        <div class="sms-boundary">${icon('smartphone')}<p>A GitHub Pages website cannot read the live Android SMS inbox. Automatic inbox access requires a separately installed Android companion that qualifies for Android/Google Play SMS permissions. This import is the working browser-safe integration.</p></div>
+        <div class="sms-boundary">${icon('smartphone')}<p>The companion automatically handles new SMS and can synchronize up to 500 existing inbox messages. OTPs are discarded, long numbers are masked, duplicate messages are ignored, and raw SMS bodies never enter Firebase. The backup-file import remains available as a fallback.</p></div>
       </form>
-      <section class="panel integration-queue"><div class="section-head"><div><span class="section-kicker">REVIEW BEFORE APPLYING</span><h2>Google and SMS updates</h2><p>Nothing changes household records until a family member approves it.</p></div><span class="sync-state ${pending.length ? 'pending' : 'connected'}">${pending.length} pending</span></div><div class="suggestion-list">${queue}</div></section>
+      <section class="panel integration-queue"><div class="section-head"><div><span class="section-kicker">TRUSTED FAMILY SYNC</span><h2>Google and SMS updates</h2><p>Mapped family Google accounts and consented SMS backups update household records automatically. Only untrusted sources wait for review.</p></div><div class="toolbar-actions"><span class="sync-state ${pending.length ? 'pending' : 'connected'}">${pending.length} pending</span><button type="button" data-route="global/intelligence">${icon('chart-no-axes-combined')}<span>Inbox report</span></button></div></div><div class="suggestion-list">${queue}</div></section>
       <section class="panel sync-boundary"><span>${icon('shield-check')}</span><div><b>Session-only Google access</b><p>Google access tokens remain in memory and disappear on refresh or close. Home Manager reads Calendar events and Gmail subject, sender and snippet metadata directly; it never saves tokens or complete email bodies. Gmail access still requires Google's restricted-scope verification for production use.</p></div></section>
       <section class="panel"><h2>Backup and local data</h2><div class="row"><div class="grow"><b>Export backup</b><small>Download every locally stored record and non-secret sync preference</small></div><button id="exportData">Export JSON</button></div><div class="row"><div class="grow"><b>Import backup</b><small>Validate and restore a Home Manager export</small></div><label class="primary file-button">Choose file<input id="importData" type="file" accept="application/json" hidden></label></div><div class="row"><div class="grow"><b>Reset demonstration data</b><small>Remove local changes from this browser</small></div><button id="resetData" class="danger-action">Reset</button></div></section>
-      <section class="panel privacy-note"><b>Local storage is not encrypted</b><p>Do not store full identity numbers, passwords, banking credentials, document scans, medical reports or Google tokens. Exported backups must be stored securely.</p></section>`;
+      <section class="panel privacy-note"><b>Shared family data is stored in Firebase</b><p>Settings and structured family records synchronize to the selected vault and remain cached locally for offline use. Raw SMS backup files, textbook PDFs, passwords, OTPs and Google access tokens stay off the family database. Exported backups and the shared vault link must be stored securely.</p></section>`;
   }
 
   function settingsPage(section = 'household') {
@@ -834,7 +916,9 @@
   }
 
   function render(route) {
+    activeRenderRoute = route;
     if (route === 'global/overview') return unified();
+    if (route === 'global/intelligence') return inboxIntelligence();
     if (route === 'global/questions') return questionHub();
     if (route === 'global/settings') return settingsPage('app');
     if (route.startsWith('settings/')) return settingsPage(route.split('/')[1]);
@@ -869,6 +953,7 @@
       'community/directory': () => directory('community'),
       'community/guides': guides,
       'study/overview': studyOverview,
+      'study/books': curriculum,
       'study/curriculum': curriculum,
       'study/planner': studyPlanner,
       'study/assignments': assignments,

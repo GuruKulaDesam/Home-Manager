@@ -1,0 +1,33 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "asia-south1",
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      ".git/**",
+      ".firebase/**",
+      "**/.*",
+      "**/node_modules/**",
+      "private-data/**",
+      "test-results/**",
+      "tests/**",
+      "inputs/**",
+      "docs/**",
+      "android-companion/**",
+      "scripts/**",
+      "**/*.idsig",
+      "*.log",
+      "package.json",
+      "package-lock.json",
+      "firestore.rules",
+      "README.md",
+      "CONSOLIDATION.md",
+      "CNAME"
+    ]
+  }
+}

@@ -1,5 +1,13 @@
 # Home Manager Unified
 
+## Permanent family database
+
+The app can synchronize its complete structured state through a shared Firebase Firestore vault. Create a vault under **Settings → App & data**, then share the generated link only with trusted family members. The same link works from Firebase Hosting, GitHub Pages, other browsers, and other devices. Changes are cached locally for offline use and synchronize when connectivity returns; if two devices edit the same data simultaneously, the most recent document save wins.
+
+Vault access uses Firebase Anonymous Authentication plus an unguessable 256-bit key in the shared URL. Firestore rules prevent listing vaults and reject access outside the exact keyed state document. Structured settings and family records are synchronized. Passwords, passcodes, secrets, OTPs, credential fields, OAuth tokens, raw SMS backup files, and textbook PDF files are not uploaded.
+
+Firebase project setup is declared in `firebase.json` and `firestore.rules`. Anonymous Authentication must remain enabled for the `home-manager-2026` project.
+
 One dependency-free application combining the meaningful capabilities from all repositories under `GuruKulaDesam` and `shishyan`.
 
 ## Product structure
@@ -63,6 +71,6 @@ Open `index.html` directly or publish the repository root with GitHub Pages. No 
 
 Firebase/realtime collaboration, server authentication, background notifications, bank or UPI feeds, government portals, medical systems, payments, municipal APIs and native services require backends or native runtimes. The static application does not claim those integrations are connected. Community votes, registrations, ticket updates and Life Registry records are explicitly local to the current browser.
 
-App & data Settings connects four family Google accounts directly through Google Identity Services: separate family-member mapping and owner consent, Google account selection, verified email identity, Calendar/Gmail/Drive preferences, manual sync and a shared approval queue. No OAuth connector or backend is required. Access tokens remain only in memory and disappear on refresh; the repository and browser storage contain no Google tokens or client secrets. Setup requires only a public OAuth web client ID and is documented in [docs/google-browser-setup.md](docs/google-browser-setup.md). Gmail read-only access remains a restricted Google scope and must meet Google's verification requirements before public production use.
+App & data Settings connects four family Google accounts directly through Google Identity Services: separate family-member mapping and owner consent, Google account selection, verified email identity, Calendar/Gmail/Drive preferences, manual sync and a shared approval queue. Inbox Intelligence turns retained Gmail subject, sender and snippet metadata into local metrics, seven decision categories, urgency and action-date signals, account and sender summaries, trends, and complete filterable history; Money and Learning reports reuse the relevant evidence. No OAuth connector or backend is required. Access tokens remain only in memory and disappear on refresh; the repository and browser storage contain no Google tokens or client secrets. Setup requires only a public OAuth web client ID and is documented in [docs/google-browser-setup.md](docs/google-browser-setup.md). Gmail read-only access remains a restricted Google scope and must meet Google's verification requirements before public production use.
 
-Phone SMS integration accepts Android SMS Backup & Restore-style XML or structured JSON. Files are parsed locally in the browser, OTPs are discarded, long identifiers are masked and matched household updates enter the same review queue as Google. Applying an update writes it to Bills, Travel, Appointments, Documents, Study events or Tasks. A website cannot read the live Android inbox; automatic inbox access requires a separately installed eligible Android companion because Google Play restricts SMS permissions.
+Phone SMS integration includes a private downloadable Android companion under **Settings → App & data**. The companion reads consented inbox messages locally, rejects OTPs, masks long identifiers, deduplicates messages and atomically writes structured Bills, Travel, Appointments, Documents, Study events or Tasks into the shared Firebase vault. Raw SMS bodies stay on the phone. Android SMS Backup & Restore-style XML or structured JSON import remains available as a browser-only fallback.

@@ -19,6 +19,7 @@ test('all non-learning suites render without runtime errors', async ({ page }) =
   page.on('pageerror', error => errors.push(error.message));
   const routes = [
     ['global/overview', 'Today'],
+    ['global/intelligence', 'Inbox Intelligence'],
     ['home/overview', 'Home Overview'],
     ['home/family', 'Family'],
     ['home/family/protection', 'Protection & Legacy'],
@@ -32,6 +33,23 @@ test('all non-learning suites render without runtime errors', async ({ page }) =
     await expect(page.locator('#content')).not.toBeEmpty();
   }
   expect(errors).toEqual([]);
+});
+
+test('Munnar sunrise is the default and another background choice still persists', async ({ page }) => {
+  await page.goto(`${app}#/global/overview`);
+  await expect(page.locator('body')).toHaveAttribute('data-nature', 'sunrise');
+  const surfaceTokens = await page.evaluate(() => ({
+    glass: getComputedStyle(document.documentElement).getPropertyValue('--glass').trim(),
+    shell: getComputedStyle(document.body).getPropertyValue('--shell-bg').trim()
+  }));
+  expect(surfaceTokens.glass).toContain('.559');
+  expect(surfaceTokens.shell).toContain('.615');
+
+  await page.goto(`${app}#/settings/app`);
+  await page.locator('[name="appBackground"][value="waterfall"]').check({ force: true });
+  await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
 });
 
 test('Family and Care expose at most seven clear child routes', async ({ page }) => {
@@ -98,8 +116,8 @@ test('mobile Care page has no horizontal page overflow', async ({ page }) => {
 });
 
 test('Class 7 and Class 12 have separate official textbook libraries', async ({ page }) => {
-  await page.goto(`${app}#/study/curriculum`);
-  await expect(page.locator('#pageTitle')).toHaveText('Books & Curriculum');
+  await page.goto(`${app}#/study/books`);
+  await expect(page.locator('#pageTitle')).toHaveText('Books');
   await expect(page.locator('[data-book-card]')).toHaveCount(9);
   await expect(page.locator('#content')).toContainText('Physics Part I');
   await expect(page.locator('#content')).toContainText('Flamingo');
@@ -114,8 +132,49 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('#content')).toContainText('PDF not added on this device');
 });
 
+test('Learning pages use persistent subject tabs and show CBSE and JEE readiness', async ({ page }) => {
+  await page.goto(`${app}#/study/books`);
+  await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
+  await expect(page.locator('.subject-tabs')).toContainText('Physics');
+  await page.getByRole('button', { name: 'Physics', exact: true }).click();
+  await expect(page.locator('[data-book-card]')).toHaveCount(2);
+  await expect(page.locator('[data-book-card]')).toContainText(['Physics Part I', 'Physics Part II']);
+  await expect(page.locator('[data-book-card="g12-physics-1"] [data-book-state]')).toContainText('Bundled offline');
+  await page.locator('[data-book-open="g12-physics-1"]').click();
+  await expect(page.locator('#bookReaderDialog')).toBeVisible();
+  await expect(page.locator('#bookPart option')).toHaveCount(10);
+  await expect(page.locator('#bookFrame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph101\.pdf/);
+  await page.locator('#bookReaderDialog [data-close-dialog]').click();
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
+
+  await page.goto(`${app}#/study/reports`);
+  await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.exam-track')).toHaveCount(2);
+  await expect(page.locator('.exam-readiness-grid')).toContainText('CBSE Class XII readiness');
+  await expect(page.locator('.exam-readiness-grid')).toContainText('JEE Main readiness');
+});
+
+test('Class 12 and Class 7 learning tabs keep books and curriculum focused', async ({ page }) => {
+  for (const learnerId of ['p3', 'p4']) {
+    await page.goto(`${app}#/study/books`);
+    await page.locator(`[data-learner="${learnerId}"]`).click();
+    await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
+    await expect(page.locator('.textbook-section')).toBeVisible();
+    await expect(page.locator('.curriculum-summary')).toBeHidden();
+    await expect(page.locator('.reflection-grid')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Curriculum', exact: true }).click();
+    await expect(page.locator('.textbook-section')).toBeHidden();
+    await expect(page.locator('.curriculum-summary')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Assignments', exact: true }).click();
+    await expect(page.locator('.learning-integrations')).not.toHaveAttribute('open', '');
+  }
+});
+
 test('a private PDF can be read, bookmarked and reviewed without upload', async ({ page }) => {
-  await page.goto(`${app}#/study/curriculum`);
+  await page.goto(`${app}#/study/books`);
   await page.locator('[data-learner="p4"]').click();
   await page.locator('#bookFileInput').evaluate(input => {
     input.dataset.bookId = 'g7-science';
@@ -153,13 +212,16 @@ test('a private PDF can be read, bookmarked and reviewed without upload', async 
 
 test('textbook library and reader fit a phone viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${app}#/study/curriculum`);
+  await page.goto(`${app}#/study/books`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
 });
 
 test('four Google accounts authorize and sync directly without a connector', async ({ page }) => {
+  let activeGmailDetails = 0;
+  let maxGmailDetails = 0;
+  const gmailAttempts = new Map();
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => {
     const email = route.request().headers().authorization.replace('Bearer token:', '');
@@ -174,8 +236,21 @@ test('four Google accounts authorize and sync directly without a connector', asy
     const request = route.request();
     const email = request.headers().authorization.replace('Bearer token:', '');
     const url = new URL(request.url());
-    if (url.pathname.endsWith('/messages')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages: email === 'mother@example.com' ? [{ id: 'gmail-1' }] : [] }) });
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'gmail-1', internalDate: '1785920400000', snippet: 'Class 7 exam timetable is available', payload: { headers: [{ name: 'Subject', value: 'School exam timetable' }, { name: 'From', value: 'Peepal School' }] } }) });
+    if (url.pathname.endsWith('/messages')) {
+      const secondPage = url.searchParams.get('pageToken') === 'page-2';
+      const messages = email !== 'mother@example.com' ? [] : Array.from({ length: secondPage ? 4 : 5 }, (_, index) => ({ id: `gmail-${index + (secondPage ? 6 : 1)}` }));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages, nextPageToken: email === 'mother@example.com' && !secondPage ? 'page-2' : undefined }) });
+    }
+    const messageId = url.pathname.split('/').pop();
+    const attempt = (gmailAttempts.get(messageId) || 0) + 1;
+    gmailAttempts.set(messageId, attempt);
+    if (messageId === 'gmail-1' && attempt === 1) return route.fulfill({ status: 429, headers: { 'Retry-After': '0' }, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Too many concurrent requests' } }) });
+    activeGmailDetails += 1;
+    maxGmailDetails = Math.max(maxGmailDetails, activeGmailDetails);
+    return new Promise(resolve => setTimeout(resolve, 20)).then(() => {
+      activeGmailDetails -= 1;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: messageId, internalDate: '1785920400000', snippet: 'Class 7 exam timetable and fee Rs 2,500 due 12 August 2026', payload: { headers: [{ name: 'Subject', value: `School exam timetable ${messageId}` }, { name: 'From', value: 'Peepal School' }] } }) });
+    });
   });
   await page.goto(`${app}#/settings/app`);
   await page.evaluate(() => {
@@ -195,13 +270,38 @@ test('four Google accounts authorize and sync directly without a connector', asy
   for (let index = 0; index < familyEmails.length; index += 1) {
     const row = page.locator(`[data-google-account="google-${index + 1}"]`);
     await row.locator('[data-google-connect]').click();
-    await expect(row).toContainText('Active this session');
+    await expect(row).toContainText('Gmail sync active');
   }
   await expect(page.locator('#googleSyncSettings')).toContainText('4 active this session');
   await expect(page.locator('[data-google-sync]')).toContainText('Sync all accounts');
   await page.locator('[data-google-sync]').click();
-  await expect(page.locator('.integration-queue')).toContainText('Family train booking');
-  await expect(page.locator('.integration-queue')).toContainText('School exam timetable');
+  await expect.poll(() => page.evaluate(() => HM.data.state.syncSuggestions.length)).toBe(10);
+  await expect(page.locator('.integration-queue')).toContainText('0 pending');
+  expect(maxGmailDetails).toBeLessThanOrEqual(3);
+  expect(gmailAttempts.get('gmail-1')).toBe(2);
+  await page.goto(`${app}#/global/intelligence`);
+  await expect.poll(() => page.evaluate(() => HM.data.state.settings.googleSync.accounts.length)).toBe(4);
+  await expect(page.locator('.inbox-history tbody tr')).toHaveCount(9);
+  await expect(page.locator('.inbox-metrics')).toContainText('9');
+  await expect(page.locator('.inbox-history')).toContainText('Action 12 Aug');
+  await expect(page.locator('.inbox-history')).toContainText('₹2,500');
+  await page.locator('[data-category-filter]').selectOption('school');
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(9);
+  await page.locator('[data-filter]').fill('gmail-9');
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(1);
+  await page.locator('[data-filter]').fill('');
+  await page.locator('[data-status-filter]').selectOption('applied');
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(9);
+  const appliedSchoolEvent = await page.evaluate(() => HM.data.state.events.find(item => item.title.includes('School exam timetable')));
+  expect(appliedSchoolEvent.startAt).toContain('2026-08-12');
+  await page.goto(`${app}#/home/money/reports`);
+  await expect(page.locator('.module-inbox-brief')).toContainText('Bills, payments and renewals');
+  await page.goto(`${app}#/study/reports`);
+  await expect(page.locator('.module-inbox-brief')).toContainText('Parent decisions from school messages');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${app}#/global/intelligence`);
+  const intelligenceOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(intelligenceOverflow).toBeLessThanOrEqual(1);
   const accounts = await page.evaluate(() => HM.data.state.settings.googleSync.accounts.map(account => ({ personId: account.personId, status: account.status })));
   expect(accounts).toEqual([
     { personId: 'p1', status: 'connected' },
@@ -211,8 +311,9 @@ test('four Google accounts authorize and sync directly without a connector', asy
   ]);
 });
 
-test('Android SMS backup is analysed locally with OTP exclusion and review apply', async ({ page }) => {
+test('Android SMS backup excludes OTPs and auto-applies trusted family updates', async ({ page }) => {
   await page.goto(`${app}#/settings/app`);
+  await expect(page.getByRole('link', { name: 'Download Android APK' })).toHaveAttribute('href', 'assets/downloads/our-divine-nest-sms.apk');
   await page.locator('#smsConsent').check();
   await page.locator('#phoneSmsSettings button[type="submit"]').click();
   const smsXml = `<?xml version="1.0" encoding="UTF-8"?><smses count="4">
@@ -222,18 +323,112 @@ test('Android SMS backup is analysed locally with OTP exclusion and review apply
     <sms address="BANK" date="1785931200000" body="Your OTP is 874221 and expires in 5 minutes" contact_name="Bank" />
   </smses>`;
   await page.locator('#smsImport').setInputFiles({ name: 'phone-sms.xml', mimeType: 'application/xml', buffer: Buffer.from(smsXml) });
-  await expect(page.locator('.integration-queue')).toContainText('3 pending');
-  await expect(page.locator('.integration-queue')).toContainText('Electricity bill');
+  await expect.poll(() => page.evaluate(() => HM.data.state.settings.phoneSms.importedCount)).toBe(4);
+  await expect(page.locator('.integration-queue')).toContainText('0 pending');
   await expect(page.locator('.integration-queue')).not.toContainText('874221');
-  await expect(page.locator('.integration-queue')).toContainText('...7890');
-  const billSuggestion = page.locator('.sync-suggestion').filter({ hasText: 'Electricity bill' });
-  await billSuggestion.getByRole('button', { name: 'Apply' }).click();
   const imported = await page.evaluate(() => ({
     sms: HM.data.state.settings.phoneSms.importedCount,
     bill: HM.data.state.lifeRecords.find(item => item.domain === 'bills' && item.provider === 'Power provider'),
-    pending: HM.data.state.syncSuggestions.filter(item => item.status === 'pending').length
+    pending: HM.data.state.syncSuggestions.filter(item => item.status === 'pending').length,
+    billSummary: HM.data.state.syncSuggestions.find(item => item.source === 'sms' && item.category === 'bills')?.summary
   }));
   expect(imported.sms).toBe(4);
   expect(imported.bill).toMatchObject({ domain: 'bills', amount: 1850, status: 'pending' });
-  expect(imported.pending).toBe(2);
+  expect(imported.pending).toBe(0);
+  expect(imported.billSummary).toContain('...7890');
+});
+
+test('Google Workspace tools live in the family modules that own them', async ({ page }) => {
+  await page.goto(`${app}#/settings/app`);
+  await page.evaluate(() => {
+    HM.data.state.settings.googleSync.clientId = '123456789-example.apps.googleusercontent.com';
+    HM.data.state.settings.googleSync.accounts = [{ slotId: 'google-1', personId: 'p1', email: 'father@example.com', consent: true, status: 'pending', lastSync: '' }];
+    HM.data.save();
+  });
+
+  const routes = [
+    ['home/tasks', 'tasks', 'Google Tasks'],
+    ['home/calendar', 'calendar', 'Google Calendar & Meet'],
+    ['home/life/documents', 'drive', 'Family documents in Drive'],
+    ['home/directory', 'contacts', 'Google Contacts'],
+    ['home/money/reports', 'sheets', 'Google Sheets report'],
+    ['home/wisdom', 'docs', 'Google Docs family book'],
+    ['study/assignments', 'classroom', 'Google Classroom'],
+    ['study/assignments', 'slides', 'Google Slides project deck']
+  ];
+  for (const [route, service, heading] of routes) {
+    await page.goto(`${app}#/${route}`);
+    await expect(page.locator(`[data-google-service="${service}"]`)).toContainText(heading);
+  }
+
+  await page.goto(`${app}#/global/overview`);
+  await page.locator('[data-google-note-text]').fill('Confirm the school transport timing');
+  await page.locator('[data-google-action="note-add"]').click();
+  await expect(page.locator('[data-google-service="notes"]')).toContainText('Confirm the school transport timing');
+  expect(await page.evaluate(() => HM.data.state.quickNotes.length)).toBe(1);
+
+  await page.goto(`${app}#/settings/app`);
+  await expect(page.locator('#googleSyncSettings')).toContainText('Family account mapping');
+  await expect(page.locator('#googleSyncSettings')).not.toContainText('10-in-1');
+});
+
+test('Calendar creates a real Google event with an optional Meet conference', async ({ page }) => {
+  let createRequest;
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: 'father@example.com' }) }));
+  await page.route('https://www.googleapis.com/calendar/v3/calendars/primary/events**', async route => {
+    if (route.request().method() === 'POST') {
+      createRequest = { url: route.request().url(), body: route.request().postDataJSON() };
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'event-1', summary: createRequest.body.summary, start: createRequest.body.start, hangoutLink: 'https://meet.google.com/abc-defg-hij' }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [] }) });
+  });
+  await page.goto(`${app}#/home/calendar`);
+  await page.evaluate(() => {
+    HM.data.state.settings.googleSync.clientId = '123456789-example.apps.googleusercontent.com';
+    HM.data.state.settings.googleSync.accounts = [{ slotId: 'google-1', personId: 'p1', email: 'father@example.com', consent: true, status: 'pending', lastSync: '' }];
+    HM.data.save();
+  });
+  await page.reload();
+  await page.evaluate(() => { window.google = { accounts: { oauth2: { initTokenClient: config => ({ requestAccessToken: () => config.callback({ access_token: 'calendar-token', expires_in: 3600 }) }), revoke: () => {} } } }; });
+  await page.locator('[data-google-event-title]').fill('Family study review');
+  await page.locator('[data-google-event-start]').fill('2026-08-10T18:30');
+  await page.locator('[data-google-action="calendar-meet"]').click();
+  await expect(page.locator('[data-google-service="calendar"]')).toContainText('Meet ready');
+  expect(createRequest.url).toContain('conferenceDataVersion=1');
+  expect(createRequest.body.summary).toBe('Family study review');
+  expect(createRequest.body.conferenceData.createRequest.conferenceSolutionKey.type).toBe('hangoutsMeet');
+});
+
+test('Contacts and Tasks review Google data before importing local records', async ({ page }) => {
+  await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
+  await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: 'mother@example.com' }) }));
+  await page.route('https://people.googleapis.com/v1/people/me/connections**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connections: [{ resourceName: 'people/1', names: [{ displayName: 'School Office' }], emailAddresses: [{ value: 'office@school.test' }], phoneNumbers: [{ value: '+91 422 123 4567' }], organizations: [{ name: 'Peepal Prodigy School' }] }] }) }));
+  await page.route('https://tasks.googleapis.com/tasks/v1/users/@me/lists**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [{ id: 'list-1', title: 'Family' }] }) }));
+  await page.route('https://tasks.googleapis.com/tasks/v1/lists/list-1/tasks**', route => {
+    if (route.request().method() === 'PATCH') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'gt-1', title: 'Renew library card', status: 'completed' }) });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [{ id: 'gt-1', title: 'Renew library card', status: 'needsAction', due: '2026-08-15T00:00:00.000Z' }] }) });
+  });
+  await page.goto(`${app}#/settings/app`);
+  await page.evaluate(() => {
+    HM.data.state.settings.googleSync.clientId = '123456789-example.apps.googleusercontent.com';
+    HM.data.state.settings.googleSync.accounts = [{ slotId: 'google-2', personId: 'p2', email: 'mother@example.com', consent: true, status: 'pending', lastSync: '' }];
+    HM.data.save();
+  });
+  await page.reload();
+  await page.evaluate(() => { window.google = { accounts: { oauth2: { initTokenClient: config => ({ requestAccessToken: () => config.callback({ access_token: 'workspace-token', expires_in: 3600 }) }), revoke: () => {} } } }; });
+
+  await page.goto(`${app}#/home/directory`);
+  await page.locator('[data-google-action="contacts-list"]').click();
+  await expect(page.locator('[data-google-service="contacts"]')).toContainText('School Office');
+  await page.locator('[data-google-action="contact-import"]').click();
+  await expect(page.locator('#content')).toContainText('Peepal Prodigy School');
+  expect(await page.evaluate(() => HM.data.state.contacts.some(contact => contact.email === 'office@school.test'))).toBe(true);
+
+  await page.goto(`${app}#/home/tasks`);
+  await page.locator('[data-google-action="tasks-list"]').click();
+  await expect(page.locator('[data-google-service="tasks"]')).toContainText('Renew library card');
+  await page.locator('[data-google-action="task-import"]').click();
+  await expect(page.locator('#content')).toContainText('Renew library card');
+  expect(await page.evaluate(() => HM.data.state.tasks.some(task => task.googleTaskId === 'gt-1' && task.assignee === 'Mother'))).toBe(true);
 });
