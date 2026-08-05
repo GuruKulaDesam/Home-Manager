@@ -347,10 +347,10 @@
       D.save();
     }
     renderNav();
-    const title = V.titles[route] || ['Today', 'LotusNaga Divine Nest'];
+    const title = V.titles[route] || ['Today', 'Our Divine Nest'];
     $('#breadcrumb').textContent = settingsSection() ? 'Settings' : V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
-    document.title = title[0] + ' - LotusNaga Divine Nest';
+    document.title = title[0] + ' - Our Divine Nest';
     $('#content').innerHTML = V.render(route);
     bindView();
     renderNotifications();
