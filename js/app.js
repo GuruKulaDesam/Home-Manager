@@ -263,7 +263,9 @@
     inThirtyDays.setDate(inThirtyDays.getDate() + 30);
     const horizon = inThirtyDays.toISOString().slice(0, 10);
     const lifeRecords = (D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
+    const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.status === 'pending').sort((a, b) => ({ high: 0, medium: 1, normal: 2 }[a.urgency] ?? 2) - ({ high: 0, medium: 1, normal: 2 }[b.urgency] ?? 2));
     return [
+      ...gmail.map(item => ({ title: item.title, detail: `${item.decision || 'Review'}${item.actionDate ? ` by ${D.date(item.actionDate)}` : ''}`, route: 'global/intelligence' })),
       ...overdue.map(x => ({ title: x.title, detail: `Overdue since ${D.date(x.dueAt)}`, route: x.context === 'study' ? 'study/tasks' : 'home/tasks' })),
       ...low.map(x => ({ title: `${x.name} is running low`, detail: `${x.quantity} ${x.unit} remaining`, route: 'home/inventory' })),
       ...issues.map(x => ({ title: x.title, detail: `${x.location} - high priority`, route: x.scope === 'civic' ? 'community/tickets' : 'home/assets' })),
@@ -288,7 +290,10 @@
     const routeDomain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
     const records = routeDomain ? (D.state.lifeRecords || []).filter(item => item.domain === routeDomain) : [];
     let items;
-    if (routeDomain) {
+    if (route === 'global/intelligence') {
+      const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail');
+      items = [['Signals', gmail.length, route, 'mail-search'], ['Needs review', gmail.filter(item => item.status === 'pending').length, route, 'list-checks'], ['Detected', D.money(gmail.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
+    } else if (routeDomain) {
       items = [['Records', records.length, route, 'database'], ['Need attention', records.filter(item => item.dueDate && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, route, 'bell-ring'], ['Tracked', D.money(records.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
     } else if (route === 'home/finance' || route.startsWith('home/money/')) {
       const expenses = D.state.expenses.filter(item => String(item.date).startsWith(month));
@@ -525,17 +530,19 @@
   function applyFilters() {
     const query = (document.querySelector('[data-filter]')?.value || '').toLowerCase();
     const status = document.querySelector('[data-status-filter]')?.value || '';
+    const category = document.querySelector('[data-category-filter]')?.value || '';
     const subject = $('#subjectFilter')?.value || '';
     document.querySelectorAll('[data-filter-row]').forEach(row => {
       const matchesText = !query || row.textContent.toLowerCase().includes(query);
       const matchesStatus = !status || row.dataset.status === status;
+      const matchesCategory = !category || row.dataset.category === category;
       const matchesSubject = !subject || row.dataset.subject === subject;
-      row.hidden = !(matchesText && matchesStatus && matchesSubject);
+      row.hidden = !(matchesText && matchesStatus && matchesCategory && matchesSubject);
     });
   }
 
   function bindView() {
-    document.querySelectorAll('[data-filter], [data-status-filter], #subjectFilter').forEach(control => {
+    document.querySelectorAll('[data-filter], [data-status-filter], [data-category-filter], #subjectFilter').forEach(control => {
       control.addEventListener(control.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
     });
     document.querySelectorAll('[data-topic]').forEach(card => card.ondragstart = event => event.dataTransfer.setData('topic', card.dataset.topic));
@@ -752,6 +759,7 @@
 
   const integrationCategories = ['bills', 'travel', 'school', 'health', 'deliveries', 'home', 'government'];
   const categoryLabels = { bills: 'Bill or payment', travel: 'Travel update', school: 'School update', health: 'Health update', deliveries: 'Delivery update', home: 'Home service', government: 'Government document' };
+  const categoryDecisions = { bills: 'Pay or verify', travel: 'Confirm booking', school: 'Review school action', health: 'Prepare care action', deliveries: 'Track delivery', home: 'Schedule service', government: 'Review or renew' };
 
   function safeMessageSummary(value) {
     return String(value || '')
@@ -767,6 +775,43 @@
     const numeric = Number(value);
     const date = Number.isFinite(numeric) && numeric > 0 ? new Date(numeric < 1e11 ? numeric * 1000 : numeric) : new Date(value);
     return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+  }
+
+  function extractActionDate(text, receivedAt = '') {
+    const value = String(text || '');
+    const received = receivedAt ? new Date(receivedAt) : new Date();
+    const iso = value.match(/\b(20\d{2})[-/]([01]?\d)[-/]([0-3]?\d)\b/);
+    if (iso) {
+      const date = new Date(+iso[1], +iso[2] - 1, +iso[3]);
+      if (date.getFullYear() === +iso[1] && date.getMonth() === +iso[2] - 1 && date.getDate() === +iso[3]) return `${iso[1]}-${String(+iso[2]).padStart(2, '0')}-${String(+iso[3]).padStart(2, '0')}`;
+    }
+    const numeric = value.match(/\b([0-3]?\d)[/-]([01]?\d)[/-](20\d{2})\b/);
+    if (numeric) {
+      const date = new Date(+numeric[3], +numeric[2] - 1, +numeric[1]);
+      if (date.getFullYear() === +numeric[3] && date.getMonth() === +numeric[2] - 1 && date.getDate() === +numeric[1]) return `${numeric[3]}-${String(+numeric[2]).padStart(2, '0')}-${String(+numeric[1]).padStart(2, '0')}`;
+    }
+    const monthNames = 'january february march april may june july august september october november december'.split(' ');
+    const named = value.match(/\b([0-3]?\d)(?:st|nd|rd|th)?\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:\s+(20\d{2}))?\b/i);
+    if (named) {
+      let year = +(named[3] || received.getFullYear());
+      const month = monthNames.indexOf(named[2].toLowerCase());
+      const candidate = new Date(year, month, +named[1]);
+      if (!named[3] && candidate < new Date(received.getFullYear(), received.getMonth(), received.getDate() - 30)) year += 1;
+      const date = new Date(year, month, +named[1]);
+      if (date.getMonth() === month && date.getDate() === +named[1]) return `${year}-${String(month + 1).padStart(2, '0')}-${String(+named[1]).padStart(2, '0')}`;
+    }
+    if (/\b(today|tonight)\b/i.test(value) && !Number.isNaN(received.getTime())) return received.toISOString().slice(0, 10);
+    if (/\btomorrow\b/i.test(value) && !Number.isNaN(received.getTime())) { received.setDate(received.getDate() + 1); return received.toISOString().slice(0, 10); }
+    return '';
+  }
+
+  function integrationDecision(category, text, receivedAt) {
+    const actionDate = extractActionDate(text, receivedAt);
+    const today = new Date().toISOString().slice(0, 10);
+    const inThreeDays = new Date(); inThreeDays.setDate(inThreeDays.getDate() + 3);
+    const urgentWords = /\b(urgent|overdue|final reminder|action required|immediately|expires? soon|past due)\b/i.test(text);
+    const urgency = urgentWords || (actionDate && actionDate <= inThreeDays.toISOString().slice(0, 10)) ? 'high' : actionDate && actionDate >= today ? 'medium' : 'normal';
+    return { actionDate, urgency, decision: categoryDecisions[category] || 'Review' };
   }
 
   async function messageFingerprint(message) {
@@ -812,7 +857,7 @@
     if (/\b(otp|one[ -]?time password|verification code|login code|auth code)\b/i.test(body)) return null;
     const category = classifyIntegrationText(body, allowedCategories);
     if (!category) return null;
-    const amountMatch = body.match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const amountMatch = body.match(/(?:rs\.?|inr|\u20b9)\s*([\d,]+(?:\.\d{1,2})?)/i);
     const sourceRef = await messageFingerprint(message);
     const sender = safeMessageSummary(message.contact && message.contact !== '(Unknown)' ? message.contact : message.sender).slice(0, 100);
     return { id: D.uid('sg'), source: 'sms', sourceRef, personId: ownerId, category, title: `${categoryLabels[category]}${sender ? ` from ${sender}` : ''}`, summary: safeMessageSummary(body), sender, receivedAt: message.receivedAt, amount: amountMatch ? +amountMatch[1].replace(/,/g, '') || 0 : 0, status: 'pending' };
@@ -826,7 +871,11 @@
       const source = ['gmail', 'calendar', 'sms'].includes(item.source) ? item.source : fallbackSource;
       const sourceRef = String(item.sourceRef || item.externalId || item.id || '').slice(0, 180);
       if (!sourceRef || D.state.syncSuggestions.some(existing => existing.source === source && existing.sourceRef === sourceRef)) return;
-      D.state.syncSuggestions.push({ id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title: safeMessageSummary(item.title || categoryLabels[category]).slice(0, 160), summary: safeMessageSummary(item.summary || item.snippet || ''), sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt: normalizeMessageDate(item.receivedAt || item.startAt || item.date), amount: Math.max(0, +item.amount || 0), status: 'pending' });
+      const title = safeMessageSummary(item.title || categoryLabels[category]).slice(0, 160);
+      const summary = safeMessageSummary(item.summary || item.snippet || '');
+      const receivedAt = normalizeMessageDate(item.receivedAt || item.startAt || item.date);
+      const decision = integrationDecision(category, `${title} ${summary}`, receivedAt);
+      D.state.syncSuggestions.push({ id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), status: 'pending', ...decision, processedAt: new Date().toISOString() });
       added += 1;
     });
     return added;
@@ -855,8 +904,8 @@
   function applyIntegrationSuggestion(id) {
     const item = (D.state.syncSuggestions || []).find(suggestion => suggestion.id === id && suggestion.status === 'pending');
     if (!item) return;
-    const date = String(item.receivedAt || new Date().toISOString()).slice(0, 10);
-    const eventTime = String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
+    const date = String(item.actionDate || item.receivedAt || new Date().toISOString()).slice(0, 10);
+    const eventTime = item.actionDate ? `${date}T09:00` : String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
     if (item.source === 'calendar' || item.category === 'school') {
       D.state.events.push({ id: D.uid('e'), context: item.category === 'school' ? 'study' : 'home', title: item.title, category: item.category === 'school' ? 'School' : categoryLabels[item.category], startAt: eventTime, venue: item.sender || '', notes: item.summary });
     } else if (['bills', 'travel', 'health', 'government'].includes(item.category)) {
@@ -966,7 +1015,7 @@
   }
 
   function amountFromText(text) {
-    const match = String(text || '').match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const match = String(text || '').match(/(?:rs\.?|inr|\u20b9)\s*([\d,]+(?:\.\d{1,2})?)/i);
     return match ? +match[1].replace(/,/g, '') || 0 : 0;
   }
 
@@ -985,10 +1034,17 @@
 
   async function readGoogleGmail(account, session, sync) {
     if (!sync.emailAnalysis) return [];
-    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice renewal booking travel school exam appointment delivery government service}`;
-    const listParams = new URLSearchParams({ q: query, maxResults: '40' });
-    const list = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
-    const messages = await mapWithConcurrency((list.messages || []).slice(0, 40), 3, async reference => {
+    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice payment receipt renewal premium insurance booking travel ticket itinerary school exam assignment fee result attendance appointment hospital pharmacy medicine delivery order shipment government aadhaar passport tax property service maintenance subscription}`;
+    const references = [];
+    let pageToken = '';
+    do {
+      const listParams = new URLSearchParams({ q: query, maxResults: '50' });
+      if (pageToken) listParams.set('pageToken', pageToken);
+      const page = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
+      references.push(...(page.messages || []));
+      pageToken = page.nextPageToken || '';
+    } while (pageToken && references.length < 100);
+    const messages = await mapWithConcurrency(references.slice(0, 100), 3, async reference => {
       const params = new URLSearchParams({ format: 'metadata' });
       ['Subject', 'From', 'Date'].forEach(name => params.append('metadataHeaders', name));
       return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);

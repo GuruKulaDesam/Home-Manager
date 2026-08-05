@@ -19,6 +19,7 @@ test('all non-learning suites render without runtime errors', async ({ page }) =
   page.on('pageerror', error => errors.push(error.message));
   const routes = [
     ['global/overview', 'Today'],
+    ['global/intelligence', 'Inbox Intelligence'],
     ['home/overview', 'Home Overview'],
     ['home/family', 'Family'],
     ['home/family/protection', 'Protection & Legacy'],
@@ -177,7 +178,11 @@ test('four Google accounts authorize and sync directly without a connector', asy
     const request = route.request();
     const email = request.headers().authorization.replace('Bearer token:', '');
     const url = new URL(request.url());
-    if (url.pathname.endsWith('/messages')) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages: email === 'mother@example.com' ? Array.from({ length: 9 }, (_, index) => ({ id: `gmail-${index + 1}` })) : [] }) });
+    if (url.pathname.endsWith('/messages')) {
+      const secondPage = url.searchParams.get('pageToken') === 'page-2';
+      const messages = email !== 'mother@example.com' ? [] : Array.from({ length: secondPage ? 4 : 5 }, (_, index) => ({ id: `gmail-${index + (secondPage ? 6 : 1)}` }));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages, nextPageToken: email === 'mother@example.com' && !secondPage ? 'page-2' : undefined }) });
+    }
     const messageId = url.pathname.split('/').pop();
     const attempt = (gmailAttempts.get(messageId) || 0) + 1;
     gmailAttempts.set(messageId, attempt);
@@ -186,7 +191,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
     maxGmailDetails = Math.max(maxGmailDetails, activeGmailDetails);
     return new Promise(resolve => setTimeout(resolve, 20)).then(() => {
       activeGmailDetails -= 1;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: messageId, internalDate: '1785920400000', snippet: 'Class 7 exam timetable is available', payload: { headers: [{ name: 'Subject', value: `School exam timetable ${messageId}` }, { name: 'From', value: 'Peepal School' }] } }) });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: messageId, internalDate: '1785920400000', snippet: 'Class 7 exam timetable and fee Rs 2,500 due 12 August 2026', payload: { headers: [{ name: 'Subject', value: `School exam timetable ${messageId}` }, { name: 'From', value: 'Peepal School' }] } }) });
     });
   });
   await page.goto(`${app}#/settings/app`);
@@ -216,6 +221,30 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await expect(page.locator('.integration-queue')).toContainText('School exam timetable');
   expect(maxGmailDetails).toBeLessThanOrEqual(3);
   expect(gmailAttempts.get('gmail-1')).toBe(2);
+  await page.goto(`${app}#/global/intelligence`);
+  await expect.poll(() => page.evaluate(() => HM.data.state.settings.googleSync.accounts.length)).toBe(4);
+  await expect(page.locator('.inbox-history tbody tr')).toHaveCount(9);
+  await expect(page.locator('.inbox-metrics')).toContainText('9');
+  await expect(page.locator('.inbox-history')).toContainText('Action 12 Aug');
+  await expect(page.locator('.inbox-history')).toContainText('₹2,500');
+  await page.locator('[data-category-filter]').selectOption('school');
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(9);
+  await page.locator('[data-filter]').fill('gmail-9');
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(1);
+  await page.locator('[data-filter]').fill('');
+  await page.locator('.inbox-decision [data-sync-apply]').first().click();
+  await page.locator('[data-status-filter]').selectOption('applied');
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(1);
+  const appliedSchoolEvent = await page.evaluate(() => HM.data.state.events.find(item => item.title.includes('School exam timetable')));
+  expect(appliedSchoolEvent.startAt).toContain('2026-08-12');
+  await page.goto(`${app}#/home/money/reports`);
+  await expect(page.locator('.module-inbox-brief')).toContainText('Bills, payments and renewals');
+  await page.goto(`${app}#/study/reports`);
+  await expect(page.locator('.module-inbox-brief')).toContainText('Parent decisions from school messages');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${app}#/global/intelligence`);
+  const intelligenceOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(intelligenceOverflow).toBeLessThanOrEqual(1);
   const accounts = await page.evaluate(() => HM.data.state.settings.googleSync.accounts.map(account => ({ personId: account.personId, status: account.status })));
   expect(accounts).toEqual([
     { personId: 'p1', status: 'connected' },
