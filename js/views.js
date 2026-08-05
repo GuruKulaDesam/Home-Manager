@@ -50,16 +50,29 @@
     { id: 'g7-hindi', grade: 7, subject: 'Hindi', title: 'Malhar', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?ghml1=0-10' },
     { id: 'g7-skills', grade: 7, subject: 'Kaushal Bodh', title: 'Kaushal Bodh', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gekb1=0-7' },
     { id: 'g7-tamil', grade: 7, subject: 'Tamil', title: 'Tamil course book', publisher: 'Peepal-issued', sourceUrl: 'https://crm.peepalprodigy.cloud/' },
-    { id: 'g12-math-1', grade: 12, subject: 'Mathematics', title: 'Mathematics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh1=0-6' },
-    { id: 'g12-math-2', grade: 12, subject: 'Mathematics', title: 'Mathematics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh2=0-7' },
-    { id: 'g12-physics-1', grade: 12, subject: 'Physics', title: 'Physics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph1=0-8' },
-    { id: 'g12-physics-2', grade: 12, subject: 'Physics', title: 'Physics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph2=0-6' },
-    { id: 'g12-chemistry-1', grade: 12, subject: 'Chemistry', title: 'Chemistry Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech1=0-5' },
-    { id: 'g12-chemistry-2', grade: 12, subject: 'Chemistry', title: 'Chemistry Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech2=0-5' },
-    { id: 'g12-english-1', grade: 12, subject: 'English Core', title: 'Flamingo', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lefl1=0-13' },
-    { id: 'g12-english-2', grade: 12, subject: 'English Core', title: 'Vistas', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?levt1=0-6' },
-    { id: 'g12-cs', grade: 12, subject: 'Computer Science', title: 'Computer Science', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lecs1=0-13' }
+    { id: 'g12-math-1', code: 'lemh1', grade: 12, subject: 'Mathematics', title: 'Mathematics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh1=0-6' },
+    { id: 'g12-math-2', code: 'lemh2', grade: 12, subject: 'Mathematics', title: 'Mathematics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh2=0-7' },
+    { id: 'g12-physics-1', code: 'leph1', grade: 12, subject: 'Physics', title: 'Physics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph1=0-8' },
+    { id: 'g12-physics-2', code: 'leph2', grade: 12, subject: 'Physics', title: 'Physics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph2=0-6' },
+    { id: 'g12-chemistry-1', code: 'lech1', grade: 12, subject: 'Chemistry', title: 'Chemistry Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech1=0-5' },
+    { id: 'g12-chemistry-2', code: 'lech2', grade: 12, subject: 'Chemistry', title: 'Chemistry Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lech2=0-5' },
+    { id: 'g12-english-1', code: 'lefl1', grade: 12, subject: 'English Core', title: 'Flamingo', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lefl1=0-13' },
+    { id: 'g12-english-2', code: 'levt1', grade: 12, subject: 'English Core', title: 'Vistas', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?levt1=0-6' },
+    { id: 'g12-cs', code: 'lecs1', grade: 12, subject: 'Computer Science', title: 'Computer Science', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lecs1=0-13' }
   ];
+
+  const bundledBookParts = {
+    lemh1: ['01','02','03','04','05','06','a1','a2','an','ps'], lemh2: ['01','02','03','04','05','06','07','an','ps'],
+    leph1: ['01','02','03','04','05','06','07','08','an','ps'], leph2: ['01','02','03','04','05','06','an','ps'],
+    lech1: ['01','02','03','04','05','a1','an','ps'], lech2: ['01','02','03','04','05','an','ps'],
+    lefl1: ['01','02','03','04','05','06','07','08','11','12','13','14','15','ps'], levt1: ['01','02','03','04','05','06','ps'],
+    lecs1: ['01','02','03','04','05','06','07','08','09','10','11','12','13','ps']
+  };
+  textbookCatalog.forEach(book => {
+    if (!book.code) return;
+    const nested = book.code === 'lefl1' ? '/lefl1dd' : '';
+    book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: part === 'ps' ? 'Prelims' : part === 'an' ? 'Answers' : part.startsWith('a') ? `Appendix ${part.slice(1) || 1}` : `Chapter ${Number(part)}`, url: `assets/textbooks/class-12/${book.code}${nested}/${book.code}${part}.pdf`, order: index + 1 }));
+  });
 
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
@@ -623,7 +636,7 @@
     const activeId = profiles.some(item => item.personId === D.state.settings.activeLearnerId) ? D.state.settings.activeLearnerId : profiles[0]?.personId;
     if (activeId && activeId !== D.state.settings.activeLearnerId) D.state.settings.activeLearnerId = activeId;
     const profile = profiles.find(item => item.personId === activeId) || { personId: '', name: 'Student', grade: 6, subjects: [], targetPercent: 75 };
-    const selectedSubject = D.state.settings.learningSubjectTabs?.[activeRenderRoute] || 'All subjects';
+    const selectedSubject = D.state.settings.activeLearningSubject?.[activeId] || D.state.settings.learningSubjectTabs?.[activeRenderRoute] || 'All subjects';
     const inSubject = item => selectedSubject === 'All subjects' || item.subject === selectedSubject;
     return {
       activeId,
@@ -685,7 +698,9 @@
     const extension = context.learningExtension === 'curriculum' ? reflectionPanel(context) : context.learningExtension === 'planner' ? schoolPlannerPanel(context) : context.learningExtension === 'reports' ? examReadinessPanel(context) + schoolReportPanel(context) : '';
     const subjects = ['All subjects', ...context.profile.subjects];
     const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${context.selectedSubject === subject ? 'active' : ''}" aria-pressed="${context.selectedSubject === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
-    return bar + subjectTabs + (context.showSchoolHub ? schoolHub(context) : '') + extension;
+    const learningSections = [['Tracking','activity','study/overview'],['Books','book-open','study/curriculum'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Assessments','file-chart-column','study/assessments'],['Practice','brain-circuit','study/practice'],['Reports','chart-spline','study/reports']];
+    const sectionTabs = activeRenderRoute.startsWith('study/') ? `<nav class="learning-section-tabs" aria-label="Learning sections">${learningSections.map(([label, iconName, route]) => `<button type="button" data-route="${route}" class="${activeRenderRoute === route ? 'active' : ''}" ${activeRenderRoute === route ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span></button>`).join('')}</nav>` : '';
+    return bar + subjectTabs + sectionTabs + (context.showSchoolHub ? schoolHub(context) : '') + extension;
   }
 
   function schoolHub(context) {

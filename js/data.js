@@ -180,6 +180,7 @@ function normalize(value){
     activeGroup:typeof inputSettings.activeGroup==='string'?inputSettings.activeGroup:'today',
     activeLearnerId:typeof inputSettings.activeLearnerId==='string'?inputSettings.activeLearnerId:'p3',
     learningSubjectTabs:inputSettings.learningSubjectTabs&&typeof inputSettings.learningSubjectTabs==='object'?clone(inputSettings.learningSubjectTabs):{},
+    activeLearningSubject:inputSettings.activeLearningSubject&&typeof inputSettings.activeLearningSubject==='object'?clone(inputSettings.activeLearningSubject):{},
     sidebarCollapsed:Boolean(inputSettings.sidebarCollapsed),
     householdName:typeof inputSettings.householdName==='string'?inputSettings.householdName:'',
     language:typeof inputSettings.language==='string'?inputSettings.language:'English',
