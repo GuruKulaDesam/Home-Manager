@@ -20,7 +20,7 @@
       ['Overview', 'heart-handshake', 'home/care'], ['Health', 'heart-pulse', 'home/life/health'], ['Medicines', 'pill', 'home/life/medicines'], ['Appointments', 'stethoscope', 'home/life/appointments'], ['Elder care', 'accessibility', 'home/life/elders'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
     ]},
     learning: { label: 'Learning', icon: 'graduation-cap', note: 'Study and development', route: 'study/overview', items: [
-      ['Dashboard', 'graduation-cap', 'study/overview'], ['Books & curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice'], ['Reports', 'chart-spline', 'study/reports']
+      ['Tracking', 'activity', 'study/overview'], ['Books', 'book-open', 'study/books'], ['Curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice']
     ]},
     community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
       ['Overview', 'map', 'community/overview'], ['Updates', 'newspaper', 'community/feed'], ['Events & polls', 'calendar-heart', 'community/participate'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic issues', 'ticket-check', 'community/tickets'], ['Local services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
@@ -107,6 +107,7 @@
     'community/guides': ['Civic Guides', 'Self-service local information'],
     'community/participate': ['Events & Polls', 'Plans and local preferences'],
     'study/overview': ['Learning Dashboard', 'Peepal and CBSE progress'],
+    'study/books': ['Books', 'Focused local textbook library'],
     'study/curriculum': ['Books & Curriculum', 'Textbooks, reading review and CBSE outcomes'],
     'study/planner': ['Study Planner', 'School day and home study'],
     'study/assignments': ['Assignments', 'Homework, projects and practicals'],
@@ -695,12 +696,12 @@
   function learnerBar(context) {
     const p = context.profile;
     const bar = `<section class="learner-bar"><div class="learner-switch" role="group" aria-label="Choose student">${context.profiles.map((profile, index) => `<button data-learner="${e(profile.personId)}" class="student-tone-${index + 1} ${profile.personId === context.activeId ? 'active' : ''}" aria-pressed="${profile.personId === context.activeId}"><span>${e(profile.name[0])}</span><span><b>${e(profile.name)}</b><small>Peepal - CBSE Class ${e(profile.grade)}</small></span></button>`).join('')}</div><div class="learner-target"><span>${icon('target')}</span><span><small>Academic target</small><b>${e(p.targetPercent)}%</b></span><button class="icon-action" data-edit="academicProfile" data-id="${e(p.id)}" data-student="${e(p.personId)}" aria-label="Edit ${e(p.name)} profile">${icon('pencil')}</button></div></section>`;
-    const extension = context.learningExtension === 'curriculum' ? reflectionPanel(context) : context.learningExtension === 'planner' ? schoolPlannerPanel(context) : context.learningExtension === 'reports' ? examReadinessPanel(context) + schoolReportPanel(context) : '';
+    const extension = context.learningExtension === 'reports' ? examReadinessPanel(context) : '';
     const subjects = ['All subjects', ...context.profile.subjects];
     const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${context.selectedSubject === subject ? 'active' : ''}" aria-pressed="${context.selectedSubject === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
-    const learningSections = [['Tracking','activity','study/overview'],['Books','book-open','study/curriculum'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Assessments','file-chart-column','study/assessments'],['Practice','brain-circuit','study/practice'],['Reports','chart-spline','study/reports']];
+    const learningSections = [['Tracking','activity','study/overview'],['Books','book-open','study/books'],['Curriculum','book-open-check','study/curriculum'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Assessments','file-chart-column','study/assessments'],['Practice','brain-circuit','study/practice']];
     const sectionTabs = activeRenderRoute.startsWith('study/') ? `<nav class="learning-section-tabs" aria-label="Learning sections">${learningSections.map(([label, iconName, route]) => `<button type="button" data-route="${route}" class="${activeRenderRoute === route ? 'active' : ''}" ${activeRenderRoute === route ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span></button>`).join('')}</nav>` : '';
-    return bar + subjectTabs + sectionTabs + (context.showSchoolHub ? schoolHub(context) : '') + extension;
+    return bar + subjectTabs + sectionTabs + extension;
   }
 
   function schoolHub(context) {
@@ -709,6 +710,7 @@
   }
 
   function reflectionPanel(context) {
+    if (context) return '';
     const recent = [...context.reflections].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 4);
     const lensIcons = ['scan-search', 'network', 'users-round', 'blocks', 'messages-square', 'trophy'];
     return `<div class="education-grid reflection-grid"><section class="panel"><div class="section-head"><div><h2>Peepal learning lenses</h2><p>School-published learning priorities</p></div><a class="icon-action" href="${e(context.profile.grade >= 11 ? context.school.seniorSecondaryUrl : context.school.secondaryUrl)}" target="_blank" rel="noopener noreferrer" aria-label="Open Peepal methodology">${icon('external-link')}</a></div><div class="learning-lenses">${(context.school.methods || []).map((method, index) => `<span><i>${icon(lensIcons[index] || 'sparkles')}</i><b>${e(method)}</b></span>`).join('')}</div></section><section class="panel"><div class="section-head"><div><h2>Daily self-assessment</h2><p>Strength, question and next step</p></div><button class="primary" data-create="reflection" data-student="${e(context.activeId)}">${icon('plus')}<span>Reflection</span></button></div>${recent.length ? recent.map(item => `<div class="reflection-row"><div class="grow"><b>${e(item.subject)} - ${D.date(item.date)}</b><small>Confidence ${item.confidence}/5 - Effort ${item.effort}/5 - Clarity ${item.clarity}/5</small><p>${e(item.nextStep)}</p></div><span class="row-actions"><button class="icon-action" data-edit="reflection" data-id="${e(item.id)}" data-student="${e(context.activeId)}" aria-label="Edit reflection">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="learningReflections:${e(item.id)}" aria-label="Delete reflection">${icon('trash-2')}</button></span></div>`).join('') : '<p class="empty">No self-assessment recorded.</p>'}</section></div>`;
@@ -752,7 +754,6 @@
     const upcomingExams = c.assessments.filter(item => item.status === 'scheduled' && item.date >= today()).sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const nextPlans = c.plans.filter(item => item.date >= today()).sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)).slice(0, 7);
     const weak = [...readiness].sort((a, b) => a.readiness - b.readiness).slice(0, 3);
-    c.showSchoolHub = true;
     return `${learnerBar(c)}<section class="metrics">${metric('Syllabus mastery', `${mastery}%`, `${c.syllabus.filter(item => item.status === 'mastered').length}/${c.syllabus.length} outcomes mastered`, 'book-open-check')}${metric('Assessment average', `${score}%`, `Target ${c.profile.targetPercent}%`, 'file-chart-column')}${metric('Open submissions', due.length, due.filter(item => item.dueDate <= today()).length ? 'Includes overdue work' : 'Homework and projects', 'clipboard-check')}${metric('Practice accuracy', `${practicePercent(c.practice)}%`, `${c.practice.reduce((sumValue, item) => sumValue + (+item.attempted || 0), 0)} questions logged`, 'brain-circuit')}</section><div class="grid-2 learning-dashboard"><section class="panel"><div class="section-head"><div><h2>Next study blocks</h2><p>A realistic plan for ${e(c.profile.name)}</p></div><button data-route="study/planner">Open planner</button></div>${nextPlans.length ? nextPlans.map(item => row(`${item.startTime} - ${item.activity}`, `${D.date(item.date, { weekday: 'short', day: 'numeric', month: 'short' })} - ${item.subject} - ${item.minutes} min`, academicStatus(item.status))).join('') : '<p class="empty">No study blocks planned.</p>'}</section><section class="panel"><div class="section-head"><div><h2>Priority subjects</h2><p>Lowest combined readiness first</p></div><button data-route="study/reports">Full report</button></div>${weak.map(item => `<div class="readiness-row"><span class="subject-dot"></span><div class="grow"><b>${e(item.subject)}</b><small>Mastery ${item.mastery}% - Tests ${item.test}% - Practice ${item.accuracy}%</small><div class="progress ${item.readiness < 60 ? 'over' : ''}"><span style="width:${clamp(item.readiness)}%"></span></div></div><strong>${item.readiness}%</strong></div>`).join('')}</section></div><section class="panel learning-actions"><div class="section-head"><div><h2>Do next</h2><p>Highest-impact actions based on current records</p></div></div><div class="action-strip">${upcomingExams.slice(0, 1).map(item => `<button data-route="study/assessments"><span>${icon('calendar-warning')}</span><span><small>UPCOMING EXAM</small><b>${e(item.subject)} - ${e(item.title)}</b><em>${D.date(item.date)}</em></span></button>`).join('')}${due.slice(0, 2).map(item => `<button data-route="study/assignments"><span>${icon('clipboard-check')}</span><span><small>SUBMISSION</small><b>${e(item.title)}</b><em>${D.date(item.dueDate)}</em></span></button>`).join('')}${weak.slice(0, 2).map(item => `<button data-route="study/practice"><span>${icon('brain-circuit')}</span><span><small>REINFORCE</small><b>${e(item.subject)}</b><em>${item.readiness}% ready</em></span></button>`).join('')}<button data-route="study/assessments"><span>${icon(c.profile.grade === 12 ? 'file-check-2' : 'notebook-tabs')}</span><span><small>${c.profile.grade === 12 ? 'BOARD PREP' : 'SCHOOL REVIEW'}</small><b>${c.profile.grade === 12 ? 'Check practical and theory gaps' : 'Review periodic-test gaps'}</b><em>Open assessment plan</em></span></button></div></section>${sectionFinance('learning', ['goal', 'education'])}`;
   }
 
@@ -793,7 +794,7 @@
 
   function assignments() {
     const c = academicContext();
-    return `${learnerBar(c)}${classroomPanel(c.activeId)}${slidesPanel(c.activeId)}${assignmentsBase().replace(learnerBar(c), '')}`;
+    return `${assignmentsBase()}<details class="learning-integrations"><summary>${icon('cloud')}<span><b>Google class tools</b><small>Classroom imports and project presentations</small></span>${icon('chevron-down')}</summary><div>${classroomPanel(c.activeId)}${slidesPanel(c.activeId)}</div></details>`;
   }
 
   function assessments() {
@@ -950,6 +951,7 @@
       'community/directory': () => directory('community'),
       'community/guides': guides,
       'study/overview': studyOverview,
+      'study/books': curriculum,
       'study/curriculum': curriculum,
       'study/planner': studyPlanner,
       'study/assignments': assignments,

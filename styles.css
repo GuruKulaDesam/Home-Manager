@@ -678,6 +678,19 @@ textarea { min-height: 96px; resize: vertical; }
 .learning-section-tabs button { min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; color: var(--ink-soft); border: 1px solid var(--line); background: var(--glass-soft); font-size: 10px; font-weight: 800; }
 .learning-section-tabs button svg { width: 15px; height: 15px; }
 .learning-section-tabs button.active { color: var(--tone-2); border-color: var(--tone-2); background: var(--tone-2-soft); }
+#content[data-view="study/books"] .curriculum-summary,
+#content[data-view="study/books"] .curriculum-summary ~ * { display: none; }
+#content[data-view="study/curriculum"] .textbook-section { display: none; }
+#content[data-view="study/overview"] .section-finance,
+#content[data-view^="study/"] .module-inbox-brief { display: none; }
+#content[data-view^="study/"] #subjectFilter { display: none; }
+.learning-integrations { margin-top: 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--glass-soft); }
+.learning-integrations > summary { min-height: 48px; display: flex; align-items: center; gap: 9px; padding: 9px 12px; cursor: pointer; list-style: none; }
+.learning-integrations > summary > svg:first-child { color: var(--tone-2); }
+.learning-integrations > summary > svg:last-child { margin-left: auto; }
+.learning-integrations > summary b, .learning-integrations > summary small { display: block; }
+.learning-integrations > summary small { margin-top: 2px; color: var(--muted); font-size: 9px; }
+.learning-integrations > div { padding: 0 10px 10px; }
 .exam-readiness-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
 .exam-track h2 { display: flex; align-items: center; gap: 7px; }
 .exam-track h2 svg { width: 18px; height: 18px; color: var(--tone-2); }
