@@ -116,8 +116,8 @@ test('mobile Care page has no horizontal page overflow', async ({ page }) => {
 });
 
 test('Class 7 and Class 12 have separate official textbook libraries', async ({ page }) => {
-  await page.goto(`${app}#/study/curriculum`);
-  await expect(page.locator('#pageTitle')).toHaveText('Books & Curriculum');
+  await page.goto(`${app}#/study/books`);
+  await expect(page.locator('#pageTitle')).toHaveText('Books');
   await expect(page.locator('[data-book-card]')).toHaveCount(9);
   await expect(page.locator('#content')).toContainText('Physics Part I');
   await expect(page.locator('#content')).toContainText('Flamingo');
@@ -133,7 +133,7 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
 });
 
 test('Learning pages use persistent subject tabs and show CBSE and JEE readiness', async ({ page }) => {
-  await page.goto(`${app}#/study/curriculum`);
+  await page.goto(`${app}#/study/books`);
   await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
   await expect(page.locator('.subject-tabs')).toContainText('Physics');
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
@@ -155,8 +155,26 @@ test('Learning pages use persistent subject tabs and show CBSE and JEE readiness
   await expect(page.locator('.exam-readiness-grid')).toContainText('JEE Main readiness');
 });
 
+test('Class 12 and Class 7 learning tabs keep books and curriculum focused', async ({ page }) => {
+  for (const learnerId of ['p3', 'p4']) {
+    await page.goto(`${app}#/study/books`);
+    await page.locator(`[data-learner="${learnerId}"]`).click();
+    await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
+    await expect(page.locator('.textbook-section')).toBeVisible();
+    await expect(page.locator('.curriculum-summary')).toBeHidden();
+    await expect(page.locator('.reflection-grid')).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Curriculum', exact: true }).click();
+    await expect(page.locator('.textbook-section')).toBeHidden();
+    await expect(page.locator('.curriculum-summary')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Assignments', exact: true }).click();
+    await expect(page.locator('.learning-integrations')).not.toHaveAttribute('open', '');
+  }
+});
+
 test('a private PDF can be read, bookmarked and reviewed without upload', async ({ page }) => {
-  await page.goto(`${app}#/study/curriculum`);
+  await page.goto(`${app}#/study/books`);
   await page.locator('[data-learner="p4"]').click();
   await page.locator('#bookFileInput').evaluate(input => {
     input.dataset.bookId = 'g7-science';
@@ -194,7 +212,7 @@ test('a private PDF can be read, bookmarked and reviewed without upload', async 
 
 test('textbook library and reader fit a phone viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(`${app}#/study/curriculum`);
+  await page.goto(`${app}#/study/books`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
