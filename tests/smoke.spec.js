@@ -35,6 +35,23 @@ test('all non-learning suites render without runtime errors', async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test('Munnar sunrise is the default and another background choice still persists', async ({ page }) => {
+  await page.goto(`${app}#/global/overview`);
+  await expect(page.locator('body')).toHaveAttribute('data-nature', 'sunrise');
+  const surfaceTokens = await page.evaluate(() => ({
+    glass: getComputedStyle(document.documentElement).getPropertyValue('--glass').trim(),
+    shell: getComputedStyle(document.body).getPropertyValue('--shell-bg').trim()
+  }));
+  expect(surfaceTokens.glass).toContain('.559');
+  expect(surfaceTokens.shell).toContain('.615');
+
+  await page.goto(`${app}#/settings/app`);
+  await page.locator('[name="appBackground"][value="waterfall"]').check({ force: true });
+  await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
+  await page.reload();
+  await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
+});
+
 test('Family and Care expose at most seven clear child routes', async ({ page }) => {
   await page.goto(`${app}#/home/family`);
   await expect(page.locator('#sectionNav button')).toHaveCount(7);

@@ -1322,7 +1322,7 @@
     render();
   }
   function applyTheme() {
-    const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'waterfall';
+    const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'sunrise';
     document.body.classList.remove('dark');
     document.body.dataset.nature = background;
     document.body.classList.toggle('collapsed', Boolean(D.state.settings.sidebarCollapsed));
