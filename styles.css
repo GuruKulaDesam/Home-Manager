@@ -1899,7 +1899,26 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 .chapter-workspace-shell:has(.chapter-section-book) { display: block; }
 .chapter-workspace-shell:has(.chapter-section-book) .chapter-content-tabs { position: absolute; top: 5px; right: 10px; left: 10px; z-index: 3; width: fit-content; max-width: calc(100% - 20px); border: 1px solid rgba(255,255,255,.68); border-radius: 10px; background: rgba(251,250,248,.91); box-shadow: 0 8px 24px rgba(23,32,51,.14); backdrop-filter: blur(14px); }
 .chapter-workspace-shell:has(.chapter-section-book) .chapter-workspace-content { width: 100%; height: 100%; }
+.chapter-summary-layout { width: min(100%, 1280px); display: grid; grid-template-columns: minmax(0, 7fr) minmax(270px, 3fr); align-items: start; gap: 28px; margin: 0 auto; }
+.chapter-summary-layout .chapter-summary { max-width: none; margin: 0; }
+.chapter-understand-layout .chapter-learning-grid { max-width: none; margin: 0 0 70px; }
 .chapter-summary { max-width: 920px; margin: 0 auto; padding: 8px 18px 110px; }
+.chapter-support-rail { position: sticky; top: 18px; display: grid; gap: 14px; max-height: calc(100vh - 150px); padding: 8px 3px 70px; overflow-y: auto; scrollbar-width: none; }
+.chapter-support-rail::-webkit-scrollbar { display: none; }
+.chapter-support-card { display: none; padding: 18px 18px 17px; border: 1px solid rgba(15,118,110,.15); border-left: 4px solid #0f766e; border-radius: 14px; background: rgba(255,255,255,.78); box-shadow: 0 10px 26px rgba(31,41,55,.055); backdrop-filter: blur(8px); }
+.chapter-support-card.is-active { display: block; }
+.chapter-support-card header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.chapter-support-card header > span { width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; color: #fff; border-radius: 10px; background: #0f766e; }
+.chapter-support-card header svg { width: 17px; height: 17px; }
+.chapter-support-card h2 { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.25; }
+.chapter-support-card ul { display: grid; gap: 10px; margin: 0; padding: 0 0 0 18px; }
+.chapter-support-card li, .chapter-support-card > p { margin: 0; color: var(--ink-soft); font-size: 13.5px; line-height: 1.6; }
+.chapter-support-card li::marker { color: #0f766e; }
+.chapter-support-card.patterns { border-left-color: #0369a1; }.chapter-support-card.patterns header > span { background: #0369a1; }.chapter-support-card.patterns li::marker { color: #0369a1; }
+.chapter-support-card.memory { border-left-color: #7c3aed; }.chapter-support-card.memory header > span { background: #7c3aed; }.chapter-support-card.memory li::marker { color: #7c3aed; }
+.chapter-support-card.remember { border-left-color: #c2415b; }.chapter-support-card.remember header > span { background: #c2415b; }.chapter-support-card.remember li::marker { color: #c2415b; }
+.chapter-support-card.repair { border-left-color: #c2410c; }.chapter-support-card.repair header > span { background: #c2410c; }.chapter-support-card.repair li::marker { color: #c2410c; }
+.chapter-support-card.exam-signal { border-left-color: #15803d; }.chapter-support-card.exam-signal header > span { background: #15803d; }
 .chapter-summary-opening { display: block; }
 .chapter-opening-copy { display: grid; grid-template-columns: 62px minmax(0,1fr); gap: 20px; }
 .chapter-opening-copy > div > small { color: #0f766e; font-size: 11px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
@@ -1950,7 +1969,7 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 .chapter-slow-steps .chapter-formula-card { padding: 22px 24px; border: 2px solid rgba(124,58,237,.24); border-left: 6px solid #7c3aed; background: linear-gradient(120deg, rgba(245,243,255,.9), rgba(240,253,250,.62), rgba(255,247,237,.48)); box-shadow: 0 12px 30px rgba(91,33,182,.08); }
 .chapter-slow-steps .chapter-formula-card > span { color: #5b21b6; background: #fff; border: 1px solid rgba(124,58,237,.2); }
 .chapter-slow-steps .chapter-formula-card > span svg { width: 19px; height: 19px; }
-.chapter-formula-card p { color: #312e81; font-family: Cambria, Georgia, serif; font-size: clamp(19px, 1.65vw, 23px); font-weight: 720; line-height: 1.55; font-variant-numeric: lining-nums tabular-nums; }
+.chapter-formula-card p { color: #312e81; font-family: "Cambria Math", "STIX Two Math", "DejaVu Math TeX Gyre", "Times New Roman", serif; font-size: clamp(19px, 1.65vw, 23px); font-weight: 600; line-height: 1.6; letter-spacing: .012em; font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }
 .chapter-example-answer { display: flex; gap: 14px; margin-top: 22px; padding: 22px 24px; color: #14532d; border: 2px solid rgba(21,128,61,.22); border-radius: 16px; background: linear-gradient(125deg, rgba(240,253,244,.94), rgba(240,253,250,.72)); }
 .chapter-example-answer > span { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; color: #fff; border-radius: 12px; background: #15803d; }
 .chapter-example-answer small { font-size: 10px; font-weight: 900; letter-spacing: .07em; }
@@ -2030,6 +2049,15 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 
 @media (min-width: 1100px) {
   #content[data-view^="study/"] .learning-command-bar { display: none; }
+}
+
+@media (min-width: 1251px) {
+  .chapter-summary-layout .chapter-summary-exam .chapter-exam-teaching > div:last-child { display: none; }
+}
+
+@media (max-width: 1250px) {
+  .chapter-summary-layout { grid-template-columns: 1fr; }
+  .chapter-support-rail { display: none; }
 }
 
 @media (max-width: 800px) {

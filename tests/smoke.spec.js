@@ -473,18 +473,41 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('.chapter-relationship-visual')).toBeVisible();
   await expect(page.locator('.chapter-relationship-visual figcaption')).not.toBeEmpty();
   await expect(page.locator('.chapter-formula-card').first()).toBeVisible();
+  await expect(page.locator('.chapter-support-rail')).toBeVisible();
+  await expect(page.locator('.chapter-support-rail')).not.toContainText('Common Mistakes');
+  await expect(page.locator('.chapter-support-card.is-active')).toHaveCount(1);
+  await expect(page.locator('.chapter-support-card.is-active')).toContainText('Memorization Techniques');
+  const summaryColumns = await page.evaluate(() => {
+    const layout = document.querySelector('.chapter-summary-layout').getBoundingClientRect();
+    const rail = document.querySelector('.chapter-support-rail').getBoundingClientRect();
+    return { ratio: rail.width / layout.width, railTop: rail.top };
+  });
+  expect(summaryColumns.ratio).toBeGreaterThan(.26);
+  expect(summaryColumns.ratio).toBeLessThan(.34);
+  await page.locator('.chapter-picture-section').scrollIntoViewIfNeeded();
+  await expect(page.locator('.chapter-support-card.is-active')).toHaveCount(1);
+  await expect(page.locator('.chapter-support-card.is-active')).toContainText('Common Patterns');
+  await page.locator('.chapter-summary-results').scrollIntoViewIfNeeded();
+  await expect(page.locator('.chapter-support-card.is-active')).toHaveCount(2);
+  await expect(page.locator('.chapter-support-card.memory.is-active')).toContainText('Memorization Techniques');
+  await expect(page.locator('.chapter-support-card.remember.is-active')).toContainText('Do Not Forget This');
+  await page.locator('.chapter-summary-traps').scrollIntoViewIfNeeded();
+  await expect(page.locator('.chapter-support-card.is-active')).toHaveCount(1);
+  await expect(page.locator('.chapter-support-card.is-active')).toContainText('How to Catch Errors');
   expect(await page.locator('.chapter-summary').innerText()).not.toMatch(/do not rush|take (?:these|it) slowly|go slowly|pause and|before moving down|do not reread/i);
   const lessonReadability = await page.locator('.chapter-summary').evaluate(summary => ({
     height: summary.scrollHeight,
     storyFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-summary-story')).fontSize),
     stepFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-slow-steps p')).fontSize),
     formulaFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-formula-card p')).fontSize),
+    formulaFamily: getComputedStyle(summary.querySelector('.chapter-formula-card p')).fontFamily,
     viewportHeight: innerHeight
   }));
   expect(lessonReadability.height).toBeGreaterThan(lessonReadability.viewportHeight * 2);
   expect(lessonReadability.storyFont).toBeGreaterThanOrEqual(16);
   expect(lessonReadability.stepFont).toBeGreaterThanOrEqual(16);
   expect(lessonReadability.formulaFont).toBeGreaterThanOrEqual(18);
+  expect(lessonReadability.formulaFamily).toContain('Cambria Math');
   const firstSummary = await page.locator('.chapter-summary-bigidea').textContent();
   await page.locator('.chapter-browser-item').nth(1).click();
   await expect(page.locator('.chapter-browser-item').nth(1)).toHaveAttribute('aria-current', 'page');
@@ -493,6 +516,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.locator('.chapter-browser-item').first().click();
   await page.locator('[data-chapter-workspace-tab="understand"]').click();
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
+  await expect(page.locator('.chapter-understand-layout .chapter-support-rail')).toBeVisible();
   await page.locator('[data-chapter-stage-toggle="understand"]').click();
   await expect(page.locator('.chapter-workspace-status')).toContainText('2/7');
   const horizontalTabs = await page.locator('.chapter-workspace-tabs button').evaluateAll(buttons => buttons.slice(0, 2).map(button => button.getBoundingClientRect()).map(rect => ({ x: rect.x, y: rect.y })));
@@ -552,6 +576,7 @@ test('chapter foundations and relationship pictures remain readable on a phone',
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
   await page.locator('.curriculum-chapter-card').first().click({ position: { x: 18, y: 90 } });
   await expect(page.locator('.chapter-foundation')).toBeVisible();
+  await expect(page.locator('.chapter-support-rail')).toBeHidden();
   await page.locator('.chapter-picture-section').scrollIntoViewIfNeeded();
   await expect(page.locator('.chapter-relationship-visual')).toBeInViewport();
   const fit = await page.evaluate(() => {

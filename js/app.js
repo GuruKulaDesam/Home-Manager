@@ -14,6 +14,7 @@
   let activeBookObjectUrl = false;
   let activeInlineBookUrl = '';
   let activeChapterWorkspace = null;
+  let chapterSupportCleanup = null;
   const googleSessions = new Map();
   const googleWorkspaceSessions = new Map();
   HM.workspace = { cache: {}, selected: {} };
@@ -27,6 +28,35 @@
 
   function refreshIcons() {
     if (window.lucide) window.lucide.createIcons({ attrs: { 'aria-hidden': 'true' } });
+  }
+
+  function syncChapterSupportRail() {
+    chapterSupportCleanup?.();
+    chapterSupportCleanup = null;
+    const layout = document.querySelector('.chapter-summary-layout');
+    const rail = layout?.querySelector('.chapter-support-rail');
+    const scroller = layout?.closest('.chapter-workspace-content');
+    if (!layout || !rail || !scroller) return;
+    const definitions = layout.classList.contains('chapter-understand-layout')
+      ? [['concepts', '.chapter-learning-grid > article:nth-child(1)'], ['results', '.chapter-learning-grid > article:nth-child(2)'], ['reasoning', '.chapter-learning-grid > article:nth-child(3)'], ['traps', '.chapter-learning-grid > article:nth-child(4)']]
+      : [['foundation', '.chapter-foundation'], ['vocabulary', '.chapter-vocabulary'], ['opening', '.chapter-summary-opening'], ['picture', '.chapter-picture-section'], ['concepts', '.chapter-summary-map'], ['results', '.chapter-summary-results'], ['example', '.chapter-first-example'], ['reasoning', '.chapter-summary-reasoning'], ['traps', '.chapter-summary-traps'], ['exam', '.chapter-summary-exam'], ['recall', '.chapter-summary-recall']];
+    const sections = definitions.map(([key, selector]) => ({ key, element: layout.querySelector(selector) })).filter(item => item.element);
+    const cards = [...rail.querySelectorAll('[data-support-for]')];
+    const update = () => {
+      const anchor = scroller.getBoundingClientRect().top + Math.min(190, scroller.clientHeight * .28);
+      let current = sections[0];
+      sections.forEach(item => { if (item.element.getBoundingClientRect().top <= anchor) current = item; });
+      const active = cards.filter(card => (card.dataset.supportFor || '').split(/\s+/).includes(current?.key));
+      cards.forEach(card => card.classList.toggle('is-active', active.includes(card)));
+      rail.hidden = !active.length;
+    };
+    scroller.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    chapterSupportCleanup = () => {
+      scroller.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+    requestAnimationFrame(update);
   }
 
   function toast(message) {
@@ -1710,6 +1740,7 @@
     workspace.hidden = false;
     document.body.classList.add('chapter-workspace-open');
     refreshIcons();
+    syncChapterSupportRail();
   }
 
   function openChapterWorkspace(lessonId, section = 'summary') {
@@ -1719,6 +1750,8 @@
 
   function closeChapterWorkspace() {
     const workspace = $('#chapterWorkspace');
+    chapterSupportCleanup?.();
+    chapterSupportCleanup = null;
     workspace.hidden = true;
     $('#chapterWorkspaceBody').innerHTML = '';
     activeChapterWorkspace = null;
