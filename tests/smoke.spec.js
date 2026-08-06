@@ -74,6 +74,9 @@ test('all non-learning suites render without runtime errors', async ({ page }) =
     ['home/family/protection', 'Protection & Legacy'],
     ['home/care', 'Care Overview'],
     ['home/finance', 'Money Overview'],
+    ['home/travel', 'Travel'],
+    ['home/web', 'Web Life'],
+    ['home/entertainment', 'Entertainment'],
     ['community/overview', 'Community Overview']
   ];
   for (const [route, title] of routes) {
@@ -103,9 +106,9 @@ test('Munnar sunrise is the default and another background choice still persists
 
 test('Family and Care expose at most seven clear child routes', async ({ page }) => {
   await page.goto(`${app}#/home/family`);
-  await expect(page.locator('#sectionNav button')).toHaveCount(7);
+  expect(await page.locator('#sectionNav button').count()).toBeLessThanOrEqual(7);
   await page.goto(`${app}#/home/care`);
-  await expect(page.locator('#sectionNav button')).toHaveCount(7);
+  expect(await page.locator('#sectionNav button').count()).toBeLessThanOrEqual(7);
   await expect(page.locator('#sectionNav')).toContainText('Medicines');
   await expect(page.locator('#sectionNav')).toContainText('Elder care');
 });
@@ -178,6 +181,30 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-7\/gegp1\/gegp1ps\.pdf/);
   await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(9);
   await expect(page.locator('[data-book-state]')).toContainText('Bundled offline');
+});
+
+test('Travel, Web Life and Entertainment are independent complete menus', async ({ page }) => {
+  await page.goto(`${app}#/home/travel`);
+  await expect(page.locator('#sectionNav button')).toHaveCount(7);
+  await expect(page.locator('#sectionNav')).toContainText('Transportation');
+  await expect(page.locator('#sectionNav')).toContainText('Hotels & stays');
+  await expect(page.locator('#sectionNav')).toContainText('Insurance & documents');
+  await expect(page.locator('#content')).toContainText('Travel command centre');
+
+  await page.goto(`${app}#/home/web`);
+  await expect(page.locator('#sectionNav button')).toHaveCount(7);
+  await expect(page.locator('#sectionNav')).toContainText('Email & accounts');
+  await expect(page.locator('#sectionNav')).toContainText('AI services');
+  await expect(page.locator('#content')).toContainText('Never save passwords');
+
+  await page.goto(`${app}#/home/entertainment`);
+  await expect(page.locator('#sectionNav button')).toHaveCount(7);
+  await expect(page.locator('#sectionNav')).toContainText('Watch');
+  await expect(page.locator('#sectionNav')).toContainText('Outings & events');
+
+  const labels = await page.evaluate(() => Object.fromEntries(Object.entries(HM.views.groups).map(([key, group]) => [key, group.items.map(item => item[0])])));
+  expect(labels.household).not.toContain('Vehicles');
+  expect(labels.family).not.toContain('Travel');
 });
 
 test('every declared offline textbook section is a real local PDF', async ({ page }) => {
