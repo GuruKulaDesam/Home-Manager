@@ -12,6 +12,7 @@
   let activeBookReader = null;
   let activeBookUrl = '';
   let activeBookObjectUrl = false;
+  let activeInlineBookUrl = '';
   const googleSessions = new Map();
   const googleWorkspaceSessions = new Map();
   HM.workspace = { cache: {}, selected: {} };
@@ -59,6 +60,7 @@
       health: 'care', emergency: 'care', pets: 'care', education: 'learning'
     };
     if (lifeOwners[lifeDomain]) return lifeOwners[lifeDomain];
+    if (currentRoute.startsWith('study/')) return 'learning';
     const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'community/events': 'community', 'community/polls': 'community' };
     return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
   }
@@ -123,13 +125,16 @@
       const importLabel = card.querySelector('[data-book-import-label]');
       try {
         const book = V.textbookCatalog.find(item => item.id === card.dataset.bookCard);
+        const inlineFrame = card.querySelector('[data-inline-book-frame]');
+        const inlineMissing = card.querySelector('.inline-book-missing');
         if (book?.pdfFiles?.length) {
           readyCount += 1;
           card.classList.add('book-ready');
           open.disabled = false;
-          state.textContent = `Bundled offline - ${book.pdfFiles.length} sections`;
-          importLabel.textContent = 'Bundled';
-          card.querySelector('[data-book-import]').disabled = true;
+          if (state) state.textContent = `Bundled offline - ${book.pdfFiles.length} sections`;
+          if (importLabel) importLabel.textContent = 'Bundled';
+          const importButton = card.querySelector('[data-book-import]');
+          if (importButton) importButton.disabled = true;
           return;
         }
         const file = await getBookFile(card.dataset.bookCard);
@@ -138,6 +143,12 @@
         open.disabled = !file;
         state.textContent = file ? `Ready offline - ${file.name}` : 'PDF not added on this device';
         importLabel.textContent = file ? 'Replace PDF' : 'Add PDF';
+        if (inlineFrame && file?.blob) {
+          if (activeInlineBookUrl) URL.revokeObjectURL(activeInlineBookUrl);
+          activeInlineBookUrl = URL.createObjectURL(file.blob);
+          inlineFrame.src = `${activeInlineBookUrl}#view=FitH`;
+          inlineMissing.hidden = true;
+        } else if (inlineMissing) inlineMissing.hidden = false;
       } catch (error) {
         open.disabled = true;
         state.textContent = 'Private storage is unavailable in this browser';
@@ -145,7 +156,7 @@
       }
     }));
     const summary = document.querySelector('[data-book-library-summary]') || document.querySelector('.textbook-heading p');
-    if (summary) summary.textContent = `${readyCount} of ${cards.length} PDFs ready offline · ${cards.length - readyCount} missing`;
+    if (summary && !document.querySelector('[data-inline-book-frame]')) summary.textContent = `${readyCount} of ${cards.length} PDFs ready offline · ${cards.length - readyCount} missing`;
   }
 
   function renderReaderNotes() {
@@ -186,7 +197,11 @@
       activeBookReader = { book, studentId };
       const profile = D.state.academicProfiles.find(item => item.personId === studentId);
       const progress = readingProgress(bookId, studentId);
-      if (bundled && bundled.some(part => part.url === progress.currentPart)) activeBookUrl = progress.currentPart;
+      const selectedBundledPart = bundled?.find(part => (part.key || part.url) === progress.currentPart || (!part.key && part.url === progress.currentPart)) || bundled?.[0];
+      if (selectedBundledPart) {
+        activeBookUrl = selectedBundledPart.url;
+        if (!progress.currentPart && selectedBundledPart.page) progress.currentPage = selectedBundledPart.page;
+      }
       if (progress.status === 'not-started') progress.status = 'reading';
       progress.lastOpened = new Date().toISOString();
       D.save();
@@ -195,7 +210,7 @@
       $('#bookReaderMeta').textContent = bundled ? `${book.publisher} - official PDFs bundled for offline reading` : `${book.publisher} - ${stored.name} - stored only in this browser`;
       $('#bookPartSection').hidden = !bundled;
       $('#bookPart').innerHTML = bundled ? bundled.map((part, index) => `<option value="${index}">${D.esc(part.label)}</option>`).join('') : '';
-      if (bundled) $('#bookPart').value = String(Math.max(0, bundled.findIndex(part => part.url === activeBookUrl)));
+      if (bundled) $('#bookPart').value = String(Math.max(0, bundled.indexOf(selectedBundledPart)));
       $('#removeBookFile').hidden = Boolean(bundled);
       $('#bookNote').value = '';
       refreshBookReader(true);
@@ -266,8 +281,8 @@
     $('#nav').innerHTML = Object.entries(V.groups).map(([key, item]) => {
       const active = key === activeGroup;
       const expanded = expandedGroup === key && key !== 'today';
-      const children = expanded && key !== 'learning' ? `<div id="sectionNav" class="section-nav" role="group" aria-label="${D.esc(item.label)} pages">${item.items.map((child, index) => { const childActive = !activeSettings && topRoute === child[2]; return `<button type="button" data-route="${child[2]}" aria-label="Open ${D.esc(child[0])}" title="${D.esc(child[0])}" class="tab-tone-${index + 1} ${childActive ? 'active' : ''}" ${childActive ? 'aria-current="page"' : ''}><i data-lucide="${child[1]}"></i><span>${D.esc(child[0])}</span></button>`; }).join('')}</div>` : '';
-      const direct = key === 'learning';
+      const children = expanded ? `<div id="sectionNav" class="section-nav" role="group" aria-label="${D.esc(item.label)} pages">${item.items.map((child, index) => { const childActive = !activeSettings && topRoute === child[2]; return `<button type="button" data-route="${child[2]}" aria-label="Open ${D.esc(child[0])}" title="${D.esc(child[0])}" class="tab-tone-${index + 1} ${childActive ? 'active' : ''}" ${childActive ? 'aria-current="page"' : ''}><i data-lucide="${child[1]}"></i><span>${D.esc(child[0])}</span></button>`; }).join('')}</div>` : '';
+      const direct = false;
       const chevron = key === 'today' || direct ? '' : `<i class="nav-chevron" data-lucide="${expanded ? 'chevron-down' : 'chevron-right'}"></i>`;
       const expansionState = key === 'today' || direct ? '' : ` aria-expanded="${expanded}"`;
       const parentLabel = key === 'today' || direct ? `Open ${item.label}` : `${expanded ? 'Collapse' : 'Expand'} ${item.label} menu`;
@@ -306,6 +321,12 @@
   }
 
   function renderHeaderKpis() {
+    if (route.startsWith('study/')) {
+      $('#headerKpis').hidden = true;
+      $('#headerKpis').innerHTML = '';
+      return;
+    }
+    $('#headerKpis').hidden = false;
     const day = new Date().toISOString().slice(0, 10);
     const month = day.slice(0, 7);
     const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
@@ -343,6 +364,27 @@
     $('#headerKpis').innerHTML = items.map(item => `<button data-route="${item[2]}" title="Open ${D.esc(item[0])}"><i data-lucide="${item[3]}"></i><span><small>${D.esc(item[0])}</small><b>${D.esc(item[1])}</b></span></button>`).join('');
   }
 
+  function placeEducationMasterControls() {
+    const slot = $('#educationHeaderTabs');
+    if (!slot) return;
+    const contentLearners = $('#content .learner-bar');
+    const contentControls = $('#content .education-master-controls');
+    const controls = contentControls || slot.querySelector('.education-master-controls');
+    const learners = contentLearners || slot.querySelector('.learner-bar');
+    const row = $('#content .education-command-row');
+    const useHeader = route.startsWith('study/') && window.innerWidth >= 1100;
+    slot.hidden = !useHeader;
+    if (!controls && !learners) { slot.replaceChildren(); return; }
+    if (useHeader) {
+      slot.replaceChildren(...[learners, controls].filter(Boolean));
+    } else if (row) {
+      const sectionTabs = row.querySelector('.learning-section-tabs');
+      if (learners) row.insertBefore(learners, sectionTabs);
+      if (controls) row.insertBefore(controls, sectionTabs);
+      slot.replaceChildren();
+    }
+  }
+
   function render() {
     HM.life.ensure();
     route = location.hash.slice(2) || route;
@@ -376,6 +418,7 @@
     document.title = title[0] + ' - Our Divine Nest';
     $('#content').dataset.view = route;
     $('#content').innerHTML = V.render(route);
+    placeEducationMasterControls();
     bindView();
     renderNotifications();
     renderHeaderKpis();
@@ -468,7 +511,10 @@
     form.dataset.domain = source.domain || record?.domain || routeDomain || 'documents';
     form.dataset.editId = source.editId || '';
     if (record) Object.entries(record).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
-    else if (form.elements.context) form.elements.context.value = source.context || workspace;
+    else {
+      Object.entries(source).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
+      if (form.elements.context) form.elements.context.value = source.context || workspace;
+    }
     $('#formDialog').showModal();
     refreshIcons();
     setTimeout(() => $('#formFields input, #formFields select, #formFields textarea')?.focus(), 50);
@@ -598,6 +644,27 @@
     document.querySelectorAll('[data-plan-status]').forEach(select => select.onchange = () => {
       const item = D.state.studyPlans.find(record => record.id === select.dataset.planStatus);
       if (item) { item.status = select.value; save('Study plan updated'); render(); }
+    });
+    document.querySelectorAll('[data-inline-book-part]').forEach(select => select.onchange = () => {
+      const frame = document.querySelector('[data-inline-book-frame]');
+      if (frame) frame.src = `${select.value}#view=FitH`;
+      const progress = readingProgress(select.dataset.bookId, D.state.settings.activeLearnerId);
+      progress.currentPart = select.value;
+      D.save();
+    });
+    document.querySelectorAll('[data-study-plan]').forEach(card => card.ondragstart = event => event.dataTransfer.setData('studyPlan', card.dataset.studyPlan));
+    document.querySelectorAll('[data-plan-drop]').forEach(column => {
+      column.ondragover = event => { event.preventDefault(); column.classList.add('is-drag-over'); };
+      column.ondragleave = () => column.classList.remove('is-drag-over');
+      column.ondrop = event => {
+        event.preventDefault();
+        const item = D.state.studyPlans.find(record => record.id === event.dataTransfer.getData('studyPlan'));
+        if (item) { item.status = column.dataset.planDrop; save('Study block moved'); render(); }
+      };
+    });
+    document.querySelectorAll('[data-plan-move]').forEach(button => button.onclick = () => {
+      const item = D.state.studyPlans.find(record => record.id === button.dataset.planMove);
+      if (item) { item.status = button.dataset.status; save('Study block moved'); render(); }
     });
     document.querySelectorAll('[data-deliverable-status]').forEach(select => select.onchange = () => {
       const item = D.state.academicDeliverables.find(record => record.id === select.dataset.deliverableStatus);
@@ -1531,11 +1598,194 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
+  function openChapterWorkspace(lessonId, section = 'understand') {
+    const workspace = $('#chapterWorkspace');
+    $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, section);
+    workspace.hidden = false;
+    document.body.classList.add('chapter-workspace-open');
+    refreshIcons();
+    workspace.querySelector('.chapter-workspace-close')?.focus();
+  }
+
+  function closeChapterWorkspace() {
+    const workspace = $('#chapterWorkspace');
+    workspace.hidden = true;
+    $('#chapterWorkspaceBody').innerHTML = '';
+    document.body.classList.remove('chapter-workspace-open');
+    document.querySelector('[data-chapter-workspace]')?.focus();
+  }
+
   document.addEventListener('click', event => {
+    if (event.target.closest('[data-close-chapter-workspace]')) {
+      closeChapterWorkspace();
+      return;
+    }
     const closeDialog = event.target.closest('[data-close-dialog]');
     if (closeDialog) {
       const dialog = document.getElementById(closeDialog.dataset.closeDialog);
       if (dialog?.open) dialog.close();
+      return;
+    }
+    const inlineChapter = event.target.closest('[data-inline-book-chapter]');
+    if (inlineChapter) {
+      const frame = document.querySelector('[data-inline-book-frame]');
+      const page = +inlineChapter.dataset.bookPage || 1;
+      if (frame) frame.src = `${inlineChapter.dataset.inlineBookChapter}#${page > 1 ? `page=${page}&` : ''}view=FitH`;
+      const progress = readingProgress(inlineChapter.dataset.bookId, D.state.settings.activeLearnerId);
+      progress.currentPart = inlineChapter.dataset.bookPartKey || inlineChapter.dataset.inlineBookChapter;
+      progress.currentPage = page;
+      progress.lastOpened = new Date().toISOString();
+      D.save();
+      document.querySelectorAll('[data-inline-book-chapter]').forEach(button => {
+        const active = button === inlineChapter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+      return;
+    }
+    const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
+    if (chapterWorkspace) {
+      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'understand');
+      return;
+    }
+    const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
+    if (chapterTab) {
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(chapterTab.dataset.lesson, chapterTab.dataset.chapterWorkspaceTab);
+      refreshIcons();
+      return;
+    }
+    const chapterStage = event.target.closest('[data-chapter-stage-toggle]');
+    if (chapterStage) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterStage.dataset.lesson;
+      const stage = chapterStage.dataset.chapterStageToggle;
+      D.state.settings.chapterJourney ||= {};
+      D.state.settings.chapterJourney[learnerId] ||= {};
+      D.state.settings.chapterJourney[learnerId][lessonId] ||= {};
+      D.state.settings.chapterJourney[learnerId][lessonId][stage] = !D.state.settings.chapterJourney[learnerId][lessonId][stage];
+      D.save();
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, stage);
+      refreshIcons();
+      toast(D.state.settings.chapterJourney[learnerId][lessonId][stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
+      return;
+    }
+    const chapterMastery = event.target.closest('[data-chapter-mastery]');
+    if (chapterMastery) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterMastery.dataset.lesson;
+      const mastery = +chapterMastery.dataset.chapterMastery;
+      const status = mastery >= 80 ? 'mastered' : mastery ? 'learning' : 'not-started';
+      if (chapterMastery.dataset.jee === 'true' || lessonId.startsWith('book-')) {
+        D.state.settings.chapterMastery ||= {};
+        D.state.settings.chapterMastery[learnerId] ||= {};
+        D.state.settings.chapterMastery[learnerId][lessonId] = { mastery, status };
+      } else {
+        const lesson = D.state.syllabusItems.find(item => item.id === lessonId && item.studentId === learnerId);
+        if (lesson) { lesson.mastery = mastery; lesson.status = status; }
+      }
+      D.save();
+      render();
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, 'progress');
+      refreshIcons();
+      toast('Chapter progress updated');
+      return;
+    }
+    const inlineBook = event.target.closest('[data-inline-book]');
+    if (inlineBook) {
+      D.state.settings.activeReadingBook ||= {};
+      D.state.settings.activeReadingBook[D.state.settings.activeLearnerId] = inlineBook.dataset.inlineBook;
+      D.save();
+      render();
+      return;
+    }
+    const geniusLesson = event.target.closest('[data-genius-lesson]');
+    if (geniusLesson) {
+      D.state.settings.activeGeniusLesson ||= {};
+      D.state.settings.activeGeniusLesson[D.state.settings.activeLearnerId] = geniusLesson.dataset.geniusLesson;
+      D.save();
+      render();
+      return;
+    }
+    const geniusSection = event.target.closest('[data-genius-section]');
+    if (geniusSection) {
+      D.state.settings.activeGeniusSection ||= {};
+      D.state.settings.activeGeniusSection[D.state.settings.activeLearnerId] = geniusSection.dataset.geniusSection;
+      D.save();
+      render();
+      return;
+    }
+    const geniusNoteSave = event.target.closest('[data-genius-note-save]');
+    if (geniusNoteSave) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const textarea = document.querySelector(`[data-genius-note][data-lesson="${CSS.escape(geniusNoteSave.dataset.geniusNoteSave)}"]`);
+      D.state.settings.geniusNotes ||= {};
+      D.state.settings.geniusNotes[learnerId] ||= {};
+      D.state.settings.geniusNotes[learnerId][geniusNoteSave.dataset.geniusNoteSave] = textarea?.value.trim() || '';
+      save('Chapter note saved');
+      if (document.body.classList.contains('chapter-workspace-open')) {
+        $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(geniusNoteSave.dataset.geniusNoteSave, 'notes');
+        refreshIcons();
+      }
+      return;
+    }
+    const practiceLesson = event.target.closest('[data-practice-lesson]');
+    if (practiceLesson) {
+      D.state.settings.activePracticeLesson ||= {};
+      D.state.settings.activePracticeLesson[D.state.settings.activeLearnerId] = practiceLesson.dataset.practiceLesson;
+      D.save();
+      render();
+      return;
+    }
+    const mcqAnswer = event.target.closest('[data-mcq-answer]');
+    if (mcqAnswer) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lesson = V.lessonById(mcqAnswer.dataset.lesson);
+      const questions = lesson ? HM.genius.questions(lesson) : [];
+      const questionIndex = +mcqAnswer.dataset.question;
+      const question = questions[questionIndex];
+      if (!question) return;
+      D.state.settings.mcqProgress ||= {};
+      D.state.settings.mcqProgress[learnerId] ||= {};
+      const progress = D.state.settings.mcqProgress[learnerId][lesson.id] ||= { index: 0, answers: {}, attempted: 0, correct: 0 };
+      if (!progress.answers[questionIndex]) {
+        const selected = +mcqAnswer.dataset.mcqAnswer;
+        const correct = selected === question.answer;
+        progress.answers[questionIndex] = { selected, correct };
+        progress.attempted += 1;
+        if (correct) progress.correct += 1;
+        D.save();
+      }
+      render();
+      return;
+    }
+    const mcqNext = event.target.closest('[data-mcq-next]');
+    if (mcqNext) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lesson = V.lessonById(mcqNext.dataset.mcqNext);
+      const progress = D.state.settings.mcqProgress?.[learnerId]?.[mcqNext.dataset.mcqNext];
+      if (lesson && progress) {
+        const count = HM.genius.questions(lesson).length;
+        if (progress.index >= count - 1) { progress.index = 0; progress.answers = {}; }
+        else progress.index += 1;
+        D.save();
+        render();
+      }
+      return;
+    }
+    const geniusMode = event.target.closest('[data-genius-mode]');
+    if (geniusMode) {
+      const learnerId = D.state.settings.activeLearnerId;
+      D.state.settings.activeGeniusMode ||= {};
+      D.state.settings.activeGeniusMode[learnerId] = geniusMode.dataset.geniusMode;
+      D.state.settings.activeLearningTrack ||= {};
+      D.state.settings.activeLearningTrack[learnerId] = geniusMode.dataset.geniusMode === 'jee' ? 'jee' : 'cbse';
+      if (geniusMode.dataset.geniusMode === 'jee') {
+        D.state.settings.activeLearningSubject ||= {};
+        const subject = D.state.settings.activeLearningSubject[learnerId];
+        if (!['Physics', 'Chemistry', 'Mathematics'].includes(subject)) D.state.settings.activeLearningSubject[learnerId] = 'Physics';
+      }
+      save('Genius Mind mode changed');
+      render();
       return;
     }
     const bookImport = event.target.closest('[data-book-import]');
@@ -1563,6 +1813,15 @@
       refreshIcons();
       return;
     }
+    const practiceOpen = event.target.closest('[data-practice-open]');
+    if (practiceOpen) {
+      const learnerId = D.state.settings.activeLearnerId;
+      D.state.settings.activePracticeLesson ||= {};
+      D.state.settings.activePracticeLesson[learnerId] = practiceOpen.dataset.practiceOpen;
+      D.save();
+      go('study/practice');
+      return;
+    }
     const routeTarget = event.target.closest('[data-route]');
     if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); if ($('#emergencyDialog').open) $('#emergencyDialog').close(); toggleNotifications(false); return; }
     const agendaPerson = event.target.closest('[data-agenda-person]');
@@ -1576,13 +1835,36 @@
       return;
     }
     const learner = event.target.closest('[data-learner]');
-    if (learner) { D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); return; }
+    if (learner) { const chapterWasOpen = document.body.classList.contains('chapter-workspace-open'); D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); if (chapterWasOpen) closeChapterWorkspace(); return; }
+    const learningTrack = event.target.closest('[data-learning-track]');
+    if (learningTrack) {
+      if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace();
+      const learnerId = D.state.settings.activeLearnerId;
+      D.state.settings.activeLearningTrack ||= {};
+      D.state.settings.activeLearningTrack[learnerId] = learningTrack.dataset.learningTrack;
+      if (learningTrack.dataset.learningTrack === 'jee') {
+        D.state.settings.activeGeniusMode ||= {};
+        D.state.settings.activeGeniusMode[learnerId] = 'jee';
+        D.state.settings.activeLearningSubject ||= {};
+        if (!['Physics', 'Chemistry', 'Mathematics'].includes(D.state.settings.activeLearningSubject[learnerId])) D.state.settings.activeLearningSubject[learnerId] = 'Physics';
+        D.save();
+        go('study/jee');
+      } else {
+        D.state.settings.activeGeniusMode ||= {};
+        D.state.settings.activeGeniusMode[learnerId] = 'school';
+        D.save();
+        go('study/genius');
+      }
+      return;
+    }
     const learningSubject = event.target.closest('[data-learning-subject]');
     if (learningSubject) {
+      const chapterWasOpen = document.body.classList.contains('chapter-workspace-open');
       D.state.settings.activeLearningSubject ||= {};
       D.state.settings.activeLearningSubject[D.state.settings.activeLearnerId] = learningSubject.dataset.learningSubject;
       save('Subject view changed');
       render();
+      if (chapterWasOpen) closeChapterWorkspace();
       return;
     }
     const workspaceTarget = event.target.closest('[data-workspace]');
@@ -1651,8 +1933,8 @@
     if (!part) return;
     activeBookUrl = part.url;
     const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
-    progress.currentPart = part.url;
-    progress.currentPage = 1;
+    progress.currentPart = part.key || part.url;
+    progress.currentPage = part.page || 1;
     D.save();
     refreshBookReader(true);
   };
@@ -1759,6 +2041,11 @@
   $('#collapse').onclick = () => { D.state.settings.sidebarCollapsed = !D.state.settings.sidebarCollapsed; D.save(); applyTheme(); };
   $('#bottomNav').onclick = event => { if (event.target.closest('#bottomMore')) { document.body.classList.add('menu-open'); $('#menu').setAttribute('aria-expanded', 'true'); } };
   window.addEventListener('hashchange', render);
+  let educationResizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(educationResizeTimer);
+    educationResizeTimer = setTimeout(placeEducationMasterControls, 120);
+  });
   window.addEventListener('hm-cloud-status', () => { if (route === 'settings/app') render(); });
   window.addEventListener('hm-cloud-state', () => {
     activeGroup = D.state.settings.activeGroup || 'today';
@@ -1769,7 +2056,7 @@
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }
-    if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); }
+    if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }
   });
 
   applyTheme();

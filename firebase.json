@@ -30,6 +30,7 @@
       "**/.*",
       "**/node_modules/**",
       "private-data/**",
+      "assets/textbooks/class-7/tamil/tamil7-term-*.pdf",
       "vendor/wllama/assets/**",
       "vendor/wllama/cpp/**",
       "vendor/wllama/guides/**",

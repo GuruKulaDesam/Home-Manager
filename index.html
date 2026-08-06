@@ -38,6 +38,7 @@
           <small id="breadcrumb">Our Divine Nest</small>
           <h1 id="pageTitle">Today</h1>
         </div>
+        <div id="educationHeaderTabs" class="education-header-tabs" aria-label="Education track and subjects"></div>
         <div id="headerKpis" class="header-kpis" aria-label="Current household signals"></div>
       </div>
     </header>
@@ -114,6 +115,10 @@
   </dialog>
   <input id="bookFileInput" class="sr-only" type="file" accept="application/pdf,.pdf" aria-label="Choose textbook PDF">
 
+  <section id="chapterWorkspace" class="chapter-workspace" aria-labelledby="chapterWorkspaceTitle" hidden>
+    <div id="chapterWorkspaceBody"></div>
+  </section>
+
   <dialog id="quickDialog" class="side-drawer quick-drawer" aria-labelledby="quickTitle">
     <form method="dialog">
       <span class="drawer-accent" aria-hidden="true"></span>
@@ -128,6 +133,14 @@
   <script src="js/data.js"></script>
   <script src="js/life.js"></script>
   <script src="js/questions.js"></script>
+  <script src="js/genius.js"></script>
+  <script src="js/genius-content/physics.js"></script>
+  <script src="js/genius-content/chemistry.js"></script>
+  <script src="js/genius-content/mathematics.js"></script>
+  <script src="js/genius-content/senior-language-cs.js"></script>
+  <script src="js/genius-content/middle-stem.js"></script>
+  <script src="js/genius-content/middle-languages.js"></script>
+  <script src="js/genius-content/middle-society-skills.js"></script>
   <script src="js/views.js"></script>
   <script type="module" src="js/cloud.js"></script>
   <script type="module" src="js/offline-ai.js"></script>
