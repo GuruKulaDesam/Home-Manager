@@ -20,7 +20,7 @@
       ['Overview', 'heart-handshake', 'home/care'], ['Health', 'heart-pulse', 'home/life/health'], ['Medicines', 'pill', 'home/life/medicines'], ['Appointments', 'stethoscope', 'home/life/appointments'], ['Elder care', 'accessibility', 'home/life/elders'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
     ]},
     learning: { label: 'Education', icon: 'graduation-cap', note: 'Study and development', route: 'study/curriculum', items: [
-      ['Learning Path', 'route', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Overview', 'activity', 'study/overview'], ['Progress', 'chart-no-axes-combined', 'study/reports']
+      ['Learning Path', 'route', 'study/curriculum'], ['Genius Mind', 'brain', 'study/genius'], ['Planner', 'calendar-clock', 'study/planner'], ['Overview', 'activity', 'study/overview'], ['Progress', 'chart-no-axes-combined', 'study/reports']
     ]},
     community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
       ['Overview', 'map', 'community/overview'], ['Updates', 'newspaper', 'community/feed'], ['Events & polls', 'calendar-heart', 'community/participate'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic issues', 'ticket-check', 'community/tickets'], ['Local services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
@@ -764,7 +764,7 @@
     const subjects = jeeMode ? ['Physics', 'Chemistry', 'Mathematics'] : context.profile.subjects;
     const selectedTab = subjects.includes(context.selectedSubject) ? context.selectedSubject : subjects[0];
     const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs subject-master-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${selectedTab === subject ? 'active' : ''}" aria-pressed="${selectedTab === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
-    const cbseSections = [['Learning Path','route','study/curriculum'],['Planner','calendar-clock','study/planner'],['Overview','activity','study/overview'],['Progress','chart-no-axes-combined','study/reports']];
+    const cbseSections = [['Learning Path','route','study/curriculum'],['Genius Mind','brain','study/genius'],['Planner','calendar-clock','study/planner'],['Overview','activity','study/overview'],['Progress','chart-no-axes-combined','study/reports']];
     const jeeSections = cbseSections;
     const learningSections = jeeMode ? jeeSections : cbseSections;
     const sectionTabs = activeRenderRoute.startsWith('study/') ? `<nav class="learning-section-tabs" aria-label="Learning sections">${learningSections.map(([label, iconName, route]) => `<button type="button" data-route="${route}" class="${activeRenderRoute === route ? 'active' : ''}" ${activeRenderRoute === route ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span></button>`).join('')}</nav>` : '';

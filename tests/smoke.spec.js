@@ -273,7 +273,8 @@ test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page 
   for (const learnerId of ['p3', 'p4']) {
     await page.goto(`${app}#/study/books`);
     await page.locator(`[data-learner="${learnerId}"]`).click();
-    await expect(page.locator('.learning-section-tabs button')).toHaveCount(4);
+    await expect(page.locator('.learning-section-tabs button')).toHaveCount(5);
+    await expect(page.locator('#sectionNav')).toContainText('Genius Mind');
     await expect(page.locator('.inline-book-reader')).toBeVisible();
     await expect(page.locator('.curriculum-summary')).toBeHidden();
     await expect(page.locator('.reflection-grid')).toHaveCount(0);
