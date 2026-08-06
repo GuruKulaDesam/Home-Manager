@@ -1835,9 +1835,10 @@
       return;
     }
     const learner = event.target.closest('[data-learner]');
-    if (learner) { D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); return; }
+    if (learner) { const chapterWasOpen = document.body.classList.contains('chapter-workspace-open'); D.state.settings.activeLearnerId = learner.dataset.learner; save('Student view changed'); render(); if (chapterWasOpen) closeChapterWorkspace(); return; }
     const learningTrack = event.target.closest('[data-learning-track]');
     if (learningTrack) {
+      if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace();
       const learnerId = D.state.settings.activeLearnerId;
       D.state.settings.activeLearningTrack ||= {};
       D.state.settings.activeLearningTrack[learnerId] = learningTrack.dataset.learningTrack;
@@ -1858,10 +1859,12 @@
     }
     const learningSubject = event.target.closest('[data-learning-subject]');
     if (learningSubject) {
+      const chapterWasOpen = document.body.classList.contains('chapter-workspace-open');
       D.state.settings.activeLearningSubject ||= {};
       D.state.settings.activeLearningSubject[D.state.settings.activeLearnerId] = learningSubject.dataset.learningSubject;
       save('Subject view changed');
       render();
+      if (chapterWasOpen) closeChapterWorkspace();
       return;
     }
     const workspaceTarget = event.target.closest('[data-workspace]');
