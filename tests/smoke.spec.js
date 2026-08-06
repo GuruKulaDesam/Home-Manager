@@ -16,6 +16,21 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test('household identity drives the shell, map link and browser title', async ({ page }) => {
+  await expect(page.locator('#brandName')).toHaveText('Lotus Naga Home');
+  await expect(page.locator('#brandAddress')).toHaveText('32 SSS Jaya Enclave, Kovaipudur, Coimbatore, 641042');
+  await expect(page.locator('#brandAddress')).toHaveAttribute('href', /google\.com\/maps\/search/);
+  await expect(page).toHaveTitle('Today - Lotus Naga Home');
+
+  await page.goto(`${app}#/settings/household`);
+  await page.locator('#householdSettings [name="householdName"]').fill('Jaya Community Home');
+  await page.locator('#householdSettings [name="primaryAddress"]').fill('Kovaipudur, Coimbatore');
+  await page.locator('#householdSettings button[type="submit"]').click();
+  await expect(page.locator('#brandName')).toHaveText('Jaya Community Home');
+  await expect(page.locator('#brandAddress')).toHaveText('Kovaipudur, Coimbatore');
+  await expect(page).toHaveTitle('Household profile - Jaya Community Home');
+});
+
 test('offline assistant selects safe domain roles and ships its local runtime', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => Boolean(window.HomeAI))).toBe(true);
   await page.click('#offlineAssistant');
@@ -333,7 +348,7 @@ test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page 
     await page.goto(`${app}#/study/curriculum`);
     await expect(page.locator('.curriculum-journey-list')).toBeVisible();
     await expect(page.locator('.curriculum-progress-strip')).toContainText('Stages complete');
-    await expect(page.locator('.curriculum-progress-strip')).toContainText('Exam ready');
+    await expect(page.locator('.curriculum-progress-strip')).toContainText('Summaries reviewed');
     await expect(page.locator('.curriculum-progress-strip')).not.toContainText('One complete learning journey');
     await expect(page.locator('.curriculum-journey-row').first()).toContainText('%');
     await expect(page.locator('.chapter-primary-action')).toHaveCount(0);
@@ -352,22 +367,50 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   await expect(cards.first().locator('.chapter-card-title h2')).toBeVisible();
   await expect(cards.first().locator('.chapter-card-metrics > *')).toHaveCount(2);
   await expect(cards.first().locator('.chapter-card-footer')).toContainText('Next step');
+  await expect(page.getByPlaceholder('Find a chapter')).toHaveCount(0);
+  await expect(page.locator('.curriculum-journey-tools')).toHaveCount(0);
   const cardColors = await cards.evaluateAll(items => items.slice(0, 3).map(item => getComputedStyle(item.querySelector('.chapter-sequence')).backgroundColor));
   expect(new Set(cardColors).size).toBe(1);
   const matchingTheme = await page.evaluate(() => ({
-    card: getComputedStyle(document.querySelector('.curriculum-chapter-card .chapter-sequence')).backgroundColor,
+    card: getComputedStyle(document.querySelector('.curriculum-chapter-card .chapter-sequence')).color,
+    numberGradient: getComputedStyle(document.querySelector('.curriculum-chapter-card .chapter-sequence')).backgroundImage,
     tab: getComputedStyle(document.querySelector('#educationHeaderTabs [data-learning-subject].active')).backgroundColor
   }));
   expect(matchingTheme.card).toBe(matchingTheme.tab);
+  expect(matchingTheme.numberGradient).toContain('linear-gradient');
   const shellTheme = await page.locator('#sidebar').evaluate(element => ({ background: getComputedStyle(element).backgroundImage, color: getComputedStyle(element).color }));
   expect(shellTheme.background).toContain('linear-gradient');
+  expect(shellTheme.background).toContain('rgb(38, 31, 56)');
   expect(shellTheme.color).toBe('rgb(248, 250, 252)');
+  const menuIconColors = await page.locator('#nav > .nav-tree-item > .nav-parent .nav-icon').evaluateAll(items => items.slice(0, 6).map(item => getComputedStyle(item).color));
+  expect(new Set(menuIconColors).size).toBeGreaterThan(3);
+  const cardPalette = await cards.first().evaluate(card => ({
+    primary: getComputedStyle(card.querySelector('.chapter-sequence')).color,
+    complement: getComputedStyle(card.querySelector('.chapter-card-visual')).color,
+    third: getComputedStyle(card.querySelector('.section-kicker')).color,
+    surfaceGradient: getComputedStyle(card).backgroundImage,
+    shadow: getComputedStyle(card).boxShadow,
+    titleGradient: getComputedStyle(card.querySelector('.chapter-card-title h2')).backgroundImage
+  }));
+  expect(cardPalette.primary).not.toBe(cardPalette.complement);
+  expect(new Set([cardPalette.primary, cardPalette.complement, cardPalette.third]).size).toBe(3);
+  expect(cardPalette.surfaceGradient).toContain('linear-gradient');
+  expect(cardPalette.shadow).not.toBe('none');
+  expect(cardPalette.titleGradient).toContain('linear-gradient');
   const themeSurfaces = await page.evaluate(() => ({
     topbar: getComputedStyle(document.querySelector('.topbar')).backgroundColor,
     progress: getComputedStyle(document.querySelector('.curriculum-progress-strip')).backgroundColor
   }));
   expect(themeSurfaces.topbar).toBe('rgba(0, 0, 0, 0)');
   expect(themeSurfaces.progress).not.toBe('rgb(23, 32, 51)');
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const frozenEducationHeader = await page.evaluate(() => ({
+    top: document.querySelector('.app-header').getBoundingClientRect().top,
+    subjectVisible: document.querySelector('#educationHeaderTabs [data-learning-subject].active').getBoundingClientRect().height > 0
+  }));
+  expect(Math.abs(frozenEducationHeader.top)).toBeLessThanOrEqual(1);
+  expect(frozenEducationHeader.subjectVisible).toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
   const firstMastery = cards.first().locator('[data-card-mastery]');
   await firstMastery.selectOption('80');
   await expect(page.locator('body')).not.toHaveClass(/chapter-workspace-open/);
@@ -389,20 +432,72 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.locator('.curriculum-chapter-card').first().click({ position: { x: 18, y: 90 } });
   await expect(page.locator('#chapterWorkspace')).toBeVisible();
   await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(7);
+  await expect(page.locator('.chapter-workspace-tabs button').first()).toContainText('Summary');
+  await expect(page.locator('.chapter-workspace-tabs button').first()).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.chapter-workspace-tabs')).not.toContainText('Exam Ready');
+  await expect(page.locator('[data-chapter-stage-toggle="summary"]')).toBeVisible();
+  await expect(page.locator('#nav .chapter-workspace-tabs')).toHaveCount(0);
+  await expect(page.locator('#chapterWorkspace .chapter-workspace-tabs')).toBeVisible();
+  await expect(page.locator('.chapter-browser-item')).toHaveCount(14);
+  await expect(page.locator('.chapter-browser-item').first()).toContainText('Electric Charges and Fields');
   await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'visible');
   await expect(page.locator('#nav')).toHaveClass(/chapter-nav-mode/);
+  await expect(page.locator('.chapter-workspace-close')).toHaveText('Back to Curriculum');
+  await expect(page.locator('#sidebar .sidebar-bottom')).toBeHidden();
+  const backPlacement = await page.locator('.chapter-workspace-close').evaluate(button => {
+    const control = button.getBoundingClientRect();
+    const sidebar = document.querySelector('#sidebar').getBoundingClientRect();
+    return { leftGap: control.left - sidebar.left, bottomGap: sidebar.bottom - control.bottom };
+  });
+  expect(backPlacement.leftGap).toBeLessThan(24);
+  expect(backPlacement.bottomGap).toBeLessThan(24);
   await expect(page.locator('.chapter-workspace-sidebar')).toHaveCount(0);
   await expect(page.locator('.app-header')).toBeVisible();
   await expect(page.locator('#educationHeaderTabs [data-learning-subject="Physics"]')).toBeVisible();
   const shellWidths = await page.evaluate(() => ({ configured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar')), shell: document.querySelector('#sidebar').getBoundingClientRect().width, workspaceLeft: document.querySelector('#chapterWorkspace').getBoundingClientRect().left }));
   expect(shellWidths.shell).toBe(shellWidths.configured);
   expect(shellWidths.workspaceLeft).toBe(shellWidths.shell);
+  await expect(page.locator('.chapter-summary')).toContainText('Bring these ideas with you');
+  await expect(page.locator('.chapter-summary')).toContainText('New words, in plain words');
+  await expect(page.locator('.chapter-summary')).toContainText('The chapter’s central idea');
+  await expect(page.locator('.chapter-summary')).toContainText('How the pieces connect');
+  await expect(page.locator('.chapter-summary')).toContainText('Facts and formulas that carry the chapter');
+  await expect(page.locator('.chapter-summary')).toContainText('Watch one idea become an answer');
+  await expect(page.locator('.chapter-summary')).toContainText('How to work through a question');
+  await expect(page.locator('.chapter-summary')).toContainText('Mistakes to watch for');
+  await expect(page.locator('.chapter-summary')).toContainText('How to write a strong exam answer');
+  await expect(page.locator('.chapter-summary')).toContainText('What can you explain without looking?');
+  await expect(page.locator('.chapter-summary h1')).toHaveText('Electric Charges and Fields');
+  await expect(page.locator('.chapter-foundation .chapter-slow-steps article')).toHaveCount(3);
+  await expect(page.locator('.chapter-word-cards article')).not.toHaveCount(0);
+  await expect(page.locator('.chapter-relationship-visual')).toBeVisible();
+  await expect(page.locator('.chapter-relationship-visual figcaption')).not.toBeEmpty();
+  await expect(page.locator('.chapter-formula-card').first()).toBeVisible();
+  expect(await page.locator('.chapter-summary').innerText()).not.toMatch(/do not rush|take (?:these|it) slowly|go slowly|pause and|before moving down|do not reread/i);
+  const lessonReadability = await page.locator('.chapter-summary').evaluate(summary => ({
+    height: summary.scrollHeight,
+    storyFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-summary-story')).fontSize),
+    stepFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-slow-steps p')).fontSize),
+    formulaFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-formula-card p')).fontSize),
+    viewportHeight: innerHeight
+  }));
+  expect(lessonReadability.height).toBeGreaterThan(lessonReadability.viewportHeight * 2);
+  expect(lessonReadability.storyFont).toBeGreaterThanOrEqual(16);
+  expect(lessonReadability.stepFont).toBeGreaterThanOrEqual(16);
+  expect(lessonReadability.formulaFont).toBeGreaterThanOrEqual(18);
+  const firstSummary = await page.locator('.chapter-summary-bigidea').textContent();
+  await page.locator('.chapter-browser-item').nth(1).click();
+  await expect(page.locator('.chapter-browser-item').nth(1)).toHaveAttribute('aria-current', 'page');
+  await expect(page.locator('.chapter-summary')).toContainText('Potential');
+  expect(await page.locator('.chapter-summary-bigidea').textContent()).not.toBe(firstSummary);
+  await page.locator('.chapter-browser-item').first().click();
+  await page.locator('[data-chapter-workspace-tab="understand"]').click();
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
   await page.locator('[data-chapter-stage-toggle="understand"]').click();
   await expect(page.locator('.chapter-workspace-status')).toContainText('2/7');
-  const verticalTabs = await page.locator('.chapter-workspace-tabs button').evaluateAll(buttons => buttons.slice(0, 2).map(button => button.getBoundingClientRect()).map(rect => ({ x: rect.x, y: rect.y })));
-  expect(verticalTabs[1].y).toBeGreaterThan(verticalTabs[0].y);
-  expect(Math.abs(verticalTabs[1].x - verticalTabs[0].x)).toBeLessThan(2);
+  const horizontalTabs = await page.locator('.chapter-workspace-tabs button').evaluateAll(buttons => buttons.slice(0, 2).map(button => button.getBoundingClientRect()).map(rect => ({ x: rect.x, y: rect.y })));
+  expect(horizontalTabs[1].x).toBeGreaterThan(horizontalTabs[0].x);
+  expect(Math.abs(horizontalTabs[1].y - horizontalTabs[0].y)).toBeLessThan(2);
   await page.locator('[data-chapter-workspace-tab="book"]').click();
   await expect(page.locator('.chapter-book-panel iframe')).toHaveAttribute('src', /leph101\.pdf/);
   const viewportUse = await page.evaluate(() => {
@@ -421,11 +516,80 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.locator('[data-chapter-workspace-tab="assignments"]').click();
   await expect(page.locator('.chapter-assignment-panel')).toContainText('Assignments connected to this subject');
   await page.locator('[data-chapter-workspace-tab="progress"]').click();
+  await expect(page.locator('.chapter-seven-status article')).toHaveCount(7);
   await page.locator('[data-chapter-mastery="80"]').click();
   await expect(page.locator('.chapter-mastery-ring')).toContainText('80%');
   await page.locator('#educationHeaderTabs [data-learning-subject="Chemistry"]').click();
   await expect(page.locator('#chapterWorkspace')).toBeHidden();
   await expect(page.locator('.curriculum-journey-list')).toBeVisible();
+});
+
+test('every real CBSE and JEE chapter has a substantive authored summary', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  const audit = await page.evaluate(() => {
+    const root = HM.chapterSummaries || {};
+    const frontMatter = /^(prelims|answers|appendix|complete book|प्रारंभिक पृष्ठ)/i;
+    const normalized = (subject, title) => `${subject}|${title}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const resolve = (id, subject, title, jee = false) => {
+      const track = jee ? (root.jee || {}) : (root.school || {});
+      return track[id] || track[`${subject}::${title}`] || root[id] || root[`${subject}::${title}`] || root[normalized(subject, title)];
+    };
+    const valid = item => item && String(item.bigIdea || '').length >= 35 && String(item.story || '').length >= 55 && ['essentialResults', 'problemFlow', 'examTraps', 'rapidRecall'].every(key => Array.isArray(item[key]) && item[key].length >= 2 && item[key].every(value => String(value).trim().length >= 3));
+    const school = HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).filter(part => !/ps\.pdf(?:$|[?#])/i.test(part.url) && !frontMatter.test(part.label)).map((part, index) => ({ id: `book-${book.id}-${part.order || index + 1}`, subject: book.subject, title: part.label })));
+    const jee = HM.genius.jeeSyllabus.map(item => ({ ...item, jee: true }));
+    const chapters = [...school, ...jee];
+    const missing = chapters.filter(item => !valid(resolve(item.id, item.subject, item.title, item.jee))).map(item => `${item.id}: ${item.subject} / ${item.title}`);
+    return { school: school.length, jee: jee.length, missing };
+  });
+  expect(audit.school).toBe(147);
+  expect(audit.jee).toBe(54);
+  expect(audit.missing).toEqual([]);
+});
+
+test('chapter foundations and relationship pictures remain readable on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(`${app}#/study/curriculum`);
+  await page.getByRole('button', { name: 'Physics', exact: true }).click();
+  await page.locator('.curriculum-chapter-card').first().click({ position: { x: 18, y: 90 } });
+  await expect(page.locator('.chapter-foundation')).toBeVisible();
+  await page.locator('.chapter-picture-section').scrollIntoViewIfNeeded();
+  await expect(page.locator('.chapter-relationship-visual')).toBeInViewport();
+  const fit = await page.evaluate(() => {
+    const diagram = document.querySelector('.chapter-relationship-visual').getBoundingClientRect();
+    return { overflow: document.documentElement.scrollWidth - innerWidth, left: diagram.left, right: diagram.right, width: innerWidth };
+  });
+  expect(fit.overflow).toBeLessThanOrEqual(1);
+  expect(fit.left).toBeGreaterThanOrEqual(0);
+  expect(fit.right).toBeLessThanOrEqual(fit.width + 1);
+});
+
+test('every real CBSE and JEE chapter teaches its foundations before the new lesson', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  const audit = await page.evaluate(() => {
+    const root = HM.chapterFoundations || {};
+    const frontMatter = /^(prelims|answers|appendix|complete book|à¤ªà¥à¤°à¤¾à¤‚à¤­à¤¿à¤• à¤ªà¥ƒà¤·à¥à¤ )/i;
+    const normalized = (subject, title) => `${subject}|${title}`.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const resolve = (id, subject, title, jee = false) => {
+      const track = jee ? (root.jee || {}) : (root.school || {});
+      return track[id] || track[`${subject}::${title}`] || root[id] || root[`${subject}::${title}`] || root[normalized(subject, title)];
+    };
+    const valid = item => {
+      if (!item || !Array.isArray(item.remember) || item.remember.length < 2 || !Array.isArray(item.newWords) || item.newWords.length < 3) return false;
+      if (!item.newWords.every(word => String(word.term || '').length > 1 && String(word.plain || '').length > 8)) return false;
+      if (!item.firstExample || !String(item.firstExample.prompt || '').trim() || !Array.isArray(item.firstExample.steps) || item.firstExample.steps.length < 2 || !String(item.firstExample.answer || '').trim()) return false;
+      const nodes = item.visual?.nodes || [];
+      const ids = new Set(nodes.map(node => node.id));
+      return nodes.length >= 2 && (item.visual.edges || []).every(edge => ids.has(edge.from) && ids.has(edge.to));
+    };
+    const school = HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).filter(part => !/ps\.pdf(?:$|[?#])/i.test(part.url) && !frontMatter.test(part.label)).map((part, index) => ({ id: `book-${book.id}-${part.order || index + 1}`, subject: book.subject, title: part.label })));
+    const jee = HM.genius.jeeSyllabus.map(item => ({ ...item, jee: true }));
+    const chapters = [...school, ...jee];
+    const missing = chapters.filter(item => !valid(resolve(item.id, item.subject, item.title, item.jee))).map(item => `${item.id}: ${item.subject} / ${item.title}`);
+    return { school: school.length, jee: jee.length, missing };
+  });
+  expect(audit.school).toBe(147);
+  expect(audit.jee).toBe(54);
+  expect(audit.missing).toEqual([]);
 });
 
 test('Genius Mind provides subject and chapter-specific recall guidance', async ({ page }) => {
@@ -490,14 +654,22 @@ test('Genius Mind adds a chapter-wise JEE Main workflow for Class 12 PCM', async
 
 test('Practice and assessments are one chapter-based MCQ workspace', async ({ page }) => {
   await page.goto(`${app}#/study/practice`);
-  await expect(page.locator('.learning-section-tabs')).toContainText('Learning Path');
-  await expect(page.locator('.mcq-question')).toContainText('no inverse function');
+  await expect(page.locator('.learning-section-tabs')).toContainText('Curriculum');
+  const questions = page.locator('.mcq-question');
+  expect(await questions.count()).toBeGreaterThanOrEqual(7);
+  await expect(questions.first()).toContainText('no inverse function');
   await expect(page.locator('.mcq-workspace textarea')).toHaveCount(0);
-  await page.locator('[data-mcq-answer="0"]').click();
+  await questions.first().locator('[data-mcq-answer="0"]').click();
   await expect(page.locator('.mcq-feedback')).toContainText('Repair this exact idea');
-  await expect(page.locator('.mcq-option.correct')).toContainText('not one-to-one');
-  await page.locator('[data-mcq-next]').click();
-  await expect(page.locator('.mcq-stage')).toContainText('Question 2 of 3');
+  await expect(questions.first().locator('.mcq-option.correct')).toContainText('not one-to-one');
+  await questions.last().scrollIntoViewIfNeeded();
+  await expect(questions.last()).toBeInViewport();
+  await expect(page.locator('.app-header')).toBeInViewport();
+  const minimumCoverage = await page.evaluate(() => {
+    const lessons = [...HM.data.state.syllabusItems, ...HM.genius.jeeSyllabus];
+    return Math.min(...lessons.map(item => HM.genius.questions(item).length));
+  });
+  expect(minimumCoverage).toBeGreaterThanOrEqual(7);
   await expect(page.locator('.assessment-drawer')).toContainText('School assessments and mock-test record');
   await page.goto(`${app}#/study/assessments`);
   await expect(page.locator('.mcq-workspace')).toBeVisible();
@@ -531,6 +703,7 @@ test('textbook library and reader fit a phone viewport', async ({ page }) => {
 test('four Google accounts authorize and sync directly without a connector', async ({ page }) => {
   let activeGmailDetails = 0;
   let maxGmailDetails = 0;
+  let gmailFullFormat = false;
   const gmailAttempts = new Map();
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => {
@@ -552,6 +725,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages, nextPageToken: email === 'mother@example.com' && !secondPage ? 'page-2' : undefined }) });
     }
     const messageId = url.pathname.split('/').pop();
+    gmailFullFormat ||= url.searchParams.get('format') === 'full';
     const attempt = (gmailAttempts.get(messageId) || 0) + 1;
     gmailAttempts.set(messageId, attempt);
     if (messageId === 'gmail-1' && attempt === 1) return route.fulfill({ status: 429, headers: { 'Retry-After': '0' }, contentType: 'application/json', body: JSON.stringify({ error: { message: 'Too many concurrent requests' } }) });
@@ -559,10 +733,18 @@ test('four Google accounts authorize and sync directly without a connector', asy
     maxGmailDetails = Math.max(maxGmailDetails, activeGmailDetails);
     return new Promise(resolve => setTimeout(resolve, 20)).then(() => {
       activeGmailDetails -= 1;
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: messageId, internalDate: '1785920400000', snippet: 'Class 7 exam timetable and fee Rs 2,500 due 12 August 2026', payload: { headers: [{ name: 'Subject', value: `School exam timetable ${messageId}` }, { name: 'From', value: 'Peepal School' }] } }) });
+      const financial = messageId === 'gmail-9';
+      const messageText = financial ? 'Payment successful. Your account was debited ₹4,200 at Grocery Mart. Receipt retained for your records.' : 'Class 7 exam timetable and fee Rs 2,500 due 12 August 2026.';
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: messageId, internalDate: '1785920400000', snippet: messageText, payload: { mimeType: 'text/plain', body: { data: Buffer.from(messageText).toString('base64url') }, headers: [{ name: 'Subject', value: financial ? `Payment receipt ${messageId}` : `School exam timetable ${messageId}` }, { name: 'From', value: financial ? 'Family Bank' : 'Peepal School' }] } }) });
     });
   });
   await page.goto(`${app}#/settings/app`);
+  const sidebarScrollbar = await page.locator('#nav').evaluate(element => ({
+    firefox: getComputedStyle(element).scrollbarWidth,
+    canStillScroll: element.scrollHeight >= element.clientHeight
+  }));
+  expect(sidebarScrollbar.firefox).toBe('none');
+  expect(sidebarScrollbar.canStillScroll).toBe(true);
   await page.evaluate(() => {
     window.google = { accounts: { oauth2: {
       initTokenClient: config => ({ requestAccessToken: () => setTimeout(() => config.callback({ access_token: `token:${config.login_hint}`, expires_in: 3600 }), 0) }),
@@ -580,7 +762,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
   for (let index = 0; index < familyEmails.length; index += 1) {
     const row = page.locator(`[data-google-account="google-${index + 1}"]`);
     await row.locator('[data-google-connect]').click();
-    await expect(row).toContainText('Gmail sync active');
+    await expect(row).toContainText('Gmail synced this session');
   }
   await expect(page.locator('#googleSyncSettings')).toContainText('4 active this session');
   await expect(page.locator('[data-google-sync]')).toContainText('Sync all accounts');
@@ -588,6 +770,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await expect.poll(() => page.evaluate(() => HM.data.state.syncSuggestions.length)).toBe(10);
   await expect(page.locator('.integration-queue')).toContainText('0 pending');
   expect(maxGmailDetails).toBeLessThanOrEqual(3);
+  expect(gmailFullFormat).toBe(true);
   expect(gmailAttempts.get('gmail-1')).toBe(2);
   await page.goto(`${app}#/global/intelligence`);
   await expect.poll(() => page.evaluate(() => HM.data.state.settings.googleSync.accounts.length)).toBe(4);
@@ -596,7 +779,8 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await expect(page.locator('.inbox-history')).toContainText('Action 12 Aug');
   await expect(page.locator('.inbox-history')).toContainText('₹2,500');
   await page.locator('[data-category-filter]').selectOption('school');
-  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(9);
+  await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(8);
+  await page.locator('[data-category-filter]').selectOption('');
   await page.locator('[data-filter]').fill('gmail-9');
   await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(1);
   await page.locator('[data-filter]').fill('');
@@ -604,9 +788,16 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await expect(page.locator('.inbox-history tbody tr:visible')).toHaveCount(9);
   const appliedSchoolEvent = await page.evaluate(() => HM.data.state.events.find(item => item.title.includes('School exam timetable')));
   expect(appliedSchoolEvent.startAt).toContain('2026-08-12');
+  const gmailExpense = await page.evaluate(() => HM.data.state.expenses.find(item => item.sourceRef?.includes('gmail-9')));
+  expect(gmailExpense).toMatchObject({ amount: 4200, source: 'Gmail' });
+  await page.goto(`${app}#/home/money/budget`);
+  await expect(page.locator('.module-inbox-brief')).toContainText('Payment receipt gmail-9');
+  await expect(page.locator('.module-inbox-brief')).toContainText('₹4,200');
+  await expect(page.locator('.module-inbox-brief')).toContainText('Grocery Mart');
   await page.goto(`${app}#/home/money/reports`);
   await expect(page.locator('.module-inbox-brief')).toContainText('Bills, payments and renewals');
   await page.goto(`${app}#/study/reports`);
+  await expect(page.locator('.module-inbox-brief')).toBeVisible();
   await expect(page.locator('.module-inbox-brief')).toContainText('Parent decisions from school messages');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${app}#/global/intelligence`);
