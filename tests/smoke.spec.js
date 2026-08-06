@@ -282,7 +282,8 @@ test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page 
     await page.goto(`${app}#/study/curriculum`);
     await expect(page.locator('.curriculum-journey-list')).toBeVisible();
     await expect(page.locator('.curriculum-journey-row').first()).toContainText('%');
-    await expect(page.locator('.chapter-primary-action').first()).toContainText('Study chapter');
+    await expect(page.locator('.chapter-primary-action').first()).toContainText('Open chapter');
+    await expect(page.locator('.curriculum-journey-row').first().locator('[data-chapter-workspace]')).toHaveCount(1);
   }
 });
 
@@ -290,18 +291,23 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.goto(`${app}#/study/curriculum`);
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
   await page.locator('.chapter-primary-action').first().click();
-  await expect(page.locator('#chapterWorkspaceDialog')).toBeVisible();
+  await expect(page.locator('#chapterWorkspace')).toBeVisible();
   await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(6);
+  await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
+  const verticalTabs = await page.locator('.chapter-workspace-tabs button').evaluateAll(buttons => buttons.slice(0, 2).map(button => button.getBoundingClientRect()).map(rect => ({ x: rect.x, y: rect.y })));
+  expect(verticalTabs[1].y).toBeGreaterThan(verticalTabs[0].y);
+  expect(Math.abs(verticalTabs[1].x - verticalTabs[0].x)).toBeLessThan(2);
   await page.locator('[data-chapter-workspace-tab="book"]').click();
   await expect(page.locator('.chapter-book-panel iframe')).toHaveAttribute('src', /leph101\.pdf/);
   const viewportUse = await page.evaluate(() => {
-    const dialog = document.querySelector('#chapterWorkspaceDialog').getBoundingClientRect();
+    const workspace = document.querySelector('#chapterWorkspace').getBoundingClientRect();
     const pdf = document.querySelector('.chapter-book-panel iframe').getBoundingClientRect();
-    return { dialogWidth: dialog.width, dialogHeight: dialog.height, pdfHeight: pdf.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
+    return { workspaceWidth: workspace.width, workspaceHeight: workspace.height, pdfWidth: pdf.width, pdfHeight: pdf.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
   });
-  expect(viewportUse.dialogWidth).toBe(viewportUse.viewportWidth);
-  expect(viewportUse.dialogHeight).toBe(viewportUse.viewportHeight);
+  expect(viewportUse.workspaceWidth).toBe(viewportUse.viewportWidth);
+  expect(viewportUse.workspaceHeight).toBe(viewportUse.viewportHeight);
+  expect(viewportUse.pdfWidth / viewportUse.viewportWidth).toBeGreaterThanOrEqual(.89);
   expect(viewportUse.pdfHeight / viewportUse.viewportHeight).toBeGreaterThanOrEqual(.9);
   await page.locator('[data-chapter-workspace-tab="practice"]').click();
   await expect(page.locator('.chapter-guided-practice')).toContainText('Why B is correct');

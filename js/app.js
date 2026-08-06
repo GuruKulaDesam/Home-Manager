@@ -1598,7 +1598,28 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
+  function openChapterWorkspace(lessonId, section = 'learn') {
+    const workspace = $('#chapterWorkspace');
+    $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, section);
+    workspace.hidden = false;
+    document.body.classList.add('chapter-workspace-open');
+    refreshIcons();
+    workspace.querySelector('.chapter-workspace-close')?.focus();
+  }
+
+  function closeChapterWorkspace() {
+    const workspace = $('#chapterWorkspace');
+    workspace.hidden = true;
+    $('#chapterWorkspaceBody').innerHTML = '';
+    document.body.classList.remove('chapter-workspace-open');
+    document.querySelector('[data-chapter-workspace]')?.focus();
+  }
+
   document.addEventListener('click', event => {
+    if (event.target.closest('[data-close-chapter-workspace]')) {
+      closeChapterWorkspace();
+      return;
+    }
     const closeDialog = event.target.closest('[data-close-dialog]');
     if (closeDialog) {
       const dialog = document.getElementById(closeDialog.dataset.closeDialog);
@@ -1624,10 +1645,7 @@
     }
     const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
     if (chapterWorkspace) {
-      const dialog = $('#chapterWorkspaceDialog');
-      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, chapterWorkspace.dataset.chapterSection || 'learn');
-      if (!dialog.open) dialog.showModal();
-      refreshIcons();
+      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'learn');
       return;
     }
     const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
@@ -2016,7 +2034,7 @@
   document.addEventListener('keydown', event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }
-    if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); }
+    if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }
   });
 
   applyTheme();
