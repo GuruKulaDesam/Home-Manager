@@ -47,6 +47,7 @@
   <aside id="utilityRail" class="utility-rail" aria-label="Quick tools">
     <button type="button" id="quickAdd" class="primary" title="Add item" aria-label="Add item"><i data-lucide="plus"></i></button>
     <button type="button" id="globalSearch" class="icon-button" title="Search (Ctrl+K)" aria-label="Search records and help" aria-haspopup="dialog" aria-controls="searchDialog"><i data-lucide="search"></i></button>
+    <button type="button" id="offlineAssistant" class="icon-button" title="Offline assistant" aria-label="Open offline assistant" aria-haspopup="dialog" aria-controls="offlineAiDialog"><i data-lucide="sparkles"></i></button>
     <button type="button" id="notifications" class="icon-button has-indicator" title="Notifications" aria-label="Open notifications" aria-expanded="false"><i data-lucide="bell"></i></button>
     <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i></button>
     <span class="utility-spacer"></span>
@@ -79,7 +80,20 @@
     <form method="dialog">
       <div class="search-box"><i data-lucide="search"></i><label class="sr-only" for="searchInput">Search records or product help</label><input id="searchInput" autocomplete="off" placeholder="Search records or ask how the app works"><button value="cancel" aria-label="Close"><i data-lucide="x"></i></button></div>
       <div id="searchResults" aria-live="polite"></div>
+      <div id="offlineAiActions" class="search-ai-actions" hidden><button type="button" id="askOfflineAi" class="primary"><i data-lucide="sparkles"></i><span>Ask offline assistant</span></button><small id="offlineAiStatus">First use downloads a 386 MB model to this browser.</small></div>
+      <div id="offlineAiAnswer" class="search-ai-answer" aria-live="polite" hidden></div>
     </form>
+  </dialog>
+
+  <dialog id="offlineAiDialog" class="offline-ai-dialog" aria-labelledby="offlineAiTitle">
+    <div class="dialog-head"><div><small id="offlineAiContext">PRIVATE · ON-DEVICE</small><h2 id="offlineAiTitle">Offline household assistant</h2><p id="offlineAiBoundary">Responses stay in this browser. Review suggestions before changing household records.</p></div><button type="button" data-close-dialog="offlineAiDialog" aria-label="Close offline assistant"><i data-lucide="x"></i></button></div>
+    <div class="offline-ai-body">
+      <div id="offlineAiSuggestions" class="offline-ai-suggestions" aria-label="Suggested questions"></div>
+      <label for="offlineAiPrompt"><span>What would you like help with?</span><textarea id="offlineAiPrompt" rows="4" placeholder="Ask about this area…"></textarea></label>
+      <div id="offlineAiDialogStatus" class="offline-ai-status">First use downloads a 386 MB model to this browser.</div>
+      <div id="offlineAiDialogAnswer" class="offline-ai-dialog-answer" aria-live="polite" hidden></div>
+    </div>
+    <div class="dialog-actions"><button type="button" data-close-dialog="offlineAiDialog">Cancel</button><button type="button" id="runOfflineAi" class="primary"><i data-lucide="sparkles"></i><span>Ask privately</span></button></div>
   </dialog>
 
   <dialog id="bookReaderDialog" class="book-reader-dialog" aria-labelledby="bookReaderTitle">
@@ -116,6 +130,7 @@
   <script src="js/questions.js"></script>
   <script src="js/views.js"></script>
   <script type="module" src="js/cloud.js"></script>
+  <script type="module" src="js/offline-ai.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

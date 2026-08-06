@@ -1263,3 +1263,14 @@ body[data-nature="wildflower"] { --app-bg: #fff0f5; --nature-image: url("assets/
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+.search-ai-actions { display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem; border-top: 1px solid var(--line); }
+.search-ai-actions small { color: var(--muted); }
+.search-ai-answer { margin: 0 1rem 1rem; padding: 1rem; border-radius: 1rem; background: var(--glass-strong); white-space: pre-wrap; line-height: 1.55; }
+.offline-ai-dialog { width: min(680px, calc(100vw - 2rem)); padding: 0; border: 1px solid var(--line); border-radius: 1.35rem; background: var(--solid); color: var(--ink); }
+.offline-ai-body { display: grid; gap: 1rem; padding: 1rem 1.25rem; }
+.offline-ai-body label { display: grid; gap: .45rem; font-weight: 700; }
+.offline-ai-body textarea { width: 100%; resize: vertical; border: 1px solid var(--line-strong); border-radius: .85rem; padding: .85rem; font: inherit; color: var(--ink); background: var(--glass); }
+.offline-ai-suggestions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.offline-ai-suggestions button { border-radius: 999px; }
+.offline-ai-status { color: var(--muted); font-size: .85rem; }
+.offline-ai-dialog-answer { max-height: 35vh; overflow: auto; padding: 1rem; border-radius: 1rem; background: var(--accent-soft); white-space: pre-wrap; line-height: 1.55; }

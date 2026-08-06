@@ -14,6 +14,29 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+test('offline assistant selects safe domain roles and ships its local runtime', async ({ page }) => {
+  await expect.poll(() => page.evaluate(() => Boolean(window.HomeAI))).toBe(true);
+  await page.click('#offlineAssistant');
+  await expect(page.locator('#offlineAiContext')).toHaveText('TODAY · PRIVATE');
+  await page.click('[data-close-dialog="offlineAiDialog"]');
+
+  await page.evaluate(() => { location.hash = '#/home/finance'; });
+  await page.click('#offlineAssistant');
+  await expect(page.locator('#offlineAiContext')).toHaveText('MONEY · EXPLANATION ONLY');
+  await expect(page.locator('#offlineAiSuggestions')).toContainText('budget variance');
+  await page.click('[data-close-dialog="offlineAiDialog"]');
+
+  await page.evaluate(() => { location.hash = '#/home/life/medicines'; });
+  await page.click('#offlineAssistant');
+  await expect(page.locator('#offlineAiContext')).toHaveText('CARE · NO DIAGNOSIS');
+  await expect(page.locator('#offlineAiBoundary')).toContainText('Review suggestions');
+
+  const wasm = await page.request.get(`${app}vendor/wllama/esm/wasm/wllama.wasm`);
+  const model = await page.request.head(`${app}assets/models/home-assistant-smollm2-360m-q8_0.gguf`);
+  expect(wasm.ok()).toBeTruthy();
+  expect(model.ok()).toBeTruthy();
+});
+
 test('all non-learning suites render without runtime errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));

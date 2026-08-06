@@ -782,7 +782,101 @@
     const recordRows = results.map(item => `<button class="search-result" data-route="${item.route}"><span class="context-badge ${item.context}">${D.esc(item.context)}</span><span class="grow"><b>${D.esc(item.label)}</b><small>${item.type}</small></span><i data-lucide="arrow-up-right"></i></button>`).join('');
     const total = questionMatches.length + results.length;
     $('#searchResults').innerHTML = total ? `<small>${total} best matches</small>${questionRows}${recordRows}` : `<div class="empty">${query ? 'No matches' : 'Search a household record or ask how the app works'}</div>`;
+    $('#offlineAiActions').hidden = !query.trim();
+    $('#offlineAiAnswer').hidden = true;
     refreshIcons();
+  }
+
+  async function askOfflineAssistant() {
+    const query = $('#searchInput').value.trim();
+    if (!query || !window.HomeAI) return;
+    const button = $('#askOfflineAi');
+    const answer = $('#offlineAiAnswer');
+    button.disabled = true;
+    answer.hidden = false;
+    answer.textContent = 'Loading the private offline assistant…';
+    try {
+      answer.textContent = await window.HomeAI.ask({ role: 'conversation', message: query });
+    } catch (error) {
+      answer.textContent = `Offline assistant unavailable: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function offlineAiArea() {
+    const careRoute = /^home\/(care|health|life\/(health|medicines|appointments|elders|emergency|pets))/.test(route);
+    const familyRoute = /^home\/(family|calendar|directory|life\/(travel|festivals|documents|insurance|legacy))/.test(route);
+    if (route === 'global/overview') return { role: 'planner', label: 'TODAY · PRIVATE', suggestions: ['Plan the next seven days', 'Which recorded commitments need attention?', 'Break a family goal into next steps'] };
+    if (route === 'home/finance' || route.startsWith('home/money/')) return { role: 'finance', label: 'MONEY · EXPLANATION ONLY', suggestions: ['Explain this month’s budget variance', 'Which spending areas need review?', 'Summarize recurring commitments'] };
+    if (careRoute) return { role: 'routine', label: 'CARE · NO DIAGNOSIS', suggestions: ['Organize the upcoming care routine', 'Summarize recorded appointments', 'Find routine follow-ups to discuss'] };
+    if (route.startsWith('study/')) return { role: 'learning', label: 'LEARNING · PRIVATE TUTOR', suggestions: ['Plan the next study week', 'Explain a difficult topic simply', 'Suggest questions to check understanding'] };
+    if (familyRoute) return { role: 'governance', label: 'FAMILY · AGREEMENTS', suggestions: ['Prepare a short family meeting agenda', 'Summarize responsibilities', 'List decisions still needing consent'] };
+    if (route.startsWith('home/')) return { role: 'operations', label: 'HOUSEHOLD · OPERATIONS', suggestions: ['Prioritize household work', 'Make a maintenance plan', 'Review low-stock or recurring supplies'] };
+    if (route.startsWith('community/')) return { role: 'governance', label: 'COMMUNITY · COORDINATION', suggestions: ['Summarize current community actions', 'Prepare a fair discussion agenda', 'Clarify owners and next steps'] };
+    return { role: 'conversation', label: 'PRIVATE · ON-DEVICE', suggestions: ['Summarize this area', 'Help me decide the next step', 'Ask me a clarifying question'] };
+  }
+
+  function offlineAiContextData() {
+    const familyRoute = /^home\/(family|calendar|directory|life\/(travel|festivals|documents|insurance|legacy))/.test(route);
+    const compact = items => (items || []).slice(0, 7).map(item => {
+      const allowed = ['title', 'name', 'label', 'date', 'due', 'status', 'owner', 'subject', 'category', 'amount', 'priority'];
+      return Object.fromEntries(allowed.filter(key => item[key] !== undefined && item[key] !== '').map(key => [key, item[key]]));
+    });
+    if (route === 'home/finance' || route.startsWith('home/money/')) {
+      const expenses = D.state.expenses || [];
+      const incomes = D.state.incomes || [];
+      return JSON.stringify({
+        currency: 'INR',
+        recordedIncome: incomes.reduce((sum, item) => sum + (+item.amount || 0), 0),
+        recordedExpenses: expenses.reduce((sum, item) => sum + (+item.amount || 0), 0),
+        budgets: compact(D.state.budgets),
+        recentExpenses: compact(expenses)
+      });
+    }
+    if (route.startsWith('study/')) {
+      const profiles = D.state.academicProfiles || [];
+      const activeId = D.state.settings.activeLearnerId || profiles[0]?.personId;
+      const profile = profiles.find(item => item.personId === activeId) || profiles[0];
+      const forLearner = items => (items || []).filter(item => !item.studentId || item.studentId === activeId);
+      return JSON.stringify({ learner: profile?.name, grade: profile?.grade, subjects: profile?.subjects?.slice(0, 7), plans: compact(forLearner(D.state.studyPlans)), assignments: compact(forLearner(D.state.academicDeliverables)), assessments: compact(forLearner(D.state.academicAssessments)) });
+    }
+    if (route.startsWith('home/care') || route.startsWith('home/health') || route.startsWith('home/life/medicines') || route.startsWith('home/life/appointments') || route.startsWith('home/life/elders')) {
+      const careDomains = ['health', 'medicines', 'appointments', 'elders', 'emergency', 'pets'];
+      return JSON.stringify({ careRecords: compact((D.state.lifeRecords || []).filter(item => careDomains.includes(item.domain))) });
+    }
+    if (familyRoute) return JSON.stringify({ tasks: compact(D.state.tasks), events: compact(D.state.events), goals: compact(D.state.goals), discussions: compact(D.state.discussions) });
+    if (route.startsWith('home/')) return JSON.stringify({ tasks: compact(D.state.tasks), inventory: compact(D.state.inventoryItems), issues: compact(D.state.issues), recurringRecords: compact(D.state.lifeRecords) });
+    return JSON.stringify({ tasks: compact(D.state.tasks), events: compact(D.state.events), goals: compact(D.state.goals), notifications: compact(notificationItems()) });
+  }
+
+  function showOfflineAssistant() {
+    const area = offlineAiArea();
+    $('#offlineAiContext').textContent = area.label;
+    $('#offlineAiSuggestions').innerHTML = area.suggestions.map(text => `<button type="button" data-ai-suggestion="${D.esc(text)}">${D.esc(text)}</button>`).join('');
+    $('#offlineAiPrompt').value = '';
+    $('#offlineAiDialogAnswer').hidden = true;
+    $('#offlineAiDialog').showModal();
+    refreshIcons();
+    setTimeout(() => $('#offlineAiPrompt').focus(), 0);
+  }
+
+  async function runRouteOfflineAssistant() {
+    const prompt = $('#offlineAiPrompt').value.trim();
+    if (!prompt || !window.HomeAI) return;
+    const button = $('#runOfflineAi');
+    const answer = $('#offlineAiDialogAnswer');
+    const area = offlineAiArea();
+    button.disabled = true;
+    answer.hidden = false;
+    answer.textContent = 'Loading the private offline assistant…';
+    try {
+      answer.textContent = await window.HomeAI.ask({ role: area.role, message: prompt, context: offlineAiContextData(), maxTokens: 384 });
+    } catch (error) {
+      answer.textContent = `Offline assistant unavailable: ${error.message}`;
+    } finally {
+      button.disabled = false;
+    }
   }
 
   function quick() {
@@ -1633,7 +1727,28 @@
     if (route === 'study/curriculum') render();
   });
   $('#globalSearch').onclick = showSearch;
+  $('#offlineAssistant').onclick = showOfflineAssistant;
   $('#searchInput').oninput = event => renderSearch(event.target.value);
+  $('#askOfflineAi').onclick = askOfflineAssistant;
+  $('#runOfflineAi').onclick = runRouteOfflineAssistant;
+  $('#offlineAiSuggestions').onclick = event => {
+    const suggestion = event.target.closest('[data-ai-suggestion]');
+    if (suggestion) { $('#offlineAiPrompt').value = suggestion.dataset.aiSuggestion; $('#offlineAiPrompt').focus(); }
+  };
+  window.addEventListener('home-ai-status', event => {
+    const status = $('#offlineAiStatus');
+    if (!status) return;
+    const detail = event.detail || {};
+    status.textContent = detail.state === 'loading'
+      ? `Loading offline model… ${detail.progress || 0}%`
+      : detail.state === 'ready'
+        ? 'Ready. Requests stay in this browser.'
+        : detail.state === 'error'
+          ? `Model error: ${detail.message}`
+          : 'First use downloads a 386 MB model to this browser.';
+    const dialogStatus = $('#offlineAiDialogStatus');
+    if (dialogStatus) dialogStatus.textContent = status.textContent;
+  });
   $('#quickAdd').onclick = quick;
   $('#emergency').onclick = showEmergency;
   $('#theme').onclick = toggleTheme;
