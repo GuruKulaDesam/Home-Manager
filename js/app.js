@@ -60,6 +60,7 @@
       health: 'care', emergency: 'care', pets: 'care', education: 'learning'
     };
     if (lifeOwners[lifeDomain]) return lifeOwners[lifeDomain];
+    if (currentRoute.startsWith('study/')) return 'learning';
     const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'community/events': 'community', 'community/polls': 'community' };
     return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
   }
@@ -130,9 +131,10 @@
           readyCount += 1;
           card.classList.add('book-ready');
           open.disabled = false;
-          state.textContent = `Bundled offline - ${book.pdfFiles.length} sections`;
-          importLabel.textContent = 'Bundled';
-          card.querySelector('[data-book-import]').disabled = true;
+          if (state) state.textContent = `Bundled offline - ${book.pdfFiles.length} sections`;
+          if (importLabel) importLabel.textContent = 'Bundled';
+          const importButton = card.querySelector('[data-book-import]');
+          if (importButton) importButton.disabled = true;
           return;
         }
         const file = await getBookFile(card.dataset.bookCard);
@@ -358,6 +360,23 @@
     $('#headerKpis').innerHTML = items.map(item => `<button data-route="${item[2]}" title="Open ${D.esc(item[0])}"><i data-lucide="${item[3]}"></i><span><small>${D.esc(item[0])}</small><b>${D.esc(item[1])}</b></span></button>`).join('');
   }
 
+  function placeEducationMasterControls() {
+    const slot = $('#educationHeaderTabs');
+    if (!slot) return;
+    const contentControls = $('#content .education-master-controls');
+    const controls = contentControls || slot.querySelector('.education-master-controls');
+    const row = $('#content .education-command-row');
+    const useHeader = route.startsWith('study/') && window.innerWidth >= 1100;
+    slot.hidden = !useHeader;
+    if (!controls) { slot.replaceChildren(); return; }
+    if (useHeader) {
+      if (contentControls) slot.replaceChildren(controls);
+    } else if (row) {
+      row.insertBefore(controls, row.querySelector('.learning-section-tabs'));
+      slot.replaceChildren();
+    }
+  }
+
   function render() {
     HM.life.ensure();
     route = location.hash.slice(2) || route;
@@ -391,6 +410,7 @@
     document.title = title[0] + ' - Our Divine Nest';
     $('#content').dataset.view = route;
     $('#content').innerHTML = V.render(route);
+    placeEducationMasterControls();
     bindView();
     renderNotifications();
     renderHeaderKpis();
@@ -1577,6 +1597,21 @@
       if (dialog?.open) dialog.close();
       return;
     }
+    const inlineChapter = event.target.closest('[data-inline-book-chapter]');
+    if (inlineChapter) {
+      const frame = document.querySelector('[data-inline-book-frame]');
+      if (frame) frame.src = `${inlineChapter.dataset.inlineBookChapter}#view=FitH`;
+      const progress = readingProgress(inlineChapter.dataset.bookId, D.state.settings.activeLearnerId);
+      progress.currentPart = inlineChapter.dataset.inlineBookChapter;
+      progress.lastOpened = new Date().toISOString();
+      D.save();
+      document.querySelectorAll('[data-inline-book-chapter]').forEach(button => {
+        const active = button === inlineChapter;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+      return;
+    }
     const inlineBook = event.target.closest('[data-inline-book]');
     if (inlineBook) {
       D.state.settings.activeReadingBook ||= {};
@@ -1660,6 +1695,8 @@
       const learnerId = D.state.settings.activeLearnerId;
       D.state.settings.activeGeniusMode ||= {};
       D.state.settings.activeGeniusMode[learnerId] = geniusMode.dataset.geniusMode;
+      D.state.settings.activeLearningTrack ||= {};
+      D.state.settings.activeLearningTrack[learnerId] = geniusMode.dataset.geniusMode === 'jee' ? 'jee' : 'cbse';
       if (geniusMode.dataset.geniusMode === 'jee') {
         D.state.settings.activeLearningSubject ||= {};
         const subject = D.state.settings.activeLearningSubject[learnerId];
@@ -1692,6 +1729,15 @@
       expandedGroup = expandedGroup === groupKey ? '' : groupKey;
       renderNav();
       refreshIcons();
+      return;
+    }
+    const practiceOpen = event.target.closest('[data-practice-open]');
+    if (practiceOpen) {
+      const learnerId = D.state.settings.activeLearnerId;
+      D.state.settings.activePracticeLesson ||= {};
+      D.state.settings.activePracticeLesson[learnerId] = practiceOpen.dataset.practiceOpen;
+      D.save();
+      go('study/practice');
       return;
     }
     const routeTarget = event.target.closest('[data-route]');
@@ -1910,6 +1956,11 @@
   $('#collapse').onclick = () => { D.state.settings.sidebarCollapsed = !D.state.settings.sidebarCollapsed; D.save(); applyTheme(); };
   $('#bottomNav').onclick = event => { if (event.target.closest('#bottomMore')) { document.body.classList.add('menu-open'); $('#menu').setAttribute('aria-expanded', 'true'); } };
   window.addEventListener('hashchange', render);
+  let educationResizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(educationResizeTimer);
+    educationResizeTimer = setTimeout(placeEducationMasterControls, 120);
+  });
   window.addEventListener('hm-cloud-status', () => { if (route === 'settings/app') render(); });
   window.addEventListener('hm-cloud-state', () => {
     activeGroup = D.state.settings.activeGroup || 'today';
