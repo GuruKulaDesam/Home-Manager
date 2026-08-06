@@ -169,7 +169,10 @@
   const icon = name => `<i data-lucide="${name}" aria-hidden="true"></i>`;
   const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, Number(value) || 0));
   const isoDay = value => String(value || '').slice(0, 10);
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => {
+    const value = new Date();
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+  };
   const eventRoute = context => context === 'community' ? 'community/events' : context === 'study' ? 'study/schedule' : 'home/calendar';
   const taskRoute = context => context === 'study' ? 'study/tasks' : context === 'community' ? 'community/overview' : 'home/tasks';
 
@@ -929,6 +932,8 @@
 
   function curriculumJourney() {
     const c = academicContext();
+    const subjectTheme = `subject-${String(c.selectedSubject || 'default').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+    const subjectVisual = ({ Physics: 'atom', Chemistry: 'flask-conical', Mathematics: 'sigma', 'Computer Science': 'binary', Science: 'microscope', English: 'feather', 'English Core': 'feather', Tamil: 'languages', Hindi: 'languages', 'Social Science': 'landmark', 'Kaushal Bodh': 'shapes' })[c.selectedSubject] || 'book-open-check';
     const jeeMode = +c.profile.grade === 12 && D.state.settings.activeLearningTrack?.[c.activeId] === 'jee';
     const lessons = curriculumLessons(c, jeeMode);
     D.state.settings.chapterMastery ||= {};
@@ -942,11 +947,25 @@
     const rows = lessons.map((lesson, index) => {
       const mastery = masteryFor(lesson);
       const tracking = chapterTracking(c, lesson);
+      const nextStage = chapterStages.find(([key]) => !tracking.status[key])?.[1] || 'Revision';
+      const masteryLevels = [...new Set([0, 20, 40, 60, 80, 100, mastery])].sort((a, b) => a - b);
       const tracker = `<div class="chapter-seven-track" aria-label="${tracking.complete} of 7 chapter stages complete">${chapterStages.map(([key, label]) => `<i class="${tracking.status[key] ? 'complete' : ''}" title="${e(label)}" aria-label="${e(label)} ${tracking.status[key] ? 'complete' : 'not complete'}"></i>`).join('')}</div>`;
-      return `<article class="curriculum-journey-row chapter-tone-${index % 6 + 1}" data-filter-row><span class="chapter-sequence">${String(index + 1).padStart(2, '0')}</span><div class="chapter-journey-copy"><span class="section-kicker">${e(lesson.term)} · ${e(lesson.competency)}</span><h2>${e(lesson.title)}</h2><div class="chapter-progress-line"><span><i style="width:${tracking.percent}%"></i></span><b>${tracking.complete}/7 complete · ${mastery}% mastery</b></div>${tracker}</div><div class="chapter-journey-actions"><button type="button" class="chapter-primary-action" data-chapter-workspace="${e(lesson.id)}">${icon('arrow-up-right')}<span>Open chapter</span></button></div></article>`;
+      return `<article class="curriculum-journey-row curriculum-chapter-card ${tracking.complete === 7 ? 'is-complete' : ''}" data-filter-row data-chapter-card="${e(lesson.id)}" role="button" tabindex="0" aria-label="Open chapter ${e(lesson.title)}"><header class="curriculum-card-head"><span class="chapter-sequence">${String(index + 1).padStart(2, '0')}</span><span class="chapter-card-state ${tracking.complete === 7 ? 'complete' : ''}">${tracking.complete === 7 ? icon('circle-check-big') : icon('circle-dashed')} ${tracking.complete === 7 ? 'Complete' : `${tracking.complete}/7 stages`}</span></header><div class="chapter-journey-copy"><span class="section-kicker">${e(lesson.term)} · ${e(lesson.competency)}</span><div class="chapter-card-title"><span class="chapter-card-visual">${icon(subjectVisual)}</span><h2>${e(lesson.title)}</h2></div><div class="chapter-card-metrics"><span><b>${tracking.percent}%</b><small>Journey</small></span><label class="chapter-card-mastery"><small>Mastery</small><select data-card-mastery="${e(lesson.id)}" aria-label="Update ${e(lesson.title)} mastery">${masteryLevels.map(value => `<option value="${value}" ${value === mastery ? 'selected' : ''}>${value}%</option>`).join('')}</select></label></div><div class="chapter-progress-line"><span><i style="width:${tracking.percent}%"></i></span></div>${tracker}</div><footer class="chapter-card-footer"><span><small>${tracking.complete === 7 ? 'Status' : 'Next step'}</small><b>${tracking.complete === 7 ? 'Ready to revise' : e(nextStage)}</b></span><span class="chapter-card-open-hint">Open ${icon('arrow-up-right')}</span></footer></article>`;
     }).join('');
     const metrics = [[lessons.length, 'Chapters'], [`${completedStages}/${lessons.length * chapterStages.length}`, 'Stages complete'], [examReady, 'Exam ready'], [mastered, 'Mastered']];
-    return `${learnerBar(c)}<section class="curriculum-progress-strip" aria-label="${e(c.selectedSubject)} chapter progress"><header><span class="section-kicker">${jeeMode ? 'JEE MAIN' : `CBSE · CLASS ${e(c.profile.grade)}`} · ${e(c.selectedSubject)}</span><b>${nextLesson ? `Next: ${e(nextLesson.title)}` : 'All chapter stages complete'}</b><small>${nextLesson ? `${chapterStages.length - chapterTracking(c, nextLesson).complete} stages remain in this chapter` : 'Choose a chapter to revise mastery'}</small></header><div class="curriculum-strip-metrics">${metrics.map(([value, label], index) => `<article class="metric-tone-${index + 1}"><strong>${value}</strong><span>${label}</span></article>`).join('')}</div></section><div class="curriculum-journey-tools"><label>${icon('search')}<input data-filter aria-label="Find a chapter" placeholder="Find a chapter"></label><span>${lessons.length} chapters · 7 tracked outcomes each</span></div><section class="curriculum-journey-list">${rows || '<p class="empty">Choose a curriculum subject to see its chapters.</p>'}</section>`;
+    return `${learnerBar(c)}<div class="curriculum-subject-theme ${subjectTheme}"><section class="curriculum-progress-strip" aria-label="${e(c.selectedSubject)} chapter progress"><header><span class="section-kicker">${jeeMode ? 'JEE MAIN' : `CBSE · CLASS ${e(c.profile.grade)}`} · ${e(c.selectedSubject)}</span><b>${nextLesson ? `Next: ${e(nextLesson.title)}` : 'All chapter stages complete'}</b><small>${nextLesson ? `${chapterStages.length - chapterTracking(c, nextLesson).complete} stages remain in this chapter` : 'Choose a chapter to revise mastery'}</small></header><div class="curriculum-strip-metrics">${metrics.map(([value, label]) => `<article><strong>${value}</strong><span>${label}</span></article>`).join('')}</div></section><div class="curriculum-journey-tools"><label>${icon('search')}<input data-filter aria-label="Find a chapter" placeholder="Find a chapter"></label><span>${lessons.length} chapters · 7 tracked outcomes each</span></div><section class="curriculum-journey-list">${rows || '<p class="empty">Choose a curriculum subject to see its chapters.</p>'}</section></div>`;
+  }
+
+  function chapterWorkspaceNavigation(lessonId, section = 'understand') {
+    const c = academicContext();
+    const lesson = curriculumLessonById(c, lessonId);
+    if (!lesson) return '';
+    const jeeMode = Boolean(HM.genius.jeeSyllabus.find(item => item.id === lessonId));
+    const tracking = chapterTracking(c, lesson);
+    const mastery = tracking.mastery;
+    const canToggle = !['notes', 'progress'].includes(section);
+    const stageAction = canToggle ? `<button type="button" class="chapter-stage-toggle ${tracking.status[section] ? 'complete' : ''}" data-chapter-stage-toggle="${e(section)}" data-lesson="${e(lesson.id)}">${icon(tracking.status[section] ? 'circle-check-big' : 'circle')}<span>${tracking.status[section] ? 'Completed' : `Mark ${chapterStages.find(([key]) => key === section)?.[1] || section} complete`}</span></button>` : `<div class="chapter-stage-rule">${icon(tracking.status[section] ? 'circle-check-big' : 'info')}<span>${section === 'notes' ? 'Save a useful note to complete this stage.' : 'Reach 80% mastery to complete this stage.'}</span></div>`;
+    return `<div class="chapter-shell-nav"><header class="chapter-workspace-head"><span class="context-badge study">${jeeMode ? 'JEE Main' : 'CBSE'}</span><h1 id="chapterWorkspaceTitle">${e(lesson.title)}</h1><p>${e(lesson.subject)} · ${e(lesson.term)}</p></header><nav class="chapter-workspace-tabs" aria-label="Chapter learning journey">${chapterStages.map(([value,label,iconName]) => `<button type="button" data-chapter-workspace-tab="${value}" data-lesson="${e(lesson.id)}" class="${section === value ? 'active' : ''} ${tracking.status[value] ? 'complete' : ''}" ${section === value ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span>${icon(tracking.status[value] ? 'circle-check-big' : 'circle')}</button>`).join('')}</nav>${stageAction}<div class="chapter-workspace-status"><span><small>Journey</small><b>${tracking.complete}/7</b></span><span><small>Mastery</small><b>${mastery}%</b></span></div><button type="button" class="chapter-workspace-close" data-close-chapter-workspace>${icon('arrow-left')}<span>All chapters</span></button></div>`;
   }
 
   function chapterWorkspace(lessonId, section = 'understand') {
@@ -987,13 +1006,14 @@
     const panels = { understand: learn, book: bookPanel, notes: notePanel, practice, assignments: assignmentPanel, exam: examPanel, progress: progressPanel };
     const canToggle = !['notes', 'progress'].includes(section);
     const stageAction = canToggle ? `<button type="button" class="chapter-stage-toggle ${tracking.status[section] ? 'complete' : ''}" data-chapter-stage-toggle="${e(section)}" data-lesson="${e(lesson.id)}">${icon(tracking.status[section] ? 'circle-check-big' : 'circle')}<span>${tracking.status[section] ? 'Completed' : `Mark ${chapterStages.find(([key]) => key === section)?.[1] || section} complete`}</span></button>` : `<div class="chapter-stage-rule">${icon(tracking.status[section] ? 'circle-check-big' : 'info')}<span>${section === 'notes' ? 'Save a useful note to complete this stage.' : 'Reach 80% mastery to complete this stage.'}</span></div>`;
-    return `<div class="chapter-workspace-shell"><aside class="chapter-workspace-sidebar"><header class="chapter-workspace-head"><span class="context-badge study">${jeeMode ? 'JEE Main' : 'CBSE'}</span><h1 id="chapterWorkspaceTitle">${e(lesson.title)}</h1><p>${e(lesson.subject)} · ${e(lesson.term)}</p></header><nav class="chapter-workspace-tabs" aria-label="Chapter learning journey">${chapterStages.map(([value,label,iconName]) => `<button type="button" data-chapter-workspace-tab="${value}" data-lesson="${e(lesson.id)}" class="${section === value ? 'active' : ''} ${tracking.status[value] ? 'complete' : ''}" ${section === value ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span>${icon(tracking.status[value] ? 'circle-check-big' : 'circle')}</button>`).join('')}</nav>${stageAction}<div class="chapter-workspace-status"><span><small>Journey</small><b>${tracking.complete}/7</b></span><span><small>Mastery</small><b>${mastery}%</b></span></div><button type="button" class="chapter-workspace-close" data-close-chapter-workspace>${icon('arrow-left')}<span>All chapters</span></button></aside><main class="chapter-workspace-content chapter-section-${e(section)}">${panels[section] || learn}</main></div>`;
+    return `<div class="chapter-workspace-shell"><main class="chapter-workspace-content chapter-section-${e(section)}">${panels[section] || learn}</main></div>`;
   }
 
   function books() {
     const c = academicContext();
     c.learningExtension = 'books';
     const available = textbookCatalog.filter(book => book.grade === +c.profile.grade);
+    const availableSubjects = [...new Set(available.map(item => item.subject))];
     const selectedSubject = c.selectedSubject === 'All subjects' ? available[0]?.subject : c.selectedSubject;
     const subjectBooks = available.filter(book => book.subject === selectedSubject);
     D.state.settings.activeReadingBook ||= {};
@@ -1012,7 +1032,8 @@
       const sections = active && item.pdfFiles?.length ? `<div class="inline-book-volume-sections">${item.pdfFiles.map((part, index) => `<button type="button" data-inline-book-chapter="${e(part.url)}" data-book-part-key="${e(partKey(part))}" data-book-page="${part.page || 1}" data-book-id="${e(item.id)}" class="inline-book-chapter ${part === selectedPart ? 'active' : ''}" aria-current="${part === selectedPart ? 'page' : 'false'}"><span>${String(index + 1).padStart(2, '0')}</span><b>${e(part.label)}</b></button>`).join('')}</div>` : '';
       return `<section class="inline-book-volume ${active ? 'active' : ''}"><button type="button" class="inline-book-volume-head" data-inline-book="${e(item.id)}" aria-expanded="${active}"><span>${icon(active ? 'book-open' : 'book')}</span><span><b>${e(bookNavLabel(item))}</b><small>${item.pdfFiles?.length || 0} offline sections</small></span>${icon(active ? 'chevron-down' : 'chevron-right')}</button>${sections}</section>`;
     }).join('');
-    const chapterNav = `<aside class="inline-book-chapters" aria-label="${e(selectedSubject)} books and chapters"><header><span>${icon('list-tree')}</span><span><b>Books & chapters</b><small>${subjectBooks.length} ${subjectBooks.length === 1 ? 'book' : 'books'} · ${sectionCount} sections</small></span></header><nav>${volumeGroups}</nav></aside>`;
+    const bookSubjectSwitch = `<nav class="book-subject-switch" aria-label="Switch textbook subject">${availableSubjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${subject === selectedSubject ? 'active' : ''}" aria-pressed="${subject === selectedSubject}">${e(subject)}</button>`).join('')}</nav>`;
+    const chapterNav = `<aside class="inline-book-chapters" aria-label="${e(selectedSubject)} books and chapters"><header><span>${icon('list-tree')}</span><span><b>Books & chapters</b><small>${subjectBooks.length} ${subjectBooks.length === 1 ? 'book' : 'books'} · ${sectionCount} sections</small></span></header>${bookSubjectSwitch}<nav>${volumeGroups}</nav></aside>`;
     return `${learnerBar(c)}<section class="inline-book-reader" data-book-card="${e(book.id)}" data-student="${e(c.activeId)}"><div class="inline-book-head"><div class="inline-book-identity"><span class="section-kicker">${e(selectedSubject)}</span><h2>${e(book.title)}</h2><p data-book-library-summary>${e(book.publisher)} · ${progress ? `Page ${progress.currentPage || 1}` : 'Ready to read'}</p></div><div class="inline-book-actions">${book.pdfFiles?.length ? '' : `<button type="button" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}"><span data-book-import-label>Add PDF</span></button>`}<button type="button" data-book-open="${e(book.id)}" data-student="${e(c.activeId)}" ${book.pdfFiles?.length ? '' : 'disabled'} title="Open reading tools">${icon('maximize-2')}<span>Tools</span></button><a href="${e(book.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open official source">${icon('external-link')}<span>Source</span></a><span class="book-local-state" data-book-state>Checking…</span></div></div><div class="inline-book-workspace">${chapterNav}<div class="inline-book-frame-wrap"><iframe class="inline-book-frame" data-inline-book-frame title="${e(book.title)} PDF" src="${e(directSource || 'about:blank')}"></iframe><div class="inline-book-missing" ${directSource ? 'hidden' : ''}><span>${icon('file-up')}</span><h3>Add this PDF to read it here</h3><p>The file stays in this browser and is excluded from backups.</p><button type="button" class="primary" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}">${icon('file-up')}<span>Add PDF</span></button></div></div></div></section><div class="book-rights-note">${icon('shield-check')}<span><b>Your PDFs stay on this device.</b> Use lawfully obtained copies. Uploaded files remain in browser storage and are excluded from Home Manager JSON backups.</span></div>`;
   }
 
@@ -1337,6 +1358,7 @@
     textbookCatalog,
     textbookAsset,
     chapterWorkspace,
+    chapterWorkspaceNavigation,
     lessonById: lessonId => curriculumLessonById(academicContext(), lessonId),
     titles,
     render,
