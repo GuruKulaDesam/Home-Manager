@@ -2,3 +2,13 @@ node_modules/
 playwright-report/
 test-results/
 private-data/
+assets/models/*.gguf
+vendor/wllama/*
+!vendor/wllama/LICENCE
+!vendor/wllama/package.json
+!vendor/wllama/esm/
+vendor/wllama/esm/*
+!vendor/wllama/esm/index.js
+!vendor/wllama/esm/wasm/
+vendor/wllama/esm/wasm/*
+!vendor/wllama/esm/wasm/wllama.wasm
