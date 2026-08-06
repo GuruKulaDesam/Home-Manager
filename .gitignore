@@ -1,6 +1,8 @@
 node_modules/
 playwright-report/
 test-results/
+assets/textbooks/class-7/tamil/tamil7-term-*.pdf
+inputs/*.pdf
 private-data/
 assets/models/*.gguf
 vendor/wllama/*

@@ -20,7 +20,7 @@
       ['Overview', 'heart-handshake', 'home/care'], ['Health', 'heart-pulse', 'home/life/health'], ['Medicines', 'pill', 'home/life/medicines'], ['Appointments', 'stethoscope', 'home/life/appointments'], ['Elder care', 'accessibility', 'home/life/elders'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
     ]},
     learning: { label: 'Learning', icon: 'graduation-cap', note: 'Study and development', route: 'study/overview', items: [
-      ['Tracking', 'activity', 'study/overview'], ['Books', 'book-open', 'study/books'], ['Curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Assessments', 'file-chart-column', 'study/assessments'], ['Practice', 'brain-circuit', 'study/practice']
+      ['Overview', 'activity', 'study/overview'], ['Books', 'book-open', 'study/books'], ['Genius Mind', 'brain', 'study/genius'], ['Curriculum', 'book-open-check', 'study/curriculum'], ['Planner', 'calendar-clock', 'study/planner'], ['Assignments', 'clipboard-check', 'study/assignments'], ['Practice & Tests', 'brain-circuit', 'study/practice']
     ]},
     community: { label: 'Community', icon: 'map-pinned', note: 'Local participation', route: 'community/overview', items: [
       ['Overview', 'map', 'community/overview'], ['Updates', 'newspaper', 'community/feed'], ['Events & polls', 'calendar-heart', 'community/participate'], ['Volunteer', 'hand-heart', 'community/volunteer'], ['Civic issues', 'ticket-check', 'community/tickets'], ['Local services', 'life-buoy', 'community/directory'], ['Guides', 'book-marked', 'community/guides']
@@ -41,15 +41,15 @@
   ];
 
   const textbookCatalog = [
-    { id: 'g7-math-1', grade: 7, subject: 'Mathematics', title: 'Ganita Prakash Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gegp1=0-8' },
-    { id: 'g7-math-2', grade: 7, subject: 'Mathematics', title: 'Ganita Prakash Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gegp2=0-7' },
-    { id: 'g7-science', grade: 7, subject: 'Science', title: 'Curiosity', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gecu1=0-12' },
-    { id: 'g7-english', grade: 7, subject: 'English', title: 'Poorvi', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gepr1=0-5' },
-    { id: 'g7-social-1', grade: 7, subject: 'Social Science', title: 'Exploring Society: India and Beyond Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gees1=0-12' },
-    { id: 'g7-social-2', grade: 7, subject: 'Social Science', title: 'Exploring Society: India and Beyond Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gees2=0-8' },
-    { id: 'g7-hindi', grade: 7, subject: 'Hindi', title: 'Malhar', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?ghml1=0-10' },
-    { id: 'g7-skills', grade: 7, subject: 'Kaushal Bodh', title: 'Kaushal Bodh', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gekb1=0-7' },
-    { id: 'g7-tamil', grade: 7, subject: 'Tamil', title: 'Tamil course book', publisher: 'Peepal-issued', sourceUrl: 'https://crm.peepalprodigy.cloud/' },
+    { id: 'g7-math-1', code: 'gegp1', grade: 7, subject: 'Mathematics', title: 'Ganita Prakash Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gegp1=0-8' },
+    { id: 'g7-math-2', code: 'gegp2', grade: 7, subject: 'Mathematics', title: 'Ganita Prakash Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gegp2=0-7' },
+    { id: 'g7-science', code: 'gecu1', grade: 7, subject: 'Science', title: 'Curiosity', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gecu1=0-12' },
+    { id: 'g7-english', code: 'gepr1', grade: 7, subject: 'English', title: 'Poorvi', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gepr1=0-5' },
+    { id: 'g7-social-1', code: 'gees1', grade: 7, subject: 'Social Science', title: 'Exploring Society: India and Beyond Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gees1=0-12' },
+    { id: 'g7-social-2', code: 'gees2', grade: 7, subject: 'Social Science', title: 'Exploring Society: India and Beyond Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gees2=0-8' },
+    { id: 'g7-hindi', code: 'ghml1', grade: 7, subject: 'Hindi', title: 'Malhar', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?ghml1=0-10' },
+    { id: 'g7-skills', code: 'gekb1', grade: 7, subject: 'Kaushal Bodh', title: 'Kaushal Bodh', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?gekb1=0-7' },
+    { id: 'g7-tamil', grade: 7, subject: 'Tamil', title: 'Class 7 Tamil — Complete Book', publisher: 'Family-supplied CBSE Tamil edition', sourceUrl: 'https://cbsetamil.com/ncert-tamil-book-for-class-7-pdf/' },
     { id: 'g12-math-1', code: 'lemh1', grade: 12, subject: 'Mathematics', title: 'Mathematics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh1=0-6' },
     { id: 'g12-math-2', code: 'lemh2', grade: 12, subject: 'Mathematics', title: 'Mathematics Part II', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?lemh2=0-7' },
     { id: 'g12-physics-1', code: 'leph1', grade: 12, subject: 'Physics', title: 'Physics Part I', publisher: 'NCERT', sourceUrl: 'https://ncert.nic.in/textbook.php?leph1=0-8' },
@@ -62,6 +62,10 @@
   ];
 
   const bundledBookParts = {
+    gegp1: ['ps','01','02','03','04','05','06','07','08'], gegp2: ['ps','01','02','03','04','05','06','07'],
+    gecu1: ['ps','01','02','03','04','05','06','07','08','09','10','11','12'], gepr1: ['ps','01','02','03','04','05'],
+    gees1: ['ps','01','02','03','04','05','06','07','08','09','10','11','12'], gees2: ['ps','01','02','03','04','05','06','07','08'],
+    ghml1: ['ps','01','02','03','04','05','06','07','08','09','10'], gekb1: ['ps','01','02','03','04','05','06','07'],
     lemh1: ['01','02','03','04','05','06','a1','a2','an','ps'], lemh2: ['01','02','03','04','05','06','07','an','ps'],
     leph1: ['01','02','03','04','05','06','07','08','an','ps'], leph2: ['01','02','03','04','05','06','an','ps'],
     lech1: ['01','02','03','04','05','a1','an','ps'], lech2: ['01','02','03','04','05','an','ps'],
@@ -71,8 +75,12 @@
   textbookCatalog.forEach(book => {
     if (!book.code) return;
     const nested = book.code === 'lefl1' ? '/lefl1dd' : '';
-    book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: part === 'ps' ? 'Prelims' : part === 'an' ? 'Answers' : part.startsWith('a') ? `Appendix ${part.slice(1) || 1}` : `Chapter ${Number(part)}`, url: `assets/textbooks/class-12/${book.code}${nested}/${book.code}${part}.pdf`, order: index + 1 }));
+    const gradeFolder = book.grade === 7 ? 'class-7' : 'class-12';
+    book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: part === 'ps' ? 'Prelims' : part === 'an' ? 'Answers' : part.startsWith('a') ? `Appendix ${part.slice(1) || 1}` : `Chapter ${Number(part)}`, url: `assets/textbooks/${gradeFolder}/${book.code}${nested}/${book.code}${part}.pdf`, order: index + 1 }));
   });
+  textbookCatalog.find(book => book.id === 'g7-tamil').pdfFiles = [
+    { label: 'Complete book — 2024 revised edition', url: 'assets/textbooks/class-7/tamil/tamil7-cbse-complete.pdf', order: 1 }
+  ];
 
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
@@ -108,11 +116,13 @@
     'community/participate': ['Events & Polls', 'Plans and local preferences'],
     'study/overview': ['Learning Dashboard', 'Peepal and CBSE progress'],
     'study/books': ['Books', 'Focused local textbook library'],
+    'study/genius': ['Genius Mind', 'Top-student methods, key concepts and chapter recall'],
+    'study/jee': ['JEE Main', 'PCM concepts, worked reasoning and exam practice'],
     'study/curriculum': ['Books & Curriculum', 'Textbooks, reading review and CBSE outcomes'],
     'study/planner': ['Study Planner', 'School day and home study'],
     'study/assignments': ['Assignments', 'Homework, projects and practicals'],
-    'study/assessments': ['Assessments', 'Tests, practicals and target gaps'],
-    'study/practice': ['Practice Centre', 'Questions, errors and focused study'],
+    'study/assessments': ['Practice & Tests', 'Chapter questions, assessments and error repair'],
+    'study/practice': ['Practice & Tests', 'Chapter questions, assessments and error repair'],
     'study/reports': ['Learning Reports', 'Academic and whole-child review']
   };
   titles['home/life'] = ['Family Life Registry', 'Every important family record in one place'];
@@ -637,7 +647,8 @@
     const activeId = profiles.some(item => item.personId === D.state.settings.activeLearnerId) ? D.state.settings.activeLearnerId : profiles[0]?.personId;
     if (activeId && activeId !== D.state.settings.activeLearnerId) D.state.settings.activeLearnerId = activeId;
     const profile = profiles.find(item => item.personId === activeId) || { personId: '', name: 'Student', grade: 6, subjects: [], targetPercent: 75 };
-    const selectedSubject = D.state.settings.activeLearningSubject?.[activeId] || D.state.settings.learningSubjectTabs?.[activeRenderRoute] || 'All subjects';
+    const defaultSubject = profile.subjects.includes('Mathematics') ? 'Mathematics' : profile.subjects[0] || 'All subjects';
+    const selectedSubject = D.state.settings.activeLearningSubject?.[activeId] || D.state.settings.learningSubjectTabs?.[activeRenderRoute] || defaultSubject;
     const inSubject = item => selectedSubject === 'All subjects' || item.subject === selectedSubject;
     return {
       activeId,
@@ -697,11 +708,16 @@
     const p = context.profile;
     const bar = `<section class="learner-bar"><div class="learner-switch" role="group" aria-label="Choose student">${context.profiles.map((profile, index) => `<button data-learner="${e(profile.personId)}" class="student-tone-${index + 1} ${profile.personId === context.activeId ? 'active' : ''}" aria-pressed="${profile.personId === context.activeId}"><span>${e(profile.name[0])}</span><span><b>${e(profile.name)}</b><small>Peepal - CBSE Class ${e(profile.grade)}</small></span></button>`).join('')}</div><div class="learner-target"><span>${icon('target')}</span><span><small>Academic target</small><b>${e(p.targetPercent)}%</b></span><button class="icon-action" data-edit="academicProfile" data-id="${e(p.id)}" data-student="${e(p.personId)}" aria-label="Edit ${e(p.name)} profile">${icon('pencil')}</button></div></section>`;
     const extension = context.learningExtension === 'reports' ? examReadinessPanel(context) : '';
-    const subjects = ['All subjects', ...context.profile.subjects];
-    const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${context.selectedSubject === subject ? 'active' : ''}" aria-pressed="${context.selectedSubject === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
-    const learningSections = [['Tracking','activity','study/overview'],['Books','book-open','study/books'],['Curriculum','book-open-check','study/curriculum'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Assessments','file-chart-column','study/assessments'],['Practice','brain-circuit','study/practice']];
+    const jeeMode = activeRenderRoute === 'study/jee';
+    const subjects = jeeMode ? ['Physics', 'Chemistry', 'Mathematics'] : context.profile.subjects;
+    const selectedTab = subjects.includes(context.selectedSubject) ? context.selectedSubject : subjects[0];
+    const subjectTabs = activeRenderRoute.startsWith('study/') ? `<nav class="subject-tabs subject-master-tabs" aria-label="Subjects">${subjects.map(subject => `<button type="button" data-learning-subject="${e(subject)}" class="${selectedTab === subject ? 'active' : ''}" aria-pressed="${selectedTab === subject}">${e(subject)}</button>`).join('')}</nav>` : '';
+    const cbseSections = [['Overview','activity','study/overview'],['Books','book-open','study/books'],['Genius Mind','brain','study/genius'],['Curriculum','book-open-check','study/curriculum'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Practice & Tests','brain-circuit','study/practice']];
+    const jeeSections = [['Key concepts','brain','study/jee'],['Planner','calendar-clock','study/planner'],['Assignments','clipboard-check','study/assignments'],['Practice & Tests','brain-circuit','study/practice']];
+    const learningSections = jeeMode ? jeeSections : cbseSections;
     const sectionTabs = activeRenderRoute.startsWith('study/') ? `<nav class="learning-section-tabs" aria-label="Learning sections">${learningSections.map(([label, iconName, route]) => `<button type="button" data-route="${route}" class="${activeRenderRoute === route ? 'active' : ''}" ${activeRenderRoute === route ? 'aria-current="page"' : ''}>${icon(iconName)}<span>${label}</span></button>`).join('')}</nav>` : '';
-    return bar + subjectTabs + sectionTabs + extension;
+    const trackTabs = +p.grade === 12 ? `<nav class="learning-track-tabs" aria-label="Curriculum track"><button type="button" data-learning-track="cbse" class="${jeeMode ? '' : 'active'}" aria-pressed="${!jeeMode}">CBSE</button><button type="button" data-learning-track="jee" class="${jeeMode ? 'active' : ''}" aria-pressed="${jeeMode}">JEE Main</button></nav>` : `<span class="learning-track-label">CBSE · Class ${e(p.grade)}</span>`;
+    return `<div class="learning-command-bar subject-first"><div class="learning-track-row">${bar}${trackTabs}</div>${subjectTabs}${sectionTabs}</div>${extension}`;
   }
 
   function schoolHub(context) {
@@ -775,6 +791,88 @@
     return `${learner}<section class="textbook-section"><div class="section-head textbook-heading"><div><small>PRIVATE READING LIBRARY</small><h2>${e(c.profile.name)}'s Class ${e(c.profile.grade)} books</h2><p>${books.length} prescribed or school-issued titles - ${reviewed} reviewed</p></div><a href="https://epathshala.nic.in/topics.php?ln=en" target="_blank" rel="noopener noreferrer">${icon('library-big')}<span>ePathshala</span></a></div><div class="book-shelf">${bookCards}</div><div class="book-rights-note">${icon('shield-check')}<span><b>Your PDFs stay on this device.</b> Add only copies your family may lawfully use. NCERT books are not redistributed by Home Manager; use each official-source button to obtain the current edition. PDF files are excluded from Home Manager JSON backups.</span></div></section>${reflectionPanel(c)}<section class="curriculum-summary">${['not-started', 'learning', 'revision', 'mastered'].map((state, index) => `<span class="curriculum-state state-${index + 1}"><b>${c.syllabus.filter(item => item.status === state).length}</b><small>${e(state.replace('-', ' '))}</small></span>`).join('')}</section><div class="toolbar"><input data-filter aria-label="Search curriculum" placeholder="Search chapters and competencies"><select id="subjectFilter" aria-label="Filter by subject"><option value="">All subjects</option>${subjects.map(subject => `<option>${e(subject)}</option>`).join('')}</select><select data-status-filter aria-label="Filter by mastery status"><option value="">All stages</option><option value="not-started">Not started</option><option value="learning">Learning</option><option value="revision">Revision</option><option value="mastered">Mastered</option></select><button class="primary" data-create="syllabus" data-student="${e(c.activeId)}">${icon('plus')}<span>Outcome</span></button></div><section class="panel"><table class="table academic-table"><thead><tr><th>Subject & outcome</th><th>Term</th><th>Competency</th><th>Mastery</th><th>Stage</th><th>Actions</th></tr></thead><tbody>${c.syllabus.map(item => `<tr data-filter-row data-subject="${e(item.subject)}" data-status="${e(item.status)}"><td data-label="Outcome"><b>${e(item.title)}</b><small>${e(item.subject)} - ${item.plannedHours} planned hours</small></td><td data-label="Term">${e(item.term)}</td><td data-label="Competency"><span class="badge">${e(item.competency)}</span></td><td data-label="Mastery"><div class="mastery-cell"><div class="progress"><span style="width:${clamp(item.mastery)}%"></span></div><b>${clamp(item.mastery)}%</b></div></td><td data-label="Stage"><select data-syllabus-status="${e(item.id)}" aria-label="Update ${e(item.title)} stage">${['not-started', 'learning', 'revision', 'mastered'].map(value => `<option value="${value}" ${item.status === value ? 'selected' : ''}>${value.replace('-', ' ')}</option>`).join('')}</select></td><td data-label="Actions"><span class="row-actions"><button class="icon-action" data-edit="syllabus" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit ${e(item.title)}">${icon('pencil')}</button><button class="icon-action danger-action" data-delete="syllabusItems:${e(item.id)}" aria-label="Delete ${e(item.title)}">${icon('trash-2')}</button></span></td></tr>`).join('')}</tbody></table></section>`;
   }
 
+  function books() {
+    const c = academicContext();
+    c.learningExtension = 'books';
+    const available = textbookCatalog.filter(book => book.grade === +c.profile.grade);
+    const selectedSubject = c.selectedSubject === 'All subjects' ? available[0]?.subject : c.selectedSubject;
+    const subjectBooks = available.filter(book => book.subject === selectedSubject);
+    D.state.settings.activeReadingBook ||= {};
+    const savedBookId = D.state.settings.activeReadingBook[c.activeId];
+    const book = subjectBooks.find(item => item.id === savedBookId) || subjectBooks[0];
+    if (!book) return `${learnerBar(c)}<section class="panel"><p class="empty">No textbook is configured for this subject.</p></section>`;
+    const progress = (D.state.readingProgress || []).find(item => item.studentId === c.activeId && item.bookId === book.id);
+    const selectedPart = book.pdfFiles?.find(part => part.url === progress?.currentPart) || book.pdfFiles?.[0];
+    const directSource = selectedPart?.url || '';
+    const volumeTabs = subjectBooks.length > 1 ? `<div class="book-volume-tabs" role="tablist" aria-label="${e(selectedSubject)} books">${subjectBooks.map(item => `<button type="button" role="tab" aria-selected="${item.id === book.id}" class="${item.id === book.id ? 'active' : ''}" data-inline-book="${e(item.id)}">${e(item.title.replace(selectedSubject, '').trim() || item.title)}</button>`).join('')}</div>` : '';
+    const partTabs = book.pdfFiles?.length ? `<label class="inline-book-part"><span>Chapter / section · ${book.pdfFiles.length} offline</span><select data-inline-book-part data-book-id="${e(book.id)}">${book.pdfFiles.map(part => `<option value="${e(part.url)}" ${part.url === directSource ? 'selected' : ''}>${e(part.label)}</option>`).join('')}</select></label>` : '';
+    return `${learnerBar(c)}<section class="inline-book-reader" data-book-card="${e(book.id)}" data-student="${e(c.activeId)}"><div class="inline-book-head"><div><span class="section-kicker">${e(selectedSubject)}</span><h2>${e(book.title)}</h2><p data-book-library-summary>${e(book.publisher)} · ${progress ? `Page ${progress.currentPage || 1}` : 'Ready to read'}</p></div><div class="inline-book-actions">${partTabs}<button type="button" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}"><span data-book-import-label>Add PDF</span></button><button type="button" data-book-open="${e(book.id)}" data-student="${e(c.activeId)}" ${book.pdfFiles?.length ? '' : 'disabled'}>${icon('maximize-2')}<span>Reading tools</span></button><a href="${e(book.sourceUrl)}" target="_blank" rel="noopener noreferrer">${icon('external-link')}<span>Official source</span></a></div></div>${volumeTabs}<div class="inline-book-frame-wrap"><iframe class="inline-book-frame" data-inline-book-frame title="${e(book.title)} PDF" src="${e(directSource ? `${directSource}#view=FitH` : 'about:blank')}"></iframe><div class="inline-book-missing" ${directSource ? 'hidden' : ''}><span>${icon('file-up')}</span><h3>Add this PDF to read it here</h3><p>The file stays in this browser and is excluded from backups.</p><button type="button" class="primary" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}">${icon('file-up')}<span>Add PDF</span></button></div></div><span class="book-local-state" data-book-state>Checking this device...</span></section><div class="book-rights-note">${icon('shield-check')}<span><b>Your PDFs stay on this device.</b> Use lawfully obtained copies. Uploaded files remain in browser storage and are excluded from Home Manager JSON backups.</span></div>`;
+  }
+
+  function geniusMind() {
+    const c = academicContext();
+    const jeeEligible = +c.profile.grade === 12;
+    D.state.settings.activeGeniusMode ||= {};
+    const mode = jeeEligible && D.state.settings.activeGeniusMode[c.activeId] === 'jee' ? 'jee' : 'school';
+    const lessons = mode === 'jee' ? c.syllabus.filter(item => ['Physics', 'Chemistry', 'Mathematics'].includes(item.subject)) : c.syllabus;
+    D.state.settings.activeGeniusLesson ||= {};
+    const savedId = D.state.settings.activeGeniusLesson[c.activeId];
+    const lesson = lessons.find(item => item.id === savedId) || lessons[0];
+    if (!lesson) return `${learnerBar(c)}<section class="panel"><p class="empty">Add curriculum outcomes to create chapter guidance.</p></section>`;
+    const guide = mode === 'jee' ? HM.genius.jeeGuide(lesson) : HM.genius.guide(lesson);
+    const list = values => `<ul>${values.map(value => `<li>${e(value)}</li>`).join('')}</ul>`;
+    const sourceItems = mode === 'jee' ? [...HM.genius.jeeSources, ...HM.genius.sources] : HM.genius.sources;
+    const sourceLinks = sourceItems.map(source => `<a href="${e(source.url)}" target="_blank" rel="noopener noreferrer"><span>${icon('external-link')}</span><span><b>${e(source.title)}</b><small>${e(source.note)}</small></span></a>`).join('');
+    const modeSwitch = jeeEligible ? `<div class="genius-mode-switch" role="group" aria-label="Preparation mode"><button type="button" data-genius-mode="school" class="${mode === 'school' ? 'active' : ''}" aria-pressed="${mode === 'school'}">School & Boards</button><button type="button" data-genius-mode="jee" class="${mode === 'jee' ? 'active' : ''}" aria-pressed="${mode === 'jee'}">JEE Main</button></div>` : '';
+    const jeePanels = mode === 'jee' ? `<div class="genius-jee-grid"><section><span class="section-kicker">JEE TIMED DRILL</span><h3>Train retrieval under time</h3>${list(guide.drill)}</section><section><span class="section-kicker">QUESTION SELECTION</span><h3>Protect accurate marks</h3>${list(guide.attempt)}</section><section><span class="section-kicker">ERROR CODES</span><h3>Repair the earliest wrong step</h3>${list(guide.errorCodes)}</section></div>` : '';
+    const sources = `${modeSwitch}${jeePanels}${sourceLinks}`;
+    return `${learnerBar(c)}<section class="genius-hero"><div><span class="section-kicker">RESEARCH-SYNTHESISED STUDY SYSTEM</span><h2>Turn each chapter into recall, application and marks</h2><p>Original study briefs built from the current curriculum, official assessment expectations and learning-science evidence—not copied commercial notes or a promise of rank.</p></div><div class="genius-cycle-mini"><span>Learn</span>${icon('arrow-right')}<span>Retrieve</span>${icon('arrow-right')}<span>Apply</span>${icon('arrow-right')}<span>Correct</span></div></section><div class="genius-layout"><aside class="genius-lessons" aria-label="Lessons"><header><b>${e(c.selectedSubject)}</b><small>${lessons.length} lessons</small></header>${lessons.map(item => `<button type="button" data-genius-lesson="${e(item.id)}" class="${item.id === lesson.id ? 'active' : ''}"><span class="genius-mastery">${item.mastery}%</span><span><b>${e(item.title)}</b><small>${e(item.term)} · ${e(item.competency)}</small></span></button>`).join('')}</aside><article class="genius-brief"><header><div><span class="context-badge study">${e(lesson.subject)}</span><h2>${e(lesson.title)}</h2><p>${e(lesson.term)} · current mastery ${lesson.mastery}% · ${e(lesson.status)}</p></div><div class="row-actions"><button data-route="study/books">${icon('book-open')}<span>Textbook</span></button><button data-route="study/practice">${icon('brain-circuit')}<span>Practise</span></button></div></header><section class="genius-key-concepts"><div class="section-head"><div><span class="section-kicker">KEY CONCEPTS</span><h3>Know these relationships</h3></div></div>${guide.concepts.map((concept, index) => `<div><span>${index + 1}</span><b>${e(concept)}</b></div>`).join('')}</section><div class="genius-brief-grid"><section><span class="section-kicker">TOP-STUDENT METHOD</span><h3>How to work this chapter</h3>${list(guide.method)}</section><section><span class="section-kicker">COMMON TRAPS</span><h3>Where marks disappear</h3>${list(guide.traps)}</section><section><span class="section-kicker">ACTIVE RECALL</span><h3>Close the book and answer</h3>${list(guide.recall)}</section><section><span class="section-kicker">EXAM PROOF</span><h3>What a strong answer shows</h3><p>${e(guide.proof)}</p></section></div><section class="genius-revision-cycle"><span class="section-kicker">FIVE-PASS CYCLE</span><h3>Do more than reread</h3><ol>${guide.cycle.map(value => `<li>${e(value)}</li>`).join('')}</ol></section></article></div><section class="genius-evidence"><div class="section-head"><div><span class="section-kicker">WHY THIS METHOD</span><h2>Official and research foundations</h2><p>Use current school instructions and official marking schemes as authoritative.</p></div></div><div>${sources}</div></section>`;
+  }
+
+  function geniusMindTeacher() {
+    const c = academicContext();
+    const jeeEligible = +c.profile.grade === 12;
+    D.state.settings.activeGeniusMode ||= {};
+    D.state.settings.activeGeniusLesson ||= {};
+    D.state.settings.activeGeniusSection ||= {};
+    const mode = jeeEligible && (activeRenderRoute === 'study/jee' || D.state.settings.activeGeniusMode[c.activeId] === 'jee') ? 'jee' : 'school';
+    const lessons = mode === 'jee' ? HM.genius.jeeSyllabus.filter(item => item.subject === c.selectedSubject) : c.syllabus;
+    const lesson = lessons.find(item => item.id === D.state.settings.activeGeniusLesson[c.activeId]) || lessons[0];
+    if (!lesson) return `${learnerBar(c)}<section class="panel"><p class="empty">Add curriculum chapters to begin a Genius lesson.</p></section>`;
+    const guide = mode === 'jee' ? HM.genius.jeeGuide(lesson) : HM.genius.guide(lesson);
+    const notes = HM.genius.teacherNotes(lesson);
+    const section = D.state.settings.activeGeniusSection[c.activeId] || 'understand';
+    const list = values => `<ul>${values.map(value => `<li>${e(value)}</li>`).join('')}</ul>`;
+    const visual = `<div class="genius-flow" aria-label="Concept flow">${notes.visual.map((value, index) => `${index ? icon('arrow-right') : ''}<span>${e(value)}</span>`).join('')}</div>`;
+    const understand = `<section class="genius-teach-panel"><span class="section-kicker">THE IDEA THAT UNLOCKS THE CHAPTER</span><h2>${e(notes.bigIdea)}</h2>${visual}<div class="teacher-talk"><span>${icon('sparkles')}</span><div><b>Guru's insight</b><p>${e(notes.wisdom)}</p></div></div><div class="genius-note-grid"><section><span class="section-kicker">YOU MUST KNOW</span><h3>The non-negotiables</h3>${list(notes.must)}</section><section><span class="section-kicker">KEY CONCEPTS</span><h3>See the chapter as a system</h3>${list(notes.concepts)}</section></div></section>`;
+    const examSheet = `<section class="genius-teach-panel"><span class="section-kicker">EXAM-DAY SHEET</span><h2>What earns marks in ${e(lesson.title)}</h2><div class="genius-note-grid"><section><span class="section-kicker">WRITE / USE THESE</span><h3>High-value notes</h3>${list(notes.must)}</section><section><span class="section-kicker">EXAMINER'S LENS</span><h3>Show this evidence</h3>${list(notes.exam)}<p class="teacher-proof">${e(guide.proof)}</p></section><section><span class="section-kicker">MARK-LOSING TRAPS</span><h3>Catch these before submission</h3>${list(guide.traps)}</section><section class="genius-revision-card"><span class="section-kicker">30-SECOND REVISION CARD</span><h3>Read, cover, reproduce</h3>${list(notes.revision)}</section></div></section>`;
+    const worked = `<section class="genius-teach-panel"><span class="section-kicker">WORKED EXAMPLE</span><h2>Watch the reasoning, not just the answer</h2><div class="worked-example"><div class="worked-question"><span>QUESTION / SITUATION</span><p>${e(notes.example[0])}</p></div><div class="worked-reasoning"><span>THINK THIS WAY</span><p>${e(notes.example[1])}</p></div><div class="worked-check"><span>${icon('badge-check')}</span><p><b>Self-check:</b> Can the result survive a unit, sign, boundary, diagram or evidence check?</p></div></div>${mode === 'jee' ? `<div class="genius-jee-grid"><section><span class="section-kicker">TIMED DRILL</span>${list(guide.drill)}</section><section><span class="section-kicker">ATTEMPT ORDER</span>${list(guide.attempt)}</section><section><span class="section-kicker">ERROR LOG</span>${list(guide.errorCodes)}</section></div>` : ''}</section>`;
+    const test = `<section class="genius-teach-panel"><span class="section-kicker">NO-NOTES CHECK</span><h2>If you can answer these, the chapter is becoming yours</h2><div class="genius-check-list">${notes.check.map((value, index) => `<details><summary><span>${index + 1}</span>${e(value)}</summary><p>Answer aloud or on paper first. Then reopen Understand or Exam Sheet and check the exact weak link—do not reread the entire chapter.</p></details>`).join('')}</div><div class="teacher-talk"><span>${icon('rotate-ccw')}</span><div><b>Come back at the right time</b><p>Retest tomorrow, after 3 days, after 7 days and inside a mixed paper. A correct answer that felt like a guess is not yet mastered.</p></div></div></section>`;
+    const panels = { understand, exam: examSheet, worked, test };
+    D.state.settings.geniusNotes ||= {};
+    D.state.settings.geniusNotes[c.activeId] ||= {};
+    const personalNote = D.state.settings.geniusNotes[c.activeId][lesson.id] || '';
+    const notePanel = `<section class="genius-personal-notes"><div><span>${icon('notebook-pen')}</span><span><b>My chapter notes</b><small>Private to this device and attached to ${e(lesson.title)}</small></span></div><textarea data-genius-note data-lesson="${e(lesson.id)}" placeholder="Write the insight, formula, mistake or question you want to remember…">${e(personalNote)}</textarea><footer><small>Keep only what will help your future self.</small><button type="button" class="primary" data-genius-note-save="${e(lesson.id)}">${icon('save')} Save note</button></footer></section>`;
+    panels.notes = notePanel;
+    const sectionTabs = [['understand', 'Understand', 'lightbulb'], ['exam', 'Exam sheet', 'notebook-tabs'], ['worked', 'Worked example', 'route'], ['test', 'Test yourself', 'brain-circuit'], ['notes', 'My notes', 'notebook-pen']];
+    const modeSwitch = jeeEligible ? `<div class="genius-mode-switch" role="group" aria-label="Preparation mode"><button type="button" data-genius-mode="school" class="${mode === 'school' ? 'active' : ''}" aria-pressed="${mode === 'school'}">Boards</button><button type="button" data-genius-mode="jee" class="${mode === 'jee' ? 'active' : ''}" aria-pressed="${mode === 'jee'}">JEE Main</button></div>` : '';
+    const sources = (mode === 'jee' ? HM.genius.jeeSources : HM.genius.sources.slice(0, 3)).map(source => `<a href="${e(source.url)}" target="_blank" rel="noopener noreferrer">${icon('external-link')}<span><b>${e(source.title)}</b><small>${e(source.note)}</small></span></a>`).join('');
+    const teacherSubjects = mode === 'jee' ? ['Physics', 'Chemistry', 'Mathematics'] : ['All subjects', ...c.profile.subjects];
+    const subjectSwitch = '';
+    return `${learnerBar(c)}${subjectSwitch}<div class="genius-teacher-layout"><aside class="genius-lessons" aria-label="Chapters"><header><b>${e(lesson.subject)}</b><small>${lessons.length} chapters</small></header>${lessons.map(item => `<button type="button" data-genius-lesson="${e(item.id)}" class="${item.id === lesson.id ? 'active' : ''}"><span class="genius-mastery">${item.mastery}%</span><span><b>${e(item.title)}</b><small>${e(item.status)}</small></span></button>`).join('')}</aside><main class="genius-classroom"><header class="genius-classroom-head"><div><span class="context-badge study">${e(lesson.subject)}</span><h1>${e(lesson.title)}</h1><p>${e(lesson.term)} · ${lesson.mastery}% mastery</p></div><div class="row-actions"><button data-route="study/books">${icon('book-open')} Book</button><button data-route="study/practice">${icon('pencil-line')} Practise</button></div></header><nav class="genius-section-tabs" aria-label="Lesson sections">${sectionTabs.map(([value, label, iconName]) => `<button type="button" data-genius-section="${value}" class="${section === value ? 'active' : ''}" aria-pressed="${section === value}">${icon(iconName)}<span>${label}</span></button>`).join('')}</nav>${panels[section] || understand}</main></div><section class="genius-source-drawer"><details><summary>Sources and syllabus alignment</summary><div>${sources}</div></details></section>`;
+  }
+
+  function jeeMain() {
+    const gradeTwelve = (D.state.academicProfiles || []).find(profile => +profile.grade === 12);
+    if (gradeTwelve && D.state.settings.activeLearnerId !== gradeTwelve.personId) D.state.settings.activeLearnerId = gradeTwelve.personId;
+    const learnerId = D.state.settings.activeLearnerId;
+    D.state.settings.activeGeniusMode ||= {};
+    D.state.settings.activeGeniusMode[learnerId] = 'jee';
+    D.state.settings.activeLearningSubject ||= {};
+    if (!['Physics', 'Chemistry', 'Mathematics'].includes(D.state.settings.activeLearningSubject[learnerId])) D.state.settings.activeLearningSubject[learnerId] = 'Physics';
+    return geniusMindTeacher();
+  }
+
   function studyPlanner() {
     const c = academicContext();
     c.learningExtension = 'planner';
@@ -813,6 +911,33 @@
   let timerSeconds = 25 * 60;
   let timerId = null;
   function format(seconds) { return `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`; }
+
+  function practiceAndTests() {
+    const c = academicContext();
+    const lessons = c.syllabus;
+    D.state.settings.activePracticeLesson ||= {};
+    D.state.settings.mcqProgress ||= {};
+    const lesson = lessons.find(item => item.id === D.state.settings.activePracticeLesson[c.activeId]) || lessons[0];
+    if (!lesson) return `${learnerBar(c)}<section class="panel"><p class="empty">Choose a subject with configured chapters to begin practice.</p></section>`;
+    const questions = HM.genius.questions(lesson);
+    const learnerProgress = D.state.settings.mcqProgress[c.activeId] ||= {};
+    const progress = learnerProgress[lesson.id] ||= { index: 0, answers: {}, attempted: 0, correct: 0 };
+    const questionIndex = Math.min(progress.index || 0, questions.length - 1);
+    const question = questions[questionIndex];
+    const response = progress.answers?.[questionIndex];
+    const completed = c.assessments.filter(item => item.status !== 'scheduled');
+    const scheduled = c.assessments.filter(item => item.status === 'scheduled');
+    const allProgress = Object.values(learnerProgress);
+    const totalAttempted = allProgress.reduce((sum, item) => sum + (+item.attempted || 0), 0);
+    const totalCorrect = allProgress.reduce((sum, item) => sum + (+item.correct || 0), 0);
+    const options = question.options.map((option, index) => {
+      const state = response ? (index === question.answer ? 'correct' : index === response.selected ? 'wrong' : 'muted') : '';
+      return `<button type="button" class="mcq-option ${state}" data-mcq-answer="${index}" data-lesson="${e(lesson.id)}" data-question="${questionIndex}" ${response ? 'disabled' : ''}><span>${String.fromCharCode(65 + index)}</span><b>${e(option)}</b>${response && index === question.answer ? icon('circle-check-big') : ''}</button>`;
+    }).join('');
+    const feedback = response ? `<div class="mcq-feedback ${response.correct ? 'correct' : 'wrong'}"><span>${icon(response.correct ? 'badge-check' : 'scan-search')}</span><div><b>${response.correct ? 'Correct—and here is why' : 'Good miss. Repair this exact idea.'}</b><p>${e(question.why)}</p></div></div>` : `<p class="mcq-prompt">Commit to an answer. The explanation appears immediately.</p>`;
+    const resultRows = [...c.assessments].sort((a, b) => String(b.date).localeCompare(String(a.date))).map(item => `<tr><td><b>${e(item.subject)}</b><small>${e(item.title)}</small></td><td>${D.date(item.date)}</td><td>${academicStatus(item.status)}</td><td>${item.status === 'scheduled' ? 'Scheduled' : `${assessmentPercent(item)}%`}</td><td><button class="icon-action" data-edit="assessment" data-id="${e(item.id)}" data-student="${e(c.activeId)}" aria-label="Edit assessment">${icon('pencil')}</button></td></tr>`).join('');
+    return `${learnerBar(c)}<section class="practice-summary-strip"><span><small>Question accuracy</small><b>${totalAttempted ? Math.round(totalCorrect / totalAttempted * 100) : 0}%</b></span><span><small>Questions answered</small><b>${totalAttempted}</b></span><span><small>Assessment average</small><b>${completed.length ? averageOf(completed.map(assessmentPercent)) : 0}%</b></span><span><small>Upcoming tests</small><b>${scheduled.length}</b></span></section><div class="mcq-workspace"><aside class="mcq-chapters"><header><b>${e(lesson.subject)}</b><small>Choose chapter</small></header>${lessons.map(item => { const itemProgress = learnerProgress[item.id]; return `<button type="button" data-practice-lesson="${e(item.id)}" class="${item.id === lesson.id ? 'active' : ''}"><span>${itemProgress?.attempted ? `${itemProgress.correct}/${itemProgress.attempted}` : 'NEW'}</span><b>${e(item.title)}</b></button>`; }).join('')}</aside><main class="mcq-stage"><header><div><span class="section-kicker">${e(lesson.subject)} · ${e(lesson.title)}</span><h2>Question ${questionIndex + 1} of ${questions.length}</h2></div><span class="mcq-progress">${Array.from({ length: questions.length }, (_, index) => `<i class="${progress.answers?.[index] ? (progress.answers[index].correct ? 'correct' : 'wrong') : index === questionIndex ? 'active' : ''}"></i>`).join('')}</span></header><article class="mcq-question"><h1>${e(question.stem)}</h1><div class="mcq-options">${options}</div>${feedback}${response ? `<div class="mcq-next-actions"><button type="button" data-route="${activeRenderRoute === 'study/jee' ? 'study/jee' : 'study/genius'}">${icon('book-open')} Teach this concept</button><button type="button" class="primary" data-mcq-next="${e(lesson.id)}">${questionIndex === questions.length - 1 ? 'Review again' : 'Next question'} ${icon('arrow-right')}</button></div>` : ''}</article></main></div><section class="assessment-drawer"><details><summary><span>${icon('file-chart-column')}</span><span><b>School assessments and mock-test record</b><small>${c.assessments.length} records · kept here with practice</small></span><button type="button" class="primary" data-create="assessment" data-student="${e(c.activeId)}">${icon('plus')} Add result</button></summary><div class="compact-table-wrap"><table class="table"><thead><tr><th>Assessment</th><th>Date</th><th>Status</th><th>Result</th><th></th></tr></thead><tbody>${resultRows || '<tr><td colspan="5">No assessments recorded yet.</td></tr>'}</tbody></table></div></details></section>`;
+  }
 
   function practiceCentre() {
     const c = academicContext();
@@ -956,18 +1081,20 @@
       'community/directory': () => directory('community'),
       'community/guides': guides,
       'study/overview': studyOverview,
-      'study/books': curriculum,
+      'study/books': books,
+      'study/genius': geniusMindTeacher,
+      'study/jee': jeeMain,
       'study/curriculum': curriculum,
       'study/planner': studyPlanner,
       'study/assignments': assignments,
-      'study/assessments': assessments,
-      'study/practice': practiceCentre,
+      'study/assessments': practiceAndTests,
+      'study/practice': practiceAndTests,
       'study/reports': learningReports,
       'study/board': curriculum,
       'study/schedule': studyPlanner,
       'study/tasks': assignments,
       'study/goals': learningReports,
-      'study/focus': practiceCentre,
+      'study/focus': practiceAndTests,
       'study/analytics': learningReports
     };
     return (map[route] || unified)();

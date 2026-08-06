@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
 
 const app = 'http://127.0.0.1:8765/';
 
@@ -89,8 +91,8 @@ test('Munnar sunrise is the default and another background choice still persists
     glass: getComputedStyle(document.documentElement).getPropertyValue('--glass').trim(),
     shell: getComputedStyle(document.body).getPropertyValue('--shell-bg').trim()
   }));
-  expect(surfaceTokens.glass).toContain('.559');
-  expect(surfaceTokens.shell).toContain('.615');
+  expect(surfaceTokens.glass).toContain('.93');
+  expect(surfaceTokens.shell).toContain('.94');
 
   await page.goto(`${app}#/settings/app`);
   await page.locator('[name="appBackground"][value="waterfall"]').check({ force: true });
@@ -165,27 +167,49 @@ test('mobile Care page has no horizontal page overflow', async ({ page }) => {
 test('Class 7 and Class 12 have separate official textbook libraries', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await expect(page.locator('#pageTitle')).toHaveText('Books');
-  await expect(page.locator('[data-book-card]')).toHaveCount(9);
-  await expect(page.locator('#content')).toContainText('Physics Part I');
-  await expect(page.locator('#content')).toContainText('Flamingo');
-  await expect(page.locator('#content')).toContainText('Computer Science');
+  await expect(page.locator('.subject-tabs button')).toHaveCount(5);
+  await expect(page.locator('[data-book-card]')).toHaveCount(1);
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/lemh1\/lemh101\.pdf/);
 
   await page.locator('[data-learner="p4"]').click();
-  await expect(page.locator('[data-book-card]')).toHaveCount(9);
+  await expect(page.locator('.subject-tabs button')).toHaveCount(7);
+  await expect(page.locator('[data-book-card]')).toHaveCount(1);
   await expect(page.locator('#content')).toContainText('Ganita Prakash Part I');
-  await expect(page.locator('#content')).toContainText('Curiosity');
-  await expect(page.locator('#content')).toContainText('Poorvi');
-  await expect(page.locator('#content')).toContainText('Kaushal Bodh');
-  await expect(page.locator('#content')).toContainText('PDF not added on this device');
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-7\/gegp1\/gegp1ps\.pdf/);
+  await expect(page.locator('[data-inline-book-part] option')).toHaveCount(9);
+  await expect(page.locator('[data-book-state]')).toContainText('Bundled offline');
+});
+
+test('every declared offline textbook section is a real local PDF', async ({ page }) => {
+  await page.goto(`${app}#/study/books`);
+  const sections = await page.evaluate(() => HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).map(part => ({ book: book.title, url: part.url }))));
+  expect(sections).toHaveLength(165);
+  for (const section of sections) {
+    const file = path.join(process.cwd(), ...section.url.split('/'));
+    expect(fs.existsSync(file), `${section.book}: ${section.url}`).toBe(true);
+    const descriptor = fs.openSync(file, 'r');
+    const header = Buffer.alloc(4);
+    fs.readSync(descriptor, header, 0, 4, 0);
+    fs.closeSync(descriptor);
+    expect(header.toString(), `${section.book}: ${section.url}`).toBe('%PDF');
+    expect(fs.statSync(file).size, `${section.book}: ${section.url}`).toBeGreaterThan(10_000);
+  }
 });
 
 test('Learning pages use persistent subject tabs and show CBSE and JEE readiness', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
+  await expect(page.locator('.learning-track-tabs')).toContainText('CBSE');
+  await expect(page.locator('.learning-track-tabs')).toContainText('JEE Main');
+  await expect(page.locator('#headerKpis')).toBeHidden();
+  await expect(page.locator('#sectionNav')).toBeVisible();
   await expect(page.locator('.subject-tabs')).toContainText('Physics');
+  const tabOrder = await page.evaluate(() => ({ subjects: document.querySelector('.subject-tabs').getBoundingClientRect().top, activities: document.querySelector('.learning-section-tabs').getBoundingClientRect().top }));
+  expect(tabOrder.subjects).toBeLessThan(tabOrder.activities);
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
-  await expect(page.locator('[data-book-card]')).toHaveCount(2);
-  await expect(page.locator('[data-book-card]')).toContainText(['Physics Part I', 'Physics Part II']);
+  await expect(page.locator('[data-book-card]')).toHaveCount(1);
+  await expect(page.locator('.book-volume-tabs button')).toHaveCount(2);
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph101\.pdf/);
   await expect(page.locator('[data-book-card="g12-physics-1"] [data-book-state]')).toContainText('Bundled offline');
   await page.locator('[data-book-open="g12-physics-1"]').click();
   await expect(page.locator('#bookReaderDialog')).toBeVisible();
@@ -207,11 +231,11 @@ test('Class 12 and Class 7 learning tabs keep books and curriculum focused', asy
     await page.goto(`${app}#/study/books`);
     await page.locator(`[data-learner="${learnerId}"]`).click();
     await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
-    await expect(page.locator('.textbook-section')).toBeVisible();
+    await expect(page.locator('.inline-book-reader')).toBeVisible();
     await expect(page.locator('.curriculum-summary')).toBeHidden();
     await expect(page.locator('.reflection-grid')).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Curriculum', exact: true }).click();
+    await page.goto(`${app}#/study/curriculum`);
     await expect(page.locator('.textbook-section')).toBeHidden();
     await expect(page.locator('.curriculum-summary')).toBeVisible();
 
@@ -220,41 +244,87 @@ test('Class 12 and Class 7 learning tabs keep books and curriculum focused', asy
   }
 });
 
-test('a private PDF can be read, bookmarked and reviewed without upload', async ({ page }) => {
+test('Genius Mind provides subject and chapter-specific recall guidance', async ({ page }) => {
+  await page.goto(`${app}#/study/genius`);
+  await expect(page.locator('#pageTitle')).toHaveText('Genius Mind');
+  await expect(page.locator('.genius-teach-panel')).toContainText('THE IDEA THAT UNLOCKS THE CHAPTER');
+  await page.getByRole('button', { name: 'Chemistry', exact: true }).click();
+  await expect(page.locator('.genius-lessons > button')).toHaveCount(10);
+  await page.getByRole('button', { name: /Electrochemistry/ }).click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('Nernst');
+  await page.locator('[data-genius-section="notes"]').click();
+  await page.locator('[data-genius-note]').fill('Nernst quotient: write the balanced cell reaction before Q.');
+  await page.locator('[data-genius-note-save]').click();
+  await page.getByRole('button', { name: /Solutions/ }).click();
+  await page.getByRole('button', { name: /Electrochemistry/ }).click();
+  await expect(page.locator('[data-genius-note]')).toHaveValue('Nernst quotient: write the balanced cell reaction before Q.');
+  await page.locator('[data-genius-section="exam"]').click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('MARK-LOSING TRAPS');
+  await page.locator('[data-genius-section="test"]').click();
+  await expect(page.locator('.genius-check-list details')).toHaveCount(3);
+
+  await page.locator('[data-learner="p4"]').click();
+  await page.getByRole('button', { name: 'Science', exact: true }).click();
+  await expect(page.locator('.genius-lessons > button')).toHaveCount(10);
+  await page.getByRole('button', { name: /Heat and temperature/ }).click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('Science explains an observation');
+});
+
+test('Genius Mind adds a chapter-wise JEE Main workflow for Class 12 PCM', async ({ page }) => {
+  await page.goto(`${app}#/study/jee`);
+  await expect(page.locator('#pageTitle')).toHaveText('JEE Main');
+  await expect(page.locator('.subject-master-tabs button.active')).toHaveText('Physics');
+  await expect(page.locator('.subject-master-tabs button')).toHaveCount(3);
+  await expect(page.locator('.genius-lessons > button')).toHaveCount(20);
+  await page.locator('[data-genius-lesson]').filter({ hasText: 'Kinematics' }).click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('motion graphs and relative motion');
+  await expect(page.locator('.genius-teach-panel')).toContainText('KEY CONCEPTS');
+  await expect(page.locator('.teacher-talk')).toContainText('Position, velocity and acceleration are three different stories');
+  await expect(page.locator('.genius-teacher-hero')).toHaveCount(0);
+  await page.locator('[data-genius-section="worked"]').click();
+  await expect(page.locator('#content')).toContainText('TIMED DRILL');
+  await expect(page.locator('#content')).toContainText('ERROR LOG');
+  await expect(page.locator('.genius-source-drawer')).toContainText('Official JEE Main syllabus');
+  await page.locator('[data-learning-subject="Chemistry"]').click();
+  await expect(page.locator('.genius-lessons > button')).toHaveCount(20);
+  await page.locator('[data-genius-lesson]').filter({ hasText: 'Electrochemistry' }).click();
+  await page.locator('[data-genius-section="understand"]').click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('Nernst');
+  await page.locator('[data-genius-section="exam"]').click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('NCERT exception');
+  await page.locator('[data-learning-subject="Mathematics"]').click();
+  await expect(page.locator('.genius-lessons > button')).toHaveCount(14);
+  await page.locator('[data-genius-lesson]').filter({ hasText: 'Complex Numbers' }).click();
+  await page.locator('[data-genius-section="understand"]').click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('Argand plane');
+});
+
+test('Practice and assessments are one chapter-based MCQ workspace', async ({ page }) => {
+  await page.goto(`${app}#/study/practice`);
+  await expect(page.locator('.learning-section-tabs')).toContainText('Practice & Tests');
+  await expect(page.locator('.mcq-question')).toContainText('no inverse function');
+  await page.locator('[data-mcq-answer="0"]').click();
+  await expect(page.locator('.mcq-feedback')).toContainText('Repair this exact idea');
+  await expect(page.locator('.mcq-option.correct')).toContainText('not one-to-one');
+  await page.locator('[data-mcq-next]').click();
+  await expect(page.locator('.mcq-stage')).toContainText('Question 2 of 3');
+  await expect(page.locator('.assessment-drawer')).toContainText('School assessments and mock-test record');
+  await page.goto(`${app}#/study/assessments`);
+  await expect(page.locator('.mcq-workspace')).toBeVisible();
+});
+
+test('the supplied unified Class 7 Tamil book is bundled as one real offline PDF', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await page.locator('[data-learner="p4"]').click();
-  await page.locator('#bookFileInput').evaluate(input => {
-    input.dataset.bookId = 'g7-science';
-    input.dataset.studentId = 'p4';
-  });
-  await page.locator('#bookFileInput').setInputFiles({
-    name: 'curiosity-family-copy.pdf',
-    mimeType: 'application/pdf',
-    buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF')
-  });
-
+  await page.getByRole('button', { name: 'Tamil', exact: true }).click();
+  await expect(page.locator('#content')).toContainText('Class 7 Tamil — Complete Book');
+  await expect(page.locator('[data-inline-book-part] option')).toHaveCount(1);
+  await expect(page.locator('[data-inline-book-part]')).toContainText('Complete book — 2024 revised edition');
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /tamil7-cbse-complete\.pdf/);
+  await expect(page.locator('[data-book-card="g7-tamil"] [data-book-state]')).toContainText('Bundled offline - 1 sections');
+  await page.locator('[data-book-open="g7-tamil"]').click();
   await expect(page.locator('#bookReaderDialog')).toBeVisible();
-  await expect(page.locator('#bookReaderTitle')).toHaveText('Curiosity');
-  await page.locator('#bookTotalPages').fill('100');
-  await page.locator('#bookTotalPages').press('Tab');
-  await page.locator('#bookCurrentPage').fill('12');
-  await page.locator('#bookCurrentPage').press('Tab');
-  await page.locator('#bookBookmark').click();
-  await page.locator('#bookNote').fill('Explain the experiment and revise the key observation.');
-  await page.locator('#saveBookNote').click();
-  await page.locator('#bookReviewed').click();
-  await expect(page.locator('#bookNotes')).toContainText('Explain the experiment');
-  await page.getByRole('button', { name: 'Close textbook reader' }).click();
-
-  await expect(page.locator('[data-book-card="g7-science"] [data-book-state]')).toContainText('Ready offline');
-  await page.locator('[data-book-open="g7-science"]').click();
-  await expect(page.locator('#bookCurrentPage')).toHaveValue('12');
-  await expect(page.locator('#bookTotalPages')).toHaveValue('100');
-  await expect(page.locator('#bookBookmark')).toContainText('Remove bookmark');
-  await expect(page.locator('#bookReviewed')).toContainText('Reviewed');
-  const progress = await page.evaluate(() => HM.data.state.readingProgress.find(item => item.bookId === 'g7-science' && item.studentId === 'p4'));
-  expect(progress).toMatchObject({ currentPage: 12, totalPages: 100, status: 'reviewed', bookmarks: [12] });
-  expect(progress.notes).toHaveLength(1);
+  await expect(page.locator('#bookReaderTitle')).toHaveText('Class 7 Tamil — Complete Book');
 });
 
 test('textbook library and reader fit a phone viewport', async ({ page }) => {
@@ -262,7 +332,8 @@ test('textbook library and reader fit a phone viewport', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
-  await expect(page.locator('.book-shelf')).toHaveCSS('grid-template-columns', /370px|[0-9.]+px/);
+  await expect(page.locator('.inline-book-reader')).toBeVisible();
+  await expect(page.locator('.inline-book-frame')).toBeVisible();
 });
 
 test('four Google accounts authorize and sync directly without a connector', async ({ page }) => {
