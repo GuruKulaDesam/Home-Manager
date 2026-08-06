@@ -13,6 +13,7 @@
   let activeBookUrl = '';
   let activeBookObjectUrl = false;
   let activeInlineBookUrl = '';
+  let activeChapterWorkspace = null;
   const googleSessions = new Map();
   const googleWorkspaceSessions = new Map();
   HM.workspace = { cache: {}, selected: {} };
@@ -211,6 +212,8 @@
       $('#bookReaderContext').textContent = `${profile?.name || 'Student'} - CLASS ${book.grade} - ${book.subject}`;
       $('#bookReaderTitle').textContent = book.title;
       $('#bookReaderMeta').textContent = bundled ? `${book.publisher} - official PDFs bundled for offline reading` : `${book.publisher} - ${stored.name} - stored only in this browser`;
+      const subjects = [...new Set(V.textbookCatalog.filter(item => item.grade === book.grade).map(item => item.subject))];
+      $('#bookReaderSubjects').innerHTML = subjects.map(subject => `<button type="button" data-book-reader-subject="${D.esc(subject)}" class="${subject === book.subject ? 'active' : ''}" aria-pressed="${subject === book.subject}">${D.esc(subject)}</button>`).join('');
       $('#bookPartSection').hidden = !bundled;
       $('#bookPart').innerHTML = bundled ? bundled.map((part, index) => `<option value="${index}">${D.esc(part.label)}</option>`).join('') : '';
       if (bundled) $('#bookPart').value = String(Math.max(0, bundled.indexOf(selectedBundledPart)));
@@ -647,6 +650,17 @@
     document.querySelectorAll('[data-plan-status]').forEach(select => select.onchange = () => {
       const item = D.state.studyPlans.find(record => record.id === select.dataset.planStatus);
       if (item) { item.status = select.value; save('Study plan updated'); render(); }
+    });
+    document.querySelectorAll('[data-card-mastery]').forEach(select => select.onchange = () => {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = select.dataset.cardMastery;
+      const mastery = Math.max(0, Math.min(100, +select.value || 0));
+      const status = mastery >= 80 ? 'mastered' : mastery ? 'learning' : 'not-started';
+      D.state.settings.chapterMastery ||= {};
+      D.state.settings.chapterMastery[learnerId] ||= {};
+      D.state.settings.chapterMastery[learnerId][lessonId] = { mastery, status };
+      save('Chapter mastery updated');
+      render();
     });
     document.querySelectorAll('[data-inline-book-part]').forEach(select => select.onchange = () => {
       const frame = document.querySelector('[data-inline-book-frame]');
@@ -1601,21 +1615,32 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
-  function openChapterWorkspace(lessonId, section = 'understand') {
+  function refreshChapterWorkspace(lessonId, section = 'understand') {
     const workspace = $('#chapterWorkspace');
+    activeChapterWorkspace = { lessonId, section };
     $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, section);
+    $('#nav').classList.add('chapter-nav-mode');
+    $('#nav').innerHTML = V.chapterWorkspaceNavigation(lessonId, section);
+    $('#workspaceMenuLabel').innerHTML = '<span><small>Education</small><b>Chapter journey</b></span><i data-lucide="route"></i>';
     workspace.hidden = false;
     document.body.classList.add('chapter-workspace-open');
     refreshIcons();
-    workspace.querySelector('.chapter-workspace-close')?.focus();
+  }
+
+  function openChapterWorkspace(lessonId, section = 'understand') {
+    refreshChapterWorkspace(lessonId, section);
+    $('#nav .chapter-workspace-close')?.focus();
   }
 
   function closeChapterWorkspace() {
     const workspace = $('#chapterWorkspace');
     workspace.hidden = true;
     $('#chapterWorkspaceBody').innerHTML = '';
+    activeChapterWorkspace = null;
     document.body.classList.remove('chapter-workspace-open');
-    document.querySelector('[data-chapter-workspace]')?.focus();
+    $('#nav').classList.remove('chapter-nav-mode');
+    render();
+    document.querySelector('[data-chapter-card]')?.focus();
   }
 
   document.addEventListener('click', event => {
@@ -1651,10 +1676,14 @@
       openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'understand');
       return;
     }
+    const chapterCard = event.target.closest('[data-chapter-card]');
+    if (chapterCard && !event.target.closest('select, option, input, label, button, a')) {
+      openChapterWorkspace(chapterCard.dataset.chapterCard, 'understand');
+      return;
+    }
     const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
     if (chapterTab) {
-      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(chapterTab.dataset.lesson, chapterTab.dataset.chapterWorkspaceTab);
-      refreshIcons();
+      refreshChapterWorkspace(chapterTab.dataset.lesson, chapterTab.dataset.chapterWorkspaceTab);
       return;
     }
     const chapterStage = event.target.closest('[data-chapter-stage-toggle]');
@@ -1667,8 +1696,7 @@
       D.state.settings.chapterJourney[learnerId][lessonId] ||= {};
       D.state.settings.chapterJourney[learnerId][lessonId][stage] = !D.state.settings.chapterJourney[learnerId][lessonId][stage];
       D.save();
-      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, stage);
-      refreshIcons();
+      refreshChapterWorkspace(lessonId, stage);
       toast(D.state.settings.chapterJourney[learnerId][lessonId][stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
       return;
     }
@@ -1687,9 +1715,7 @@
         if (lesson) { lesson.mastery = mastery; lesson.status = status; }
       }
       D.save();
-      render();
-      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, 'progress');
-      refreshIcons();
+      refreshChapterWorkspace(lessonId, 'progress');
       toast('Chapter progress updated');
       return;
     }
@@ -1726,8 +1752,7 @@
       D.state.settings.geniusNotes[learnerId][geniusNoteSave.dataset.geniusNoteSave] = textarea?.value.trim() || '';
       save('Chapter note saved');
       if (document.body.classList.contains('chapter-workspace-open')) {
-        $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(geniusNoteSave.dataset.geniusNoteSave, 'notes');
-        refreshIcons();
+        refreshChapterWorkspace(geniusNoteSave.dataset.geniusNoteSave, 'notes');
       }
       return;
     }
@@ -1858,6 +1883,21 @@
         D.save();
         go('study/genius');
       }
+      return;
+    }
+    const bookReaderSubject = event.target.closest('[data-book-reader-subject]');
+    if (bookReaderSubject && activeBookReader) {
+      const studentId = activeBookReader.studentId;
+      const grade = activeBookReader.book.grade;
+      const subject = bookReaderSubject.dataset.bookReaderSubject;
+      const nextBook = V.textbookCatalog.find(item => item.grade === grade && item.subject === subject);
+      if (!nextBook) return;
+      D.state.settings.activeLearningSubject ||= {};
+      D.state.settings.activeLearningSubject[studentId] = subject;
+      D.save();
+      $('#bookReaderDialog').close();
+      render();
+      setTimeout(() => openBookReader(nextBook.id, studentId), 0);
       return;
     }
     const learningSubject = event.target.closest('[data-learning-subject]');
@@ -2057,6 +2097,8 @@
     toast('Family database updated');
   });
   document.addEventListener('keydown', event => {
+    const chapterCard = event.target.closest?.('[data-chapter-card]');
+    if (chapterCard && event.target === chapterCard && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openChapterWorkspace(chapterCard.dataset.chapterCard, 'understand'); return; }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }
     if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }

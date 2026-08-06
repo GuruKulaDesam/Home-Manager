@@ -173,6 +173,19 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('.subject-tabs button')).toHaveCount(5);
   await expect(page.locator('[data-book-card]')).toHaveCount(1);
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/lemh1\/lemh101\.pdf/);
+  await page.locator('.book-subject-switch [data-learning-subject="Physics"]').click();
+  await expect(page.locator('.inline-book-identity')).toContainText('Physics Part I');
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph101\.pdf/);
+  await page.getByRole('button', { name: 'Tools' }).click();
+  await expect(page.locator('#bookReaderDialog')).toBeVisible();
+  await expect(page.locator('#bookReaderSubjects button')).toHaveCount(5);
+  await page.locator('#bookReaderSubjects [data-book-reader-subject="Chemistry"]').click();
+  await expect(page.locator('#bookReaderDialog')).toBeVisible();
+  await expect(page.locator('#bookReaderTitle')).toHaveText('Chemistry Part I');
+  await page.locator('[data-close-dialog="bookReaderDialog"]').click();
+  await page.locator('.book-subject-switch [data-learning-subject="Chemistry"]').click();
+  await expect(page.locator('.inline-book-identity')).toContainText('Chemistry Part I');
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/lech1\/lech101\.pdf/);
 
   await page.locator('[data-learner="p4"]').click();
   await expect(page.locator('.subject-tabs button')).toHaveCount(7);
@@ -181,6 +194,9 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-7\/gegp1\/gegp1ps\.pdf/);
   await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(9);
   await expect(page.locator('[data-book-state]')).toContainText('Bundled offline');
+  await page.locator('.book-subject-switch [data-learning-subject="Science"]').click();
+  await expect(page.locator('.inline-book-identity')).toContainText('Curiosity');
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-7\/gecu1\/gecu1ps\.pdf/);
 });
 
 test('Travel, Web Life and Entertainment are independent complete menus', async ({ page }) => {
@@ -273,7 +289,7 @@ test('Education uses the page header for learners, subjects and exam tracks', as
   });
   expect(headerLayout.headerHeight).toBeLessThanOrEqual(58);
   expect(headerLayout.learnersTop).toBeGreaterThanOrEqual(headerLayout.headerTop);
-  await page.getByRole('button', { name: 'Physics', exact: true }).click();
+  await page.locator('#educationHeaderTabs').getByRole('button', { name: 'Physics', exact: true }).click();
   await expect(page.locator('[data-book-card]')).toHaveCount(1);
   await expect(page.locator('.book-volume-tabs')).toHaveCount(0);
   await expect(page.locator('.inline-book-volume-head')).toHaveCount(2);
@@ -295,7 +311,7 @@ test('Education uses the page header for learners, subjects and exam tracks', as
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph2\/leph201\.pdf/);
   await expect(page.locator('.inline-book-chapters')).toContainText('Ray Optics and Optical Instruments');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#educationHeaderTabs').getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
   await page.goto(`${app}#/study/reports`);
   await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -320,23 +336,67 @@ test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page 
     await expect(page.locator('.curriculum-progress-strip')).toContainText('Exam ready');
     await expect(page.locator('.curriculum-progress-strip')).not.toContainText('One complete learning journey');
     await expect(page.locator('.curriculum-journey-row').first()).toContainText('%');
-    await expect(page.locator('.chapter-primary-action').first()).toContainText('Open chapter');
-    await expect(page.locator('.curriculum-journey-row').first().locator('[data-chapter-workspace]')).toHaveCount(1);
+    await expect(page.locator('.chapter-primary-action')).toHaveCount(0);
+    await expect(page.locator('.curriculum-journey-row').first()).toHaveAttribute('role', 'button');
+    await expect(page.locator('.curriculum-journey-row').first()).toHaveAttribute('tabindex', '0');
     await expect(page.locator('.curriculum-journey-row').first().locator('.chapter-seven-track i')).toHaveCount(7);
   }
+});
+
+test('curriculum chapters render as modern responsive cards', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  const cards = page.locator('.curriculum-chapter-card');
+  await expect(cards.first()).toBeVisible();
+  await expect(cards.first().locator('.curriculum-card-head')).toBeVisible();
+  await expect(cards.first().locator('.chapter-card-visual svg')).toHaveCount(1);
+  await expect(cards.first().locator('.chapter-card-title h2')).toBeVisible();
+  await expect(cards.first().locator('.chapter-card-metrics > *')).toHaveCount(2);
+  await expect(cards.first().locator('.chapter-card-footer')).toContainText('Next step');
+  const cardColors = await cards.evaluateAll(items => items.slice(0, 3).map(item => getComputedStyle(item.querySelector('.chapter-sequence')).backgroundColor));
+  expect(new Set(cardColors).size).toBe(1);
+  const matchingTheme = await page.evaluate(() => ({
+    card: getComputedStyle(document.querySelector('.curriculum-chapter-card .chapter-sequence')).backgroundColor,
+    tab: getComputedStyle(document.querySelector('#educationHeaderTabs [data-learning-subject].active')).backgroundColor
+  }));
+  expect(matchingTheme.card).toBe(matchingTheme.tab);
+  const shellTheme = await page.locator('#sidebar').evaluate(element => ({ background: getComputedStyle(element).backgroundImage, color: getComputedStyle(element).color }));
+  expect(shellTheme.background).toContain('linear-gradient');
+  expect(shellTheme.color).toBe('rgb(248, 250, 252)');
+  const themeSurfaces = await page.evaluate(() => ({
+    topbar: getComputedStyle(document.querySelector('.topbar')).backgroundColor,
+    progress: getComputedStyle(document.querySelector('.curriculum-progress-strip')).backgroundColor
+  }));
+  expect(themeSurfaces.topbar).toBe('rgba(0, 0, 0, 0)');
+  expect(themeSurfaces.progress).not.toBe('rgb(23, 32, 51)');
+  const firstMastery = cards.first().locator('[data-card-mastery]');
+  await firstMastery.selectOption('80');
+  await expect(page.locator('body')).not.toHaveClass(/chapter-workspace-open/);
+  await expect(cards.first().locator('[data-card-mastery]')).toHaveValue('80');
+  await page.reload();
+  await expect(cards.first().locator('[data-card-mastery]')).toHaveValue('80');
+  const desktopColumns = await page.locator('.curriculum-journey-list').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
+  expect(desktopColumns).toBeGreaterThan(1);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(cards.first()).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
 });
 
 test('one full-screen chapter workspace connects teaching, book, practice, assignments and progress', async ({ page }) => {
   await page.goto(`${app}#/study/curriculum`);
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
-  await page.locator('.chapter-primary-action').first().click();
+  await page.locator('.curriculum-chapter-card').first().click({ position: { x: 18, y: 90 } });
   await expect(page.locator('#chapterWorkspace')).toBeVisible();
   await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(7);
-  await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
+  await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'visible');
+  await expect(page.locator('#nav')).toHaveClass(/chapter-nav-mode/);
+  await expect(page.locator('.chapter-workspace-sidebar')).toHaveCount(0);
   await expect(page.locator('.app-header')).toBeVisible();
   await expect(page.locator('#educationHeaderTabs [data-learning-subject="Physics"]')).toBeVisible();
-  const shellWidths = await page.evaluate(() => ({ configured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar')), chapter: document.querySelector('.chapter-workspace-sidebar').getBoundingClientRect().width }));
-  expect(shellWidths.chapter).toBe(shellWidths.configured);
+  const shellWidths = await page.evaluate(() => ({ configured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar')), shell: document.querySelector('#sidebar').getBoundingClientRect().width, workspaceLeft: document.querySelector('#chapterWorkspace').getBoundingClientRect().left }));
+  expect(shellWidths.shell).toBe(shellWidths.configured);
+  expect(shellWidths.workspaceLeft).toBe(shellWidths.shell);
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
   await page.locator('[data-chapter-stage-toggle="understand"]').click();
   await expect(page.locator('.chapter-workspace-status')).toContainText('2/7');
@@ -348,12 +408,12 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   const viewportUse = await page.evaluate(() => {
     const workspace = document.querySelector('#chapterWorkspace').getBoundingClientRect();
     const pdf = document.querySelector('.chapter-book-panel iframe').getBoundingClientRect();
-    const sidebarWidth = document.querySelector('.chapter-workspace-sidebar').getBoundingClientRect().width;
+    const sidebarWidth = document.querySelector('#sidebar').getBoundingClientRect().width;
     return { workspaceWidth: workspace.width, workspaceHeight: workspace.height, sidebarWidth, pdfWidth: pdf.width, pdfHeight: pdf.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
   });
-  expect(viewportUse.workspaceWidth).toBe(viewportUse.viewportWidth);
-  expect(viewportUse.workspaceHeight).toBe(viewportUse.viewportHeight);
-  expect(Math.abs(viewportUse.pdfWidth - (viewportUse.viewportWidth - viewportUse.sidebarWidth))).toBeLessThan(2);
+  expect(viewportUse.workspaceWidth).toBe(viewportUse.viewportWidth - viewportUse.sidebarWidth);
+  expect(viewportUse.workspaceHeight).toBe(viewportUse.viewportHeight - 56);
+  expect(Math.abs(viewportUse.pdfWidth - viewportUse.workspaceWidth)).toBeLessThan(2);
   expect(viewportUse.pdfHeight / viewportUse.viewportHeight).toBeGreaterThanOrEqual(.9);
   await page.locator('[data-chapter-workspace-tab="practice"]').click();
   await expect(page.locator('.chapter-guided-practice')).toContainText('Why B is correct');
@@ -446,7 +506,7 @@ test('Practice and assessments are one chapter-based MCQ workspace', async ({ pa
 test('the supplied unified Class 7 Tamil book exposes its verified units inside one real offline PDF', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await page.locator('[data-learner="p4"]').click();
-  await page.getByRole('button', { name: 'Tamil', exact: true }).click();
+  await page.locator('.book-subject-switch').getByRole('button', { name: 'Tamil', exact: true }).click();
   await expect(page.locator('#content')).toContainText('Class 7 Tamil — Complete Book');
   await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(9);
   await expect(page.locator('.inline-book-chapters')).toContainText('அமுதத் தமிழ்');
