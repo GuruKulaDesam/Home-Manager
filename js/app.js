@@ -468,7 +468,10 @@
     form.dataset.domain = source.domain || record?.domain || routeDomain || 'documents';
     form.dataset.editId = source.editId || '';
     if (record) Object.entries(record).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
-    else if (form.elements.context) form.elements.context.value = source.context || workspace;
+    else {
+      Object.entries(source).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
+      if (form.elements.context) form.elements.context.value = source.context || workspace;
+    }
     $('#formDialog').showModal();
     refreshIcons();
     setTimeout(() => $('#formFields input, #formFields select, #formFields textarea')?.focus(), 50);
@@ -598,6 +601,20 @@
     document.querySelectorAll('[data-plan-status]').forEach(select => select.onchange = () => {
       const item = D.state.studyPlans.find(record => record.id === select.dataset.planStatus);
       if (item) { item.status = select.value; save('Study plan updated'); render(); }
+    });
+    document.querySelectorAll('[data-study-plan]').forEach(card => card.ondragstart = event => event.dataTransfer.setData('studyPlan', card.dataset.studyPlan));
+    document.querySelectorAll('[data-plan-drop]').forEach(column => {
+      column.ondragover = event => { event.preventDefault(); column.classList.add('is-drag-over'); };
+      column.ondragleave = () => column.classList.remove('is-drag-over');
+      column.ondrop = event => {
+        event.preventDefault();
+        const item = D.state.studyPlans.find(record => record.id === event.dataTransfer.getData('studyPlan'));
+        if (item) { item.status = column.dataset.planDrop; save('Study block moved'); render(); }
+      };
+    });
+    document.querySelectorAll('[data-plan-move]').forEach(button => button.onclick = () => {
+      const item = D.state.studyPlans.find(record => record.id === button.dataset.planMove);
+      if (item) { item.status = button.dataset.status; save('Study block moved'); render(); }
     });
     document.querySelectorAll('[data-deliverable-status]').forEach(select => select.onchange = () => {
       const item = D.state.academicDeliverables.find(record => record.id === select.dataset.deliverableStatus);

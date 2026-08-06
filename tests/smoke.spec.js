@@ -37,6 +37,30 @@ test('offline assistant selects safe domain roles and ships its local runtime', 
   expect(model.ok()).toBeTruthy();
 });
 
+test('learning planner combines an in-place week calendar with a movable Kanban', async ({ page }) => {
+  await page.goto(`${app}#/study/planner`);
+  await expect(page.locator('.study-week-calendar > section')).toHaveCount(7);
+  await expect(page.locator('.study-plan-column')).toHaveCount(3);
+
+  const firstDate = await page.locator('.study-week-calendar > section').first().locator('[data-date]').first().getAttribute('data-date');
+  const browserToday = await page.evaluate(() => { const value = new Date(); return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`; });
+  expect(firstDate).toBe(browserToday);
+  await page.locator('.study-week-calendar > section').first().locator('[data-date]').first().click();
+  await expect(page.locator('#formDialog')).toBeVisible();
+  await expect(page.locator('#entityForm [name="date"]')).toHaveValue(firstDate);
+  await page.locator('[data-close-dialog="formDialog"]').first().click();
+
+  const plannedCard = page.locator('.study-plan-column.planned .study-plan-card').first();
+  if (await plannedCard.count()) {
+    const id = await plannedCard.getAttribute('data-study-plan');
+    await plannedCard.locator(`[data-plan-move="${id}"][data-status="done"]`).click();
+    await expect(page.locator(`.study-plan-column.done [data-study-plan="${id}"]`)).toBeVisible();
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
+});
+
 test('all non-learning suites render without runtime errors', async ({ page }) => {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
