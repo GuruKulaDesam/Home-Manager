@@ -8,16 +8,25 @@
       ['Today', 'sparkles', 'global/overview'], ['Inbox intelligence', 'mail-search', 'global/intelligence'], ['Help & Guide', 'circle-help', 'global/questions']
     ]},
     household: { label: 'Household', icon: 'house', note: 'Run the home', route: 'home/overview', items: [
-      ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
+      ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
     ]},
     family: { label: 'Family', icon: 'users-round', note: 'Plans and togetherness', route: 'home/family', items: [
-      ['Overview', 'users-round', 'home/family'], ['Calendar', 'calendar-days', 'home/calendar'], ['Travel', 'luggage', 'home/life/travel'], ['Celebrations', 'party-popper', 'home/life/festivals'], ['Documents', 'folders', 'home/life/documents'], ['Contacts', 'contact-round', 'home/directory'], ['Protection & legacy', 'shield-check', 'home/family/protection']
+      ['Overview', 'users-round', 'home/family'], ['Calendar', 'calendar-days', 'home/calendar'], ['Celebrations', 'party-popper', 'home/life/festivals'], ['Documents', 'folders', 'home/life/documents'], ['Contacts', 'contact-round', 'home/directory'], ['Protection & legacy', 'shield-check', 'home/family/protection']
     ]},
     money: { label: 'Money', icon: 'indian-rupee', note: 'Consolidated family reporting', route: 'home/finance', items: [
       ['Overview', 'layout-dashboard', 'home/finance'], ['Budget', 'chart-pie', 'home/money/budget'], ['Cash flow', 'arrow-right-left', 'home/money/cashflow'], ['Spending', 'wallet-cards', 'home/money/spending'], ['Commitments', 'calendar-sync', 'home/money/commitments'], ['Net worth', 'scale', 'home/money/networth'], ['Reports', 'chart-no-axes-combined', 'home/money/reports']
     ]},
     care: { label: 'Care', icon: 'heart-handshake', note: 'Health and safety', route: 'home/care', items: [
       ['Overview', 'heart-handshake', 'home/care'], ['Health', 'heart-pulse', 'home/life/health'], ['Medicines', 'pill', 'home/life/medicines'], ['Appointments', 'stethoscope', 'home/life/appointments'], ['Elder care', 'accessibility', 'home/life/elders'], ['Emergency', 'siren', 'home/life/emergency'], ['Pets', 'paw-print', 'home/life/pets']
+    ]},
+    travel: { label: 'Travel', icon: 'luggage', note: 'Every journey and vehicle', route: 'home/travel', items: [
+      ['Overview', 'map', 'home/travel'], ['Trips', 'route', 'home/life/travel'], ['Transportation', 'bus-front', 'home/life/transport'], ['Vehicles', 'car-front', 'home/life/vehicles'], ['Hotels & stays', 'bed-double', 'home/life/stays'], ['Insurance & documents', 'shield-check', 'home/life/travelProtection'], ['Spending', 'wallet-cards', 'home/travel/spending']
+    ]},
+    web: { label: 'Web Life', icon: 'globe-2', note: 'Accounts, habits and digital costs', route: 'home/web', items: [
+      ['Overview', 'layout-dashboard', 'home/web'], ['Email & accounts', 'at-sign', 'home/life/webAccounts'], ['AI services', 'sparkles', 'home/life/aiServices'], ['Subscriptions', 'repeat-2', 'home/life/subscriptions'], ['Browsing habits', 'history', 'home/life/webHabits'], ['Games & apps', 'gamepad-2', 'home/life/games'], ['Privacy & devices', 'shield-check', 'home/life/digital']
+    ]},
+    entertainment: { label: 'Entertainment', icon: 'clapperboard', note: 'Watch, listen, read and go out', route: 'home/entertainment', items: [
+      ['Overview', 'layout-dashboard', 'home/entertainment'], ['Watch', 'clapperboard', 'home/life/watch'], ['Listen', 'headphones', 'home/life/listen'], ['Read', 'book-open', 'home/life/reading'], ['Play & games', 'gamepad-2', 'home/life/play'], ['Outings & events', 'ticket', 'home/life/outings'], ['Spending', 'wallet-cards', 'home/entertainment/spending']
     ]},
     learning: { label: 'Education', icon: 'graduation-cap', note: 'Study and development', route: 'study/curriculum', items: [
       ['Learning Path', 'route', 'study/curriculum'], ['Genius Mind', 'brain', 'study/genius'], ['Planner', 'calendar-clock', 'study/planner'], ['Overview', 'activity', 'study/overview'], ['Progress', 'chart-no-axes-combined', 'study/reports']
@@ -126,6 +135,11 @@
     'home/wisdom': ['Wisdom & Recognition', 'Family knowledge and points'],
     'home/directory': ['Home Directory', 'Family and service contacts'],
     'home/property': ['Property & Assets', 'Repairs, property records and household assets'],
+    'home/travel': ['Travel', 'Trips, transportation, vehicles, stays and protection'],
+    'home/travel/spending': ['Travel Spending', 'Costs across trips, transport, vehicles and stays'],
+    'home/web': ['Web Life', 'Accounts, online habits, services, games and digital costs'],
+    'home/entertainment': ['Entertainment', 'What your family watches, listens to, reads, plays and attends'],
+    'home/entertainment/spending': ['Entertainment Spending', 'Recurring and one-time leisure costs'],
     'community/overview': ['Community Overview', 'Your local personal planner'],
     'community/feed': ['News & Forum', 'Locally stored neighbourhood notes'],
     'community/events': ['Community Events', 'Meetings, markets and local activities'],
@@ -607,6 +621,48 @@
     const safe = ['planning', 'pending', 'active', 'due', 'paid', 'done'].includes(value) ? value : 'pending';
     const className = safe === 'due' ? 'danger' : ['planning', 'pending'].includes(safe) ? 'warning' : '';
     return `<span class="badge ${className}">${e(safe[0].toUpperCase() + safe.slice(1))}</span>`;
+  }
+
+  const lifeSuites = {
+    travel: {
+      title: 'Travel command centre', note: 'Plan the whole journey in one place — before, during and after the trip.', icon: 'luggage',
+      domains: ['travel', 'transport', 'vehicles', 'stays', 'travelProtection'],
+      links: [['Trips', 'Itineraries, people, packing and trip tasks', 'luggage', 'home/life/travel'], ['Transportation', 'Flights, trains, buses, taxis and transfers', 'bus-front', 'home/life/transport'], ['Vehicles', 'Service, fuel, insurance, PUC and registration', 'car-front', 'home/life/vehicles'], ['Hotels & stays', 'Bookings, check-in, cancellation and accessibility', 'bed-double', 'home/life/stays'], ['Insurance & documents', 'Cover, visas, permits and emergency copies', 'shield-check', 'home/life/travelProtection'], ['Travel spending', 'See the cost of every travel commitment', 'wallet-cards', 'home/travel/spending']]
+    },
+    web: {
+      title: 'Your web life, under control', note: 'Know which accounts exist, what they cost and whether they still deserve your time and data.', icon: 'globe-2',
+      domains: ['webAccounts', 'aiServices', 'subscriptions', 'webHabits', 'games', 'digital'],
+      links: [['Email & accounts', 'Ownership, purpose and recovery readiness', 'at-sign', 'home/life/webAccounts'], ['AI services', 'Plans, limits, privacy and intended use', 'sparkles', 'home/life/aiServices'], ['Subscriptions', 'Renewals for streaming, cloud, software and news', 'repeat-2', 'home/life/subscriptions'], ['Browsing habits', 'Attention, screen boundaries and intentional routines', 'history', 'home/life/webHabits'], ['Games & apps', 'Purchases, age access, play limits and ownership', 'gamepad-2', 'home/life/games'], ['Privacy & devices', 'Backups, device reviews and recovery readiness', 'shield-check', 'home/life/digital']],
+      warning: 'Store account names, owners and renewal details only. Never save passwords, PINs, OTPs, passkeys, recovery codes or security answers in this app.'
+    },
+    entertainment: {
+      title: 'Entertainment worth your time', note: 'Keep family leisure intentional: discover, choose, enjoy and remember — without losing sight of cost.', icon: 'clapperboard',
+      domains: ['watch', 'listen', 'reading', 'play', 'outings'],
+      links: [['Watch', 'Films, series and documentaries', 'clapperboard', 'home/life/watch'], ['Listen', 'Music, podcasts and audiobooks', 'headphones', 'home/life/listen'], ['Read', 'Books, magazines and comics', 'book-open', 'home/life/reading'], ['Play & games', 'Board games, video games and hobbies', 'dice-5', 'home/life/play'], ['Outings & events', 'Cinema, concerts, sports, attractions and dining', 'ticket', 'home/life/outings'], ['Entertainment spending', 'See recurring and one-time leisure costs', 'wallet-cards', 'home/entertainment/spending']]
+    }
+  };
+
+  function lifeSuiteOverview(name) {
+    const suite = lifeSuites[name];
+    const records = HM.life.ensure().filter(item => suite.domains.includes(item.domain));
+    const active = records.filter(item => !['done', 'paid', 'complete'].includes(item.status));
+    const due = active.filter(item => lifeDueState(item));
+    const monthly = records.reduce((total, item) => total + monthlyValue(item), 0);
+    const next = active.filter(item => item.dueDate).sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate))).slice(0, 6);
+    return `${suite.warning ? `<section class="panel privacy-banner"><div>${icon('shield-alert')}<div><h2>Protect your digital identity</h2><p>${e(suite.warning)}</p></div></div><button data-route="global/settings">Privacy details</button></section>` : ''}
+      <section class="metrics compact-metrics">${metric('Active records', active.length, suite.title, suite.icon)}${metric('Need attention', due.length, 'Due or overdue', 'calendar-warning')}${metric('Monthly commitments', D.money(monthly), 'Estimated from saved records', 'wallet-cards')}${metric('Completed', records.length - active.length, 'Closed items', 'circle-check-big')}</section>
+      <section class="family-action-grid suite-action-grid" aria-label="${e(suite.title)} workflows">${suite.links.map(item => `<button data-route="${item[3]}"><span>${icon(item[2])}</span><span><b>${e(item[0])}</b><small>${e(item[1])}</small></span>${icon('chevron-right')}</button>`).join('')}</section>
+      <section class="panel"><div class="section-head"><div><h2>What needs attention next</h2><p>${e(suite.note)}</p></div></div>${next.length ? next.map(item => row(item.title, `${HM.life.domains[item.domain].title} · ${D.date(item.dueDate)}`, `<button data-route="home/life/${item.domain}">Open</button>`)).join('') : '<p class="empty">Nothing is due. Open a section above to add the first record.</p>'}</section>`;
+  }
+
+  function lifeSuiteSpending(name) {
+    const suite = lifeSuites[name];
+    const records = HM.life.ensure().filter(item => suite.domains.includes(item.domain) && +item.amount > 0).sort((a, b) => monthlyValue(b) - monthlyValue(a));
+    const monthly = records.reduce((total, item) => total + monthlyValue(item), 0);
+    const annual = monthly * 12;
+    const oneTime = records.filter(item => ['One time', 'As needed'].includes(item.frequency)).reduce((total, item) => total + (+item.amount || 0), 0);
+    return `<section class="metrics compact-metrics">${metric('Monthly equivalent', D.money(monthly), 'Recurring commitments', 'calendar-sync')}${metric('Annual equivalent', D.money(annual), 'Estimate from recurring records', 'chart-no-axes-combined')}${metric('One-time plans', D.money(oneTime), 'Saved planned costs', 'receipt-indian-rupee')}${metric('Costed records', records.length, suite.title, suite.icon)}</section>
+      <section class="panel"><div class="section-head"><div><h2>Where the money goes</h2><p>Amounts come directly from the owning registers.</p></div></div>${records.length ? `<table class="table"><thead><tr><th>Item</th><th>Area</th><th>Frequency</th><th>Saved amount</th><th>Monthly equivalent</th><th></th></tr></thead><tbody>${records.map(item => `<tr><td data-label="Item"><b>${e(item.title)}</b><small>${e(item.provider || item.category)}</small></td><td data-label="Area">${e(HM.life.domains[item.domain].title)}</td><td data-label="Frequency">${e(item.frequency)}</td><td data-label="Saved amount">${D.money(item.amount)}</td><td data-label="Monthly equivalent">${D.money(monthlyValue(item))}</td><td><button data-route="home/life/${item.domain}">Open</button></td></tr>`).join('')}</tbody></table>` : '<p class="empty">No costs have been saved in these registers yet.</p>'}</section>`;
   }
 
   function lifeHub() {
@@ -1240,6 +1296,11 @@
       'home/assets': assets,
       'home/wisdom': wisdom,
       'home/directory': () => directory('home'),
+      'home/travel': () => lifeSuiteOverview('travel'),
+      'home/travel/spending': () => lifeSuiteSpending('travel'),
+      'home/web': () => lifeSuiteOverview('web'),
+      'home/entertainment': () => lifeSuiteOverview('entertainment'),
+      'home/entertainment/spending': () => lifeSuiteSpending('entertainment'),
       'community/overview': communityOverview,
       'community/participate': communityParticipate,
       'community/feed': feed,

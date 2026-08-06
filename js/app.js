@@ -55,8 +55,11 @@
     if (currentRoute === 'global/overview') return 'today';
     const lifeDomain = currentRoute.match(/^home\/life\/([^/]+)$/)?.[1];
     const lifeOwners = {
-      property: 'household', bills: 'household', subscriptions: 'household', digital: 'household', help: 'household', sustainability: 'household', vehicles: 'household',
-      travel: 'family', festivals: 'family', documents: 'family', tax: 'family', insurance: 'family', legacy: 'family',
+      property: 'household', bills: 'household', help: 'household', sustainability: 'household',
+      travel: 'travel', transport: 'travel', vehicles: 'travel', stays: 'travel', travelProtection: 'travel',
+      subscriptions: 'web', digital: 'web', webAccounts: 'web', aiServices: 'web', webHabits: 'web', games: 'web',
+      watch: 'entertainment', listen: 'entertainment', reading: 'entertainment', play: 'entertainment', outings: 'entertainment',
+      festivals: 'family', documents: 'family', tax: 'family', insurance: 'family', legacy: 'family',
       health: 'care', emergency: 'care', pets: 'care', education: 'learning'
     };
     if (lifeOwners[lifeDomain]) return lifeOwners[lifeDomain];
@@ -273,7 +276,7 @@
     document.body.classList.add(`group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
     const topRoute = ({
-      'home/assets': 'home/property', 'home/life/property': 'home/property', 'home/life/bills': 'home/property', 'home/life/subscriptions': 'home/property', 'home/life/digital': 'home/property',
+      'home/assets': 'home/property', 'home/life/property': 'home/property', 'home/life/bills': 'home/property',
       'home/life/insurance': 'home/family', 'home/life/tax': 'home/family', 'home/life/documents': 'home/family', 'home/life/legacy': 'home/family',
       'home/life/education': 'study/overview', 'community/events': 'community/participate', 'community/polls': 'community/participate'
     })[route] || route;
