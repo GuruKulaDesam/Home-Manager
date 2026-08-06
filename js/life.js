@@ -10,15 +10,27 @@
     insurance: { title: 'Family Protection', group: 'Family', icon: 'shield-check', note: 'Life and personal accident cover', noun: 'policy' },
     tax: { title: 'Tax & Compliance', group: 'Family', icon: 'landmark', note: 'ITR and statutory dates', noun: 'tax record' },
     property: { title: 'Property & Utilities', group: 'Household', icon: 'building-2', note: 'Homes, services, taxes and agreements', noun: 'property record' },
-    vehicles: { title: 'Vehicles', group: 'Household', icon: 'car-front', note: 'Service, insurance, PUC and registration', noun: 'vehicle record' },
+    vehicles: { title: 'Vehicles', group: 'Travel', icon: 'car-front', note: 'Service, fuel, insurance, PUC and registration', noun: 'vehicle record' },
     help: { title: 'Domestic Help', group: 'Household', icon: 'hand-helping', note: 'Staff, attendance, salary and contacts', noun: 'help record' },
-    subscriptions: { title: 'Subscriptions', group: 'Household', icon: 'repeat-2', note: 'Digital, newspaper, milk and memberships', noun: 'subscription' },
+    subscriptions: { title: 'Online Subscriptions', group: 'Web Life', icon: 'repeat-2', note: 'Streaming, cloud, news, software and memberships', noun: 'subscription' },
     education: { title: 'Education Commitments', group: 'Learning', icon: 'school', note: 'Fees, transport, courses and renewals', noun: 'education commitment' },
-    travel: { title: 'Travel & Pilgrimage', group: 'Plans', icon: 'luggage', note: 'Trips, bookings, packing and documents', noun: 'travel plan' },
+    travel: { title: 'Trips', group: 'Travel', icon: 'luggage', note: 'Itineraries, bookings, packing, travellers and trip tasks', noun: 'trip' },
+    transport: { title: 'Transportation', group: 'Travel', icon: 'bus-front', note: 'Flights, trains, buses, taxis, rentals, transfers and local transit', noun: 'transport booking' },
+    stays: { title: 'Hotels & Stays', group: 'Travel', icon: 'bed-double', note: 'Hotels, homestays, check-in details, accessibility and cancellation dates', noun: 'stay' },
+    travelProtection: { title: 'Travel Insurance & Documents', group: 'Travel', icon: 'shield-check', note: 'Travel cover, visas, passports, permits and emergency copies', noun: 'travel protection record' },
     festivals: { title: 'Festivals & Functions', group: 'Plans', icon: 'party-popper', note: 'Puja, guests, gifting and budgets', noun: 'festival plan' },
     emergency: { title: 'Emergency Readiness', group: 'Care', icon: 'siren', note: 'Contacts, blood groups and urgent instructions', noun: 'emergency record' },
     pets: { title: 'Pets & Animals', group: 'Care', icon: 'paw-print', note: 'Vaccines, food, care and appointments', noun: 'pet record' },
-    digital: { title: 'Digital Household', group: 'Records', icon: 'cloud-cog', note: 'Devices, domains, backups and account custody', noun: 'digital record' },
+    digital: { title: 'Privacy, Devices & Backups', group: 'Web Life', icon: 'shield-check', note: 'Devices, privacy reviews, domains, backups and recovery readiness', noun: 'digital safety record' },
+    webAccounts: { title: 'Email & Online Accounts', group: 'Web Life', icon: 'at-sign', note: 'Account ownership, purpose, recovery readiness and closure decisions — never passwords', noun: 'account record' },
+    aiServices: { title: 'AI Services', group: 'Web Life', icon: 'sparkles', note: 'AI accounts, plan limits, renewals, data controls and intended use', noun: 'AI service' },
+    webHabits: { title: 'Browsing & Screen Habits', group: 'Web Life', icon: 'history', note: 'Attention goals, screen boundaries, distracting sites and intentional routines', noun: 'online habit' },
+    games: { title: 'Games & Apps', group: 'Web Life', icon: 'gamepad-2', note: 'Installed games, app purchases, child access, play limits and account ownership', noun: 'game or app' },
+    watch: { title: 'Watch', group: 'Entertainment', icon: 'clapperboard', note: 'Films, series, documentaries and family watchlists', noun: 'watch item' },
+    listen: { title: 'Listen', group: 'Entertainment', icon: 'headphones', note: 'Music, podcasts, audiobooks and family listening', noun: 'listening item' },
+    reading: { title: 'Read', group: 'Entertainment', icon: 'book-open', note: 'Books, magazines, comics and leisure reading', noun: 'reading item' },
+    play: { title: 'Play & Games', group: 'Entertainment', icon: 'dice-5', note: 'Board games, video games, hobbies and family play', noun: 'play item' },
+    outings: { title: 'Outings & Events', group: 'Entertainment', icon: 'ticket', note: 'Cinema, concerts, sports, attractions, dining and family outings', noun: 'outing' },
     sustainability: { title: 'Sustainability', group: 'Household', icon: 'leaf', note: 'Water, energy, waste and garden goals', noun: 'sustainability record' },
     legacy: { title: 'Nominees & Legacy', group: 'Records', icon: 'scroll-text', note: 'Nominations, wills and succession readiness', noun: 'legacy record' }
   };
@@ -44,7 +56,11 @@
     { id: 'lr18', domain: 'legacy', title: 'Nominee review across accounts', category: 'Nominations', owner: 'Parents', provider: 'Banks and investments', reference: 'Legacy folder', amount: 0, dueDate: '2026-12-15', frequency: 'Yearly', status: 'pending', phone: '', notes: 'Review bank, demat, mutual fund, insurance and locker nominations.' },
     { id: 'lr19', domain: 'medicines', title: 'Review family medicine box', category: 'Stock and expiry', owner: 'Mother', provider: 'Family pharmacy', reference: 'Keep prescriptions offline', amount: 0, dueDate: '2026-08-15', frequency: 'Monthly', status: 'pending', phone: '', notes: 'Check regular medicines, expiry dates and seven days of essential stock.' },
     { id: 'lr20', domain: 'appointments', title: 'Dental preventive visit', category: 'Dental', owner: 'Children', provider: 'Family dentist', reference: 'Confirm directly with clinic', amount: 1200, dueDate: '2026-09-12', frequency: 'Half-yearly', status: 'planning', phone: '', notes: 'Record the appointment and follow-up action; do not store reports here.' },
-    { id: 'lr21', domain: 'elders', title: 'Weekly elder care call', category: 'Check-in', owner: 'Parents', provider: 'Family', reference: 'Sunday handoff', amount: 0, dueDate: '2026-08-09', frequency: 'Weekly', status: 'active', phone: '', notes: 'Confirm medicines, meals, mobility, appointments and who will follow up.' }
+    { id: 'lr21', domain: 'elders', title: 'Weekly elder care call', category: 'Check-in', owner: 'Parents', provider: 'Family', reference: 'Sunday handoff', amount: 0, dueDate: '2026-08-09', frequency: 'Weekly', status: 'active', phone: '', notes: 'Confirm medicines, meals, mobility, appointments and who will follow up.' },
+    { id: 'lr22', domain: 'webAccounts', title: 'Review account recovery details', category: 'Email accounts', owner: 'Family', provider: 'Email providers', reference: 'No passwords stored', amount: 0, dueDate: '2026-09-01', frequency: 'Half-yearly', status: 'pending', phone: '', notes: 'Confirm recovery email, phone, passkeys and account owner. Never store passwords or recovery codes here.' },
+    { id: 'lr23', domain: 'aiServices', title: 'Review AI service accounts', category: 'AI services', owner: 'Family', provider: 'Multiple providers', reference: 'Plans and privacy only', amount: 0, dueDate: '2026-09-15', frequency: 'Quarterly', status: 'pending', phone: '', notes: 'Review active plans, data controls, age suitability and whether each service is still useful.' },
+    { id: 'lr24', domain: 'webHabits', title: 'Weekly intentional screen review', category: 'Browsing habits', owner: 'Family', provider: 'Device wellbeing reports', reference: 'Weekly review', amount: 0, dueDate: '2026-08-09', frequency: 'Weekly', status: 'active', phone: '', notes: 'Notice time, purpose and interruptions; agree one small change without surveillance.' },
+    { id: 'lr25', domain: 'outings', title: 'Plan one family outing', category: 'Family outing', owner: 'Family', provider: '', reference: 'Monthly choice', amount: 0, dueDate: '2026-08-30', frequency: 'Monthly', status: 'planning', phone: '', notes: 'Choose together, set a budget and include travel time.' }
   ];
 
   function ensure() {
