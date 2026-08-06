@@ -198,6 +198,14 @@ test('every declared offline textbook section is a real local PDF', async ({ pag
   }
 });
 
+test('GitHub Pages streams bundled textbooks from the Divine Nest source repository', async ({ page }) => {
+  await page.goto(app);
+  const source = await page.evaluate(() => HM.views.textbookAsset('assets/textbooks/class-7/gecu1/gecu101.pdf', 'shishyan.github.io'));
+  const localSource = await page.evaluate(() => HM.views.textbookAsset('assets/textbooks/class-7/gecu1/gecu101.pdf', '127.0.0.1'));
+  expect(source).toBe('https://raw.githubusercontent.com/shishyan/Our-Divine-Nest/main/assets/textbooks/class-7/gecu1/gecu101.pdf');
+  expect(localSource).toBe('assets/textbooks/class-7/gecu1/gecu101.pdf');
+});
+
 test('every real book chapter and JEE unit has a rich specialist teaching record', async ({ page }) => {
   await page.goto(`${app}#/study/curriculum`);
   const coverage = await page.evaluate(() => {

@@ -92,15 +92,16 @@
     levt1: { '01': 'The Third Level', '02': 'The Tiger King', '03': 'Journey to the End of the Earth', '04': 'The Enemy', '05': 'On the Face of It', '06': 'Memories of Childhood', ps: 'Prelims' },
     lecs1: { '01': 'Exception Handling in Python', '02': 'File Handling in Python', '03': 'Stack', '04': 'Queue', '05': 'Sorting', '06': 'Searching', '07': 'Understanding Data', '08': 'Database Concepts', '09': 'Structured Query Language', '10': 'Computer Networks', '11': 'Data Communication', '12': 'Security Aspects', '13': 'Project Based Learning', ps: 'Prelims' }
   };
+  const textbookAsset = (path, hostname = location.hostname) => hostname === 'shishyan.github.io' ? `https://raw.githubusercontent.com/shishyan/Our-Divine-Nest/main/${path}` : path;
   textbookCatalog.forEach(book => {
     if (!book.code) return;
     const nested = book.code === 'lefl1' ? '/lefl1dd' : '';
     const gradeFolder = book.grade === 7 ? 'class-7' : 'class-12';
-    book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: bundledBookTitles[book.code][part], url: `assets/textbooks/${gradeFolder}/${book.code}${nested}/${book.code}${part}.pdf`, order: index + 1 }));
+    book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: bundledBookTitles[book.code][part], url: textbookAsset(`assets/textbooks/${gradeFolder}/${book.code}${nested}/${book.code}${part}.pdf`), order: index + 1 }));
   });
   textbookCatalog.find(book => book.id === 'g7-tamil').pdfFiles = [
     ['அமுதத் தமிழ்', 11], ['அணிநிழல் காடு', 35], ['நாடு அதை நாடு', 61], ['அறிவியல் ஆக்கம்', 85], ['ஓதுவது ஒழியேல்', 109], ['கலைவண்ணம்', 131], ['நயத்தகு நாகரிகம்', 157], ['ஒப்புரவு ஒழுகு', 177], ['மானுடம் வெல்லும்', 201]
-  ].map(([label, page], index) => ({ key: `tamil-unit-${index + 1}`, label, page, url: 'assets/textbooks/class-7/tamil/tamil7-cbse-complete.pdf', order: index + 1 }));
+  ].map(([label, page], index) => ({ key: `tamil-unit-${index + 1}`, label, page, url: textbookAsset('assets/textbooks/class-7/tamil/tamil7-cbse-complete.pdf'), order: index + 1 }));
 
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
@@ -1273,6 +1274,7 @@
     settingsGroups,
     natureBackgrounds,
     textbookCatalog,
+    textbookAsset,
     chapterWorkspace,
     lessonById: lessonId => curriculumLessonById(academicContext(), lessonId),
     titles,
