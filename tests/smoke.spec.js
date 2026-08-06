@@ -198,6 +198,14 @@ test('every declared offline textbook section is a real local PDF', async ({ pag
   }
 });
 
+test('GitHub Pages streams bundled textbooks from the Divine Nest source repository', async ({ page }) => {
+  await page.goto(app);
+  const source = await page.evaluate(() => HM.views.textbookAsset('assets/textbooks/class-7/gecu1/gecu101.pdf', 'shishyan.github.io'));
+  const localSource = await page.evaluate(() => HM.views.textbookAsset('assets/textbooks/class-7/gecu1/gecu101.pdf', '127.0.0.1'));
+  expect(source).toBe('https://raw.githubusercontent.com/shishyan/Our-Divine-Nest/main/assets/textbooks/class-7/gecu1/gecu101.pdf');
+  expect(localSource).toBe('assets/textbooks/class-7/gecu1/gecu101.pdf');
+});
+
 test('every real book chapter and JEE unit has a rich specialist teaching record', async ({ page }) => {
   await page.goto(`${app}#/study/curriculum`);
   const coverage = await page.evaluate(() => {
@@ -298,6 +306,10 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('#chapterWorkspace')).toBeVisible();
   await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(7);
   await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
+  await expect(page.locator('.app-header')).toBeVisible();
+  await expect(page.locator('#educationHeaderTabs [data-learning-subject="Physics"]')).toBeVisible();
+  const shellWidths = await page.evaluate(() => ({ configured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar')), chapter: document.querySelector('.chapter-workspace-sidebar').getBoundingClientRect().width }));
+  expect(shellWidths.chapter).toBe(shellWidths.configured);
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
   await page.locator('[data-chapter-stage-toggle="understand"]').click();
   await expect(page.locator('.chapter-workspace-status')).toContainText('2/7');
@@ -309,11 +321,12 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   const viewportUse = await page.evaluate(() => {
     const workspace = document.querySelector('#chapterWorkspace').getBoundingClientRect();
     const pdf = document.querySelector('.chapter-book-panel iframe').getBoundingClientRect();
-    return { workspaceWidth: workspace.width, workspaceHeight: workspace.height, pdfWidth: pdf.width, pdfHeight: pdf.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
+    const sidebarWidth = document.querySelector('.chapter-workspace-sidebar').getBoundingClientRect().width;
+    return { workspaceWidth: workspace.width, workspaceHeight: workspace.height, sidebarWidth, pdfWidth: pdf.width, pdfHeight: pdf.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
   });
   expect(viewportUse.workspaceWidth).toBe(viewportUse.viewportWidth);
   expect(viewportUse.workspaceHeight).toBe(viewportUse.viewportHeight);
-  expect(viewportUse.pdfWidth / viewportUse.viewportWidth).toBeGreaterThanOrEqual(.89);
+  expect(Math.abs(viewportUse.pdfWidth - (viewportUse.viewportWidth - viewportUse.sidebarWidth))).toBeLessThan(2);
   expect(viewportUse.pdfHeight / viewportUse.viewportHeight).toBeGreaterThanOrEqual(.9);
   await page.locator('[data-chapter-workspace-tab="practice"]').click();
   await expect(page.locator('.chapter-guided-practice')).toContainText('Why B is correct');
@@ -323,6 +336,9 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.locator('[data-chapter-workspace-tab="progress"]').click();
   await page.locator('[data-chapter-mastery="80"]').click();
   await expect(page.locator('.chapter-mastery-ring')).toContainText('80%');
+  await page.locator('#educationHeaderTabs [data-learning-subject="Chemistry"]').click();
+  await expect(page.locator('#chapterWorkspace')).toBeHidden();
+  await expect(page.locator('.curriculum-journey-list')).toBeVisible();
 });
 
 test('Genius Mind provides subject and chapter-specific recall guidance', async ({ page }) => {
