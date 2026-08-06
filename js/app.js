@@ -39,6 +39,21 @@
 
   function go(next) { location.hash = '#/' + next; }
 
+  function renderHomeIdentity() {
+    const name = String(D.state.settings.householdName || 'Lotus Naga Home').trim() || 'Lotus Naga Home';
+    const address = String(D.state.settings.primaryAddress || '32 SSS Jaya Enclave, Kovaipudur, Coimbatore, 641042').trim();
+    const brandName = $('#brandName');
+    const brandAddress = $('#brandAddress');
+    if (brandName) brandName.textContent = name;
+    if (brandAddress) {
+      brandAddress.textContent = address;
+      brandAddress.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      brandAddress.title = `Open ${address} in maps`;
+      brandAddress.hidden = !address;
+    }
+    return name;
+  }
+
   function save(message = 'Saved') {
     try {
       D.save();
@@ -418,10 +433,11 @@
       D.save();
     }
     renderNav();
-    const title = V.titles[route] || ['Today', 'Our Divine Nest'];
+    const homeName = renderHomeIdentity();
+    const title = V.titles[route] || ['Today', homeName];
     $('#breadcrumb').textContent = settingsSection() ? 'Settings' : V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
-    document.title = title[0] + ' - Our Divine Nest';
+    document.title = title[0] + ' - ' + homeName;
     $('#content').dataset.view = route;
     $('#content').innerHTML = V.render(route);
     placeEducationMasterControls();
@@ -996,7 +1012,61 @@
       .replace(/\b\d{6,}\b/g, number => `...${number.slice(-4)}`)
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 260);
+      .slice(0, 600);
+  }
+
+  function decodeGmailPart(data) {
+    if (!data) return '';
+    try {
+      const base64 = String(data).replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+      const bytes = Uint8Array.from(atob(padded), character => character.charCodeAt(0));
+      return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    } catch { return ''; }
+  }
+
+  function gmailMessageText(payload) {
+    const plain = [];
+    const html = [];
+    const visit = part => {
+      if (!part) return;
+      const value = decodeGmailPart(part.body?.data);
+      if (value && part.mimeType === 'text/plain') plain.push(value);
+      else if (value && part.mimeType === 'text/html') html.push(value);
+      (part.parts || []).forEach(visit);
+    };
+    visit(payload);
+    const source = plain.join('\n') || html.join('\n');
+    if (!source) return '';
+    if (plain.length) return source.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').slice(0, 20000);
+    const documentHtml = new DOMParser().parseFromString(source, 'text/html');
+    documentHtml.querySelectorAll('script, style, svg, noscript').forEach(node => node.remove());
+    return String(documentHtml.body?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20000);
+  }
+
+  function essentialMessageSummary(text, category) {
+    const cleaned = String(text || '').replace(/\r/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
+    if (!cleaned) return '';
+    const categoryWords = {
+      bills: /(?:₹|rs\.?|inr|paid|due|debit|credit|invoice|receipt|renew|premium|transaction)/i,
+      school: /(?:school|class|exam|test|assignment|homework|submit|result|attendance|fee|meeting|holiday)/i,
+      travel: /(?:pnr|flight|train|bus|hotel|booking|depart|arriv|check-in|journey|trip)/i,
+      health: /(?:appointment|doctor|hospital|clinic|lab|medicine|pharmacy|health|consult)/i,
+      deliveries: /(?:order|delivery|dispatch|ship|courier|tracking)/i,
+      government: /(?:aadhaar|passport|tax|pan|certificate|challan|municipal|government)/i,
+      home: /(?:service|repair|maintenance|technician|electricity|water|gas|property)/i
+    }[category] || /./;
+    const sentences = cleaned.split(/(?<=[.!?])\s+|\n+/).map(value => value.trim()).filter(value => value.length > 12 && value.length < 420);
+    const selected = [...sentences.filter(value => categoryWords.test(value)), ...sentences].filter((value, index, all) => all.indexOf(value) === index).slice(0, 4);
+    return safeMessageSummary(selected.join(' '));
+  }
+
+  function messageTransactionType(text) {
+    const value = String(text || '');
+    if (/\b(refund(?:ed)?|cashback|amount credited|credit received)\b/i.test(value)) return 'credit';
+    if (/\b(payment due|amount due|outstanding|pay by|due date|renewal due|premium due)\b/i.test(value) && !/\b(paid|payment successful|debited)\b/i.test(value)) return 'due';
+    if (/\b(paid|payment successful|payment received|debited|spent|purchase|receipt|order confirmed|booking confirmed|transaction successful|charged)\b/i.test(value)) return 'expense';
+    return 'notice';
   }
 
   function normalizeMessageDate(value) {
@@ -1070,7 +1140,7 @@
 
   function classifyIntegrationText(text, allowedCategories = integrationCategories) {
     const rules = [
-      ['bills', /\b(bill|invoice|payment due|due date|electricity|broadband|postpaid|recharge|premium|renewal|debited|credited|upi|transaction)\b/i],
+      ['bills', /\b(bill|invoice|receipt|payment|paid|purchase|due date|electricity|broadband|postpaid|recharge|premium|renewal|debited|credited|upi|transaction|autopay|statement|refund)\b/i],
       ['travel', /\b(pnr|flight|train|bus|boarding|departure|arrival|booking|trip|journey|hotel|cab)\b/i],
       ['school', /\b(school|class|exam|test|assignment|homework|fee|parent meeting|ptm|student|teacher)\b/i],
       ['health', /\b(doctor|hospital|clinic|appointment|lab|pharmacy|medicine|vaccin|health|consultation)\b/i],
@@ -1104,7 +1174,7 @@
       const summary = safeMessageSummary(item.summary || item.snippet || '');
       const receivedAt = normalizeMessageDate(item.receivedAt || item.startAt || item.date);
       const decision = integrationDecision(category, `${title} ${summary}`, receivedAt);
-      const suggestion = { id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), status: 'pending', trusted: autoApplyTrusted, ...decision, processedAt: new Date().toISOString() };
+      const suggestion = { id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), transactionType: ['expense','credit','due','notice'].includes(item.transactionType) ? item.transactionType : 'notice', status: 'pending', trusted: autoApplyTrusted, ...decision, processedAt: new Date().toISOString() };
       D.state.syncSuggestions.push(suggestion);
       result.added += 1;
       if (autoApplyTrusted && materializeIntegrationSuggestion(suggestion)) result.applied += 1;
@@ -1137,7 +1207,14 @@
     if (!item || item.status !== 'pending') return false;
     const date = String(item.actionDate || item.receivedAt || new Date().toISOString()).slice(0, 10);
     const eventTime = item.actionDate ? `${date}T09:00` : String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
-    if (item.source === 'calendar' || item.category === 'school') {
+    if (item.source === 'gmail' && item.transactionType === 'expense' && item.amount > 0) {
+      const expenseDomain = { bills: 'housing', travel: 'family', school: 'learning', health: 'health', deliveries: 'food', home: 'housing', government: 'family' }[item.category] || 'family';
+      D.state.expenses.push({ id: D.uid('x'), title: item.title, category: categoryLabels[item.category], domain: expenseDomain, amount: item.amount, date: String(item.receivedAt || date).slice(0, 10), source: 'Gmail', sourceRef: item.sourceRef, notes: item.summary });
+    } else if (item.category === 'school' && /\b(assignment|homework|project|worksheet|submission|submit)\b/i.test(`${item.title} ${item.summary}`)) {
+      const profile = D.state.academicProfiles.find(entry => entry.personId === item.personId) || D.state.academicProfiles[0];
+      const subject = profile?.subjects.find(value => new RegExp(`\\b${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(`${item.title} ${item.summary}`)) || profile?.subjects[0] || 'General';
+      D.state.academicDeliverables.push({ id: D.uid('ad'), studentId: profile?.personId || item.personId, title: item.title, subject, type: 'Assignment', dueDate: date, teacher: item.sender || 'School', status: 'todo', weight: 0, notes: item.summary, sourceRef: item.sourceRef });
+    } else if (item.source === 'calendar' || item.category === 'school') {
       D.state.events.push({ id: D.uid('e'), context: item.category === 'school' ? 'study' : 'home', title: item.title, category: item.category === 'school' ? 'School' : categoryLabels[item.category], startAt: eventTime, venue: item.sender || '', notes: item.summary });
     } else if (['bills', 'travel', 'health', 'government'].includes(item.category)) {
       const domain = { bills: 'bills', travel: 'travel', health: 'appointments', government: 'documents' }[item.category];
@@ -1246,14 +1323,21 @@
       let account = (sync.accounts || []).find(item => item.slotId === slotId);
       if (!account) { account = { slotId }; sync.accounts ||= []; sync.accounts.push(account); }
       Object.assign(account, { personId, email, consent: true, status: 'connected', lastSync: account.lastSync || '' });
-      save(`${email} connected for this browser session`);
+      const suggestions = [...await readGoogleCalendar(account, googleSessions.get(slotId), sync), ...await readGoogleGmail(account, googleSessions.get(slotId), sync)];
+      const result = mergeSuggestions(suggestions, 'gmail', true);
+      account.lastSync = new Date().toISOString();
+      save(`${email} synced; ${result.applied} household updates added`);
       render();
     } catch (error) { toast(`Google connection failed: ${error.message}`); }
     finally { if (button?.isConnected) button.disabled = false; }
   }
 
   function amountFromText(text) {
-    const match = String(text || '').match(/(?:rs\.?|inr|\u20b9)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const value = String(text || '');
+    const priority = value.match(/(?:paid|debited|spent|charged|purchase|total|amount|invoice|receipt)[^\d₹]{0,35}(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const prefix = priority || value.match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const suffix = value.match(/([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rupees?)\b/i);
+    const match = prefix || suffix;
     return match ? +match[1].replace(/,/g, '') || 0 : 0;
   }
 
@@ -1272,27 +1356,27 @@
 
   async function readGoogleGmail(account, session, sync) {
     if (!sync.emailAnalysis) return [];
-    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice payment receipt renewal premium insurance booking travel ticket itinerary school exam assignment fee result attendance appointment hospital pharmacy medicine delivery order shipment government aadhaar passport tax property service maintenance subscription}`;
+    const query = `newer_than:${+sync.lookbackDays || 30}d -in:spam -in:trash`;
     const references = [];
     let pageToken = '';
     do {
-      const listParams = new URLSearchParams({ q: query, maxResults: '50' });
+      const listParams = new URLSearchParams({ q: query, maxResults: '100' });
       if (pageToken) listParams.set('pageToken', pageToken);
       const page = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
       references.push(...(page.messages || []));
       pageToken = page.nextPageToken || '';
-    } while (pageToken && references.length < 100);
-    const messages = await mapWithConcurrency(references.slice(0, 100), 3, async reference => {
-      const params = new URLSearchParams({ format: 'metadata' });
-      ['Subject', 'From', 'Date'].forEach(name => params.append('metadataHeaders', name));
+    } while (pageToken && references.length < 500);
+    const messages = await mapWithConcurrency(references.slice(0, 500), 3, async reference => {
+      const params = new URLSearchParams({ format: 'full' });
       return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
     });
     return messages.map(message => {
       const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name).toLowerCase(), header.value]));
-      const text = `${headers.subject || ''} ${message.snippet || ''}`;
+      const body = gmailMessageText(message.payload);
+      const text = `${headers.subject || ''} ${message.snippet || ''} ${body}`.slice(0, 24000);
       const category = classifyIntegrationText(text, sync.categories || integrationCategories);
       if (!category || /\b(otp|one[ -]?time password|verification code)\b/i.test(text)) return null;
-      return { source: 'gmail', sourceRef: `${account.email}:${message.id}`, personId: account.personId, category, title: headers.subject || categoryLabels[category], summary: message.snippet || '', sender: headers.from || account.email, receivedAt: message.internalDate ? new Date(+message.internalDate).toISOString() : headers.date || '', amount: amountFromText(text) };
+      return { source: 'gmail', sourceRef: `${account.email}:${message.id}`, personId: account.personId, category, title: headers.subject || categoryLabels[category], summary: essentialMessageSummary(body || message.snippet || '', category), sender: headers.from || account.email, receivedAt: message.internalDate ? new Date(+message.internalDate).toISOString() : headers.date || '', amount: amountFromText(text), transactionType: messageTransactionType(text) };
     }).filter(Boolean);
   }
 
@@ -1615,19 +1699,20 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
-  function refreshChapterWorkspace(lessonId, section = 'understand') {
+  function refreshChapterWorkspace(lessonId, section = 'summary') {
     const workspace = $('#chapterWorkspace');
+    const lesson = V.lessonById(lessonId);
     activeChapterWorkspace = { lessonId, section };
     $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, section);
     $('#nav').classList.add('chapter-nav-mode');
     $('#nav').innerHTML = V.chapterWorkspaceNavigation(lessonId, section);
-    $('#workspaceMenuLabel').innerHTML = '<span><small>Education</small><b>Chapter journey</b></span><i data-lucide="route"></i>';
+    $('#workspaceMenuLabel').innerHTML = `<span><small>Education</small><b>${D.esc(lesson?.subject || 'Subject')} chapters</b></span><i data-lucide="list-tree"></i>`;
     workspace.hidden = false;
     document.body.classList.add('chapter-workspace-open');
     refreshIcons();
   }
 
-  function openChapterWorkspace(lessonId, section = 'understand') {
+  function openChapterWorkspace(lessonId, section = 'summary') {
     refreshChapterWorkspace(lessonId, section);
     $('#nav .chapter-workspace-close')?.focus();
   }
@@ -1673,12 +1758,17 @@
     }
     const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
     if (chapterWorkspace) {
-      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'understand');
+      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'summary');
       return;
     }
     const chapterCard = event.target.closest('[data-chapter-card]');
     if (chapterCard && !event.target.closest('select, option, input, label, button, a')) {
-      openChapterWorkspace(chapterCard.dataset.chapterCard, 'understand');
+      openChapterWorkspace(chapterCard.dataset.chapterCard, 'summary');
+      return;
+    }
+    const chapterSwitch = event.target.closest('[data-chapter-switch]');
+    if (chapterSwitch) {
+      refreshChapterWorkspace(chapterSwitch.dataset.chapterSwitch, activeChapterWorkspace?.section || 'summary');
       return;
     }
     const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
@@ -1694,10 +1784,14 @@
       D.state.settings.chapterJourney ||= {};
       D.state.settings.chapterJourney[learnerId] ||= {};
       D.state.settings.chapterJourney[learnerId][lessonId] ||= {};
-      D.state.settings.chapterJourney[learnerId][lessonId][stage] = !D.state.settings.chapterJourney[learnerId][lessonId][stage];
+      const journey = D.state.settings.chapterJourney[learnerId][lessonId];
+      if (stage === 'summary') {
+        journey.summary = !(journey.summary || journey.exam);
+        journey.exam = false;
+      } else journey[stage] = !journey[stage];
       D.save();
       refreshChapterWorkspace(lessonId, stage);
-      toast(D.state.settings.chapterJourney[learnerId][lessonId][stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
+      toast(journey[stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
       return;
     }
     const chapterMastery = event.target.closest('[data-chapter-mastery]');
@@ -1784,6 +1878,7 @@
         D.save();
       }
       render();
+      requestAnimationFrame(() => document.querySelector(`[data-mcq-question-card="${questionIndex}"]`)?.scrollIntoView({ block: 'center' }));
       return;
     }
     const mcqNext = event.target.closest('[data-mcq-next]');
@@ -2098,7 +2193,7 @@
   });
   document.addEventListener('keydown', event => {
     const chapterCard = event.target.closest?.('[data-chapter-card]');
-    if (chapterCard && event.target === chapterCard && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openChapterWorkspace(chapterCard.dataset.chapterCard, 'understand'); return; }
+    if (chapterCard && event.target === chapterCard && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openChapterWorkspace(chapterCard.dataset.chapterCard, 'summary'); return; }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }
     if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }

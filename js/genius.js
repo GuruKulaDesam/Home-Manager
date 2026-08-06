@@ -280,10 +280,31 @@
   function questions(item) {
     const notes = teacherNotes(item);
     const authored = quizRules.find(([pattern]) => pattern.test(item.title))?.[1];
+    const rich = notes.rich;
+    const rotateQuestion = (stem, correct, distractors, why, offset) => {
+      const options = [correct, ...distractors].slice(0, 4);
+      while (options.length < 4) options.push(`This does not follow from the governing ideas of ${item.title}.`);
+      const turns = offset % options.length;
+      return { stem, options: [...options.slice(turns), ...options.slice(0, turns)], answer: (options.length - turns) % options.length, why };
+    };
+    const firstConcept = notes.concepts[0] || item.title;
+    const secondConcept = notes.concepts[1] || 'the second governing relationship';
+    const thirdConcept = notes.concepts[2] || 'the boundary conditions';
+    const must = notes.must.length ? notes.must : [`Explain ${firstConcept} and its conditions.`];
+    const traps = rich?.traps?.length ? rich.traps : (playbooks[item.subject] || playbooks.English).traps;
+    const tips = rich?.examTips?.length ? rich.examTips : notes.exam;
+    const worked = rich?.worked || { problem: notes.example[0], steps: [notes.example[1]], answer: notes.example[1], check: `Check the conclusion against ${firstConcept}.` };
+    const guided = rich?.guidedQuestions || [];
     const generated = [
-      { stem: `Which statement belongs on the essential exam sheet for “${item.title}”?`, options: [notes.must[0], 'A final answer is enough; conditions never matter.', 'Every related quantity can be treated as a scalar.', 'The safest method is to memorise one example unchanged.'], answer: 0, why: `${notes.must[0]} This is a governing idea; the other choices discard conditions or reasoning.` },
-      { stem: `What is the best first move when a new ${item.title} question looks unfamiliar?`, options: [`Identify the known information and connect it to ${notes.concepts[0]}.`, 'Start calculating with the longest available formula.', 'Look at the answer before representing the problem.', 'Ignore the conditions and match keywords only.'], answer: 0, why: `Representation comes before calculation. The first useful anchor here is ${notes.concepts[0]}.` }
+      rotateQuestion(`Which statement belongs on the essential exam sheet for “${item.title}”?`, must[0], ['Conditions never affect the method or conclusion.', 'A memorised final answer is sufficient evidence.', 'Every related quantity or claim may be treated identically.'], `${must[0]} It is a governing idea; the alternatives discard conditions, evidence or reasoning.`, 1),
+      rotateQuestion(`What is the strongest first move when an unfamiliar ${item.title} question appears?`, `Identify the given evidence and connect it to ${firstConcept}.`, ['Start with the longest formula or paragraph available.', 'Match one keyword and ignore the remaining conditions.', 'Read the answer choices before representing the problem.'], `Representation comes before execution. ${firstConcept} supplies the first useful anchor.`, 2),
+      rotateQuestion(`Which relationship should organise a complete explanation of ${item.title}?`, `${firstConcept} → ${secondConcept} → ${thirdConcept}`, [`${thirdConcept} only; the earlier relationships are irrelevant`, 'Definition → unsupported conclusion → memorised example', 'Answer choice → guessed rule → omitted condition'], `The chapter becomes transferable when ${firstConcept}, ${secondConcept} and ${thirdConcept} are connected rather than memorised separately.`, 3),
+      rotateQuestion('Which approach is the trap that most needs correction?', traps[0], [tips[0], `State the relevant condition for ${firstConcept}.`, 'Check the result against the question and its units or evidence.'], `${traps[0]} This breaks the reasoning chain; the other options are productive checks or exam habits.`, 0),
+      rotateQuestion(`For this representative problem—${worked.problem}—what should happen first?`, worked.steps[0], ['Copy the final answer before choosing a method.', 'Discard the given conditions and use a familiar template.', 'Round every value or judgement before establishing the setup.'], `${worked.steps[0]} The first step fixes the representation on which the remaining solution depends.`, 1),
+      rotateQuestion('Which conclusion or result belongs to that worked reasoning?', worked.answer, [must[1] || `Only ${secondConcept} matters.`, traps[1] || 'The most tempting shortcut is always valid.', 'No conclusion can be checked from the given information.'], `${worked.answer} This follows from the stated sequence of steps, not from answer-pattern guessing.`, 2),
+      rotateQuestion('Which check gives the best evidence that the solution or interpretation is sound?', worked.check, ['It resembles an example seen before.', 'It produced a long calculation or paragraph.', 'The final option was selected quickly.'], `${worked.check} A strong check tests meaning, conditions or scale—not familiarity or length.`, 3)
     ];
+    if (guided[0]) generated[6] = rotateQuestion(guided[0].question, guided[0].answer, [traps[0], tips[0], must[0]], guided[0].explanation, 3);
     return [authored, ...generated].filter(Boolean);
   }
   function guide(item) {
