@@ -1727,6 +1727,9 @@ button.primary:hover, .primary:hover { background: var(--accent-hover); border-c
 .chapter-progress-line > span { width: min(210px, 45vw); height: 5px; overflow: hidden; border-radius: 9px; background: #edf0f3; }
 .chapter-progress-line i { height: 100%; display: block; background: var(--chapter-color); }
 .chapter-progress-line b { color: var(--muted); font-size: 9px; }
+.chapter-seven-track { display: flex; gap: 4px; margin-top: 7px; }
+.chapter-seven-track i { width: 18px; height: 4px; border-radius: 999px; background: #e4e7ec; }
+.chapter-seven-track i.complete { background: var(--chapter-color); }
 .chapter-journey-actions { display: flex; align-items: center; gap: 5px; }
 .chapter-journey-actions button { width: 36px; height: 36px; display: grid; place-items: center; padding: 0; color: var(--chapter-color); border: 1px solid color-mix(in srgb, var(--chapter-color) 20%, white); background: var(--chapter-soft); }
 .chapter-journey-actions button svg { width: 16px; }
@@ -1749,13 +1752,21 @@ body.chapter-workspace-open > #notificationPanel { visibility: hidden; pointer-e
 .chapter-workspace-head .context-badge { color: #fff; border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.09); }
 .chapter-workspace-tabs { min-width: 0; display: grid; gap: 4px; padding: 12px 0; overflow-y: auto; }
 .chapter-workspace-tabs button { --workspace-tab: #a78bfa; width: 100%; min-height: 43px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; color: rgba(255,255,255,.72); border: 1px solid transparent; background: transparent; text-align: left; white-space: normal; font-size: 10px; font-weight: 800; }
-.chapter-workspace-tabs button:nth-child(1) { --workspace-tab: #a78bfa; }.chapter-workspace-tabs button:nth-child(2) { --workspace-tab: #2dd4bf; }.chapter-workspace-tabs button:nth-child(3) { --workspace-tab: #fb923c; }.chapter-workspace-tabs button:nth-child(4) { --workspace-tab: #fb7185; }.chapter-workspace-tabs button:nth-child(5) { --workspace-tab: #fbbf24; }.chapter-workspace-tabs button:nth-child(6) { --workspace-tab: #4ade80; }
+.chapter-workspace-tabs button:nth-child(1) { --workspace-tab: #a78bfa; }.chapter-workspace-tabs button:nth-child(2) { --workspace-tab: #2dd4bf; }.chapter-workspace-tabs button:nth-child(3) { --workspace-tab: #fbbf24; }.chapter-workspace-tabs button:nth-child(4) { --workspace-tab: #fb923c; }.chapter-workspace-tabs button:nth-child(5) { --workspace-tab: #fb7185; }.chapter-workspace-tabs button:nth-child(6) { --workspace-tab: #facc15; }.chapter-workspace-tabs button:nth-child(7) { --workspace-tab: #4ade80; }
 .chapter-workspace-tabs button svg { width: 17px; flex: 0 0 17px; color: var(--workspace-tab); }
+.chapter-workspace-tabs button > svg:last-child { width: 12px; flex-basis: 12px; margin-left: auto; color: rgba(255,255,255,.25); }
+.chapter-workspace-tabs button.complete > svg:last-child { color: #4ade80; }
 .chapter-workspace-tabs button:hover { color: #fff; background: rgba(255,255,255,.07); }
 .chapter-workspace-tabs button.active { color: #fff; border-color: color-mix(in srgb, var(--workspace-tab) 35%, transparent); background: color-mix(in srgb, var(--workspace-tab) 17%, transparent); box-shadow: inset 3px 0 var(--workspace-tab); }
-.chapter-workspace-tabs button.active svg { color: currentColor; }
-.chapter-workspace-status { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding: 10px 7px; color: rgba(255,255,255,.62); border-top: 1px solid rgba(255,255,255,.13); font-size: 9px; }
-.chapter-workspace-status b { color: #4ade80; font-size: 14px; }
+.chapter-workspace-tabs button.active > svg:first-child { color: currentColor; }
+.chapter-stage-toggle, .chapter-stage-rule { width: 100%; min-height: 40px; display: flex; align-items: center; gap: 6px; padding: 7px; color: #e9d5ff; border: 1px solid rgba(167,139,250,.25); border-radius: 8px; background: rgba(167,139,250,.10); font-size: 8px; font-weight: 800; text-align: left; }
+.chapter-stage-toggle svg, .chapter-stage-rule svg { width: 14px; flex: 0 0 14px; }
+.chapter-stage-toggle.complete { color: #bbf7d0; border-color: rgba(74,222,128,.28); background: rgba(74,222,128,.10); }
+.chapter-stage-rule { color: rgba(255,255,255,.58); border-color: rgba(255,255,255,.10); background: rgba(255,255,255,.04); font-weight: 650; }
+.chapter-workspace-status { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; padding: 9px 4px; color: rgba(255,255,255,.62); border-top: 1px solid rgba(255,255,255,.13); font-size: 8px; }
+.chapter-workspace-status > span { display: grid; justify-items: center; gap: 1px; }
+.chapter-workspace-status small { color: inherit; font-size: 7px; text-transform: uppercase; }
+.chapter-workspace-status b { color: #4ade80; font-size: 13px; }
 .chapter-workspace-close { width: 100%; min-height: 40px; display: flex; align-items: center; gap: 7px; margin-top: 2px; padding: 7px 9px; color: #fff; border-color: rgba(255,255,255,.16); background: rgba(255,255,255,.08); font-size: 10px; font-weight: 800; }
 .chapter-workspace-content { min-height: 0; padding: 16px; overflow-y: auto; }
 .chapter-workspace-content.chapter-section-book { padding: 0; overflow: hidden; }
@@ -1808,6 +1819,12 @@ body.chapter-workspace-open > #notificationPanel { visibility: hidden; pointer-e
 .mastery-choices { display: grid; gap: 6px; margin-top: 14px; }
 .mastery-choices button { display: grid; grid-template-columns: 52px 1fr; gap: 8px; padding: 10px; text-align: left; background: #fff; }
 .mastery-choices button.active { color: #fff; border-color: #7c3aed; background: #7c3aed; }
+.chapter-seven-status { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(7, minmax(82px, 1fr)); gap: 6px; margin-top: 4px; }
+.chapter-seven-status article { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; padding: 9px; color: var(--muted); border: 1px solid var(--line); border-radius: 9px; background: #fff; }
+.chapter-seven-status article > span { grid-row: 1 / 4; color: #98a2b3; }.chapter-seven-status article > span svg { width: 17px; }
+.chapter-seven-status small { font-size: 8px; }.chapter-seven-status b { overflow: hidden; color: var(--ink-soft); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }.chapter-seven-status em { font-size: 8px; font-style: normal; }
+.chapter-seven-status article.complete { color: #15803d; border-color: rgba(21,128,61,.22); background: #f0fdf4; }.chapter-seven-status article.complete > span { color: #15803d; }
+.chapter-note-panel { max-width: 900px; margin: 20px auto; }
 .chapter-empty-state { display: grid; place-content: center; justify-items: center; min-height: 55vh; text-align: center; }
 
 /* Colour is functional: navigation families are easy to scan without a blue wash. */
@@ -1828,11 +1845,13 @@ body.chapter-workspace-open > #notificationPanel { visibility: hidden; pointer-e
   .chapter-workspace-head { padding: 3px 2px 9px; }.chapter-workspace-head h1 { margin-top: 6px; font-size: 10px; }.chapter-workspace-head p { font-size: 7px; }
   .chapter-workspace-tabs { gap: 2px; padding-block: 7px; }.chapter-workspace-tabs button { min-height: 48px; flex-direction: column; justify-content: center; gap: 3px; padding: 4px 2px; text-align: center; font-size: 7px; }
   .chapter-workspace-tabs button.active { box-shadow: inset 2px 0 var(--workspace-tab); }
-  .chapter-workspace-status { display: grid; justify-content: center; gap: 1px; padding: 6px 2px; text-align: center; }.chapter-workspace-status b { font-size: 11px; }
+  .chapter-stage-toggle, .chapter-stage-rule { min-height: 36px; justify-content: center; padding: 4px 2px; font-size: 0; }.chapter-stage-toggle svg, .chapter-stage-rule svg { width: 14px; }
+  .chapter-workspace-status { gap: 1px; padding: 6px 0; text-align: center; }.chapter-workspace-status b { font-size: 10px; }.chapter-workspace-status small { font-size: 6px; }
   .chapter-workspace-close { justify-content: center; padding: 5px 2px; font-size: 7px; }.chapter-workspace-close svg { width: 14px; }
   .chapter-workspace-content { padding: 10px; }
   .chapter-learning-grid, .chapter-exam-panel { grid-template-columns: 1fr; }.chapter-big-idea { grid-column: auto; }
   .chapter-deep-concepts { grid-template-columns: 1fr; }
   .chapter-concept-flow { justify-content: flex-start; }.guided-options { grid-template-columns: 1fr; }
-  .chapter-progress-panel { grid-template-columns: 1fr; justify-items: center; gap: 18px; }.chapter-progress-panel > div:last-child { width: 100%; }
+  .chapter-progress-panel { grid-template-columns: 1fr; justify-items: center; gap: 18px; }.chapter-progress-panel > div:nth-child(2) { width: 100%; }
+  .chapter-seven-status { grid-template-columns: repeat(2, minmax(0,1fr)); width: 100%; }
 }

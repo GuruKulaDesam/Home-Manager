@@ -284,6 +284,7 @@ test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page 
     await expect(page.locator('.curriculum-journey-row').first()).toContainText('%');
     await expect(page.locator('.chapter-primary-action').first()).toContainText('Open chapter');
     await expect(page.locator('.curriculum-journey-row').first().locator('[data-chapter-workspace]')).toHaveCount(1);
+    await expect(page.locator('.curriculum-journey-row').first().locator('.chapter-seven-track i')).toHaveCount(7);
   }
 });
 
@@ -292,9 +293,11 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
   await page.locator('.chapter-primary-action').first().click();
   await expect(page.locator('#chapterWorkspace')).toBeVisible();
-  await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(6);
+  await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(7);
   await expect(page.locator('#sidebar')).toHaveCSS('visibility', 'hidden');
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
+  await page.locator('[data-chapter-stage-toggle="understand"]').click();
+  await expect(page.locator('.chapter-workspace-status')).toContainText('2/7');
   const verticalTabs = await page.locator('.chapter-workspace-tabs button').evaluateAll(buttons => buttons.slice(0, 2).map(button => button.getBoundingClientRect()).map(rect => ({ x: rect.x, y: rect.y })));
   expect(verticalTabs[1].y).toBeGreaterThan(verticalTabs[0].y);
   expect(Math.abs(verticalTabs[1].x - verticalTabs[0].x)).toBeLessThan(2);

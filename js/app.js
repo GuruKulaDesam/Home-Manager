@@ -1598,7 +1598,7 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
-  function openChapterWorkspace(lessonId, section = 'learn') {
+  function openChapterWorkspace(lessonId, section = 'understand') {
     const workspace = $('#chapterWorkspace');
     $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, section);
     workspace.hidden = false;
@@ -1645,13 +1645,28 @@
     }
     const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
     if (chapterWorkspace) {
-      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'learn');
+      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'understand');
       return;
     }
     const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
     if (chapterTab) {
       $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(chapterTab.dataset.lesson, chapterTab.dataset.chapterWorkspaceTab);
       refreshIcons();
+      return;
+    }
+    const chapterStage = event.target.closest('[data-chapter-stage-toggle]');
+    if (chapterStage) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterStage.dataset.lesson;
+      const stage = chapterStage.dataset.chapterStageToggle;
+      D.state.settings.chapterJourney ||= {};
+      D.state.settings.chapterJourney[learnerId] ||= {};
+      D.state.settings.chapterJourney[learnerId][lessonId] ||= {};
+      D.state.settings.chapterJourney[learnerId][lessonId][stage] = !D.state.settings.chapterJourney[learnerId][lessonId][stage];
+      D.save();
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, stage);
+      refreshIcons();
+      toast(D.state.settings.chapterJourney[learnerId][lessonId][stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
       return;
     }
     const chapterMastery = event.target.closest('[data-chapter-mastery]');
@@ -1707,6 +1722,10 @@
       D.state.settings.geniusNotes[learnerId] ||= {};
       D.state.settings.geniusNotes[learnerId][geniusNoteSave.dataset.geniusNoteSave] = textarea?.value.trim() || '';
       save('Chapter note saved');
+      if (document.body.classList.contains('chapter-workspace-open')) {
+        $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(geniusNoteSave.dataset.geniusNoteSave, 'notes');
+        refreshIcons();
+      }
       return;
     }
     const practiceLesson = event.target.closest('[data-practice-lesson]');
