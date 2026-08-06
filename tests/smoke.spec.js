@@ -182,9 +182,11 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
 
 test('every declared offline textbook section is a real local PDF', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
-  const sections = await page.evaluate(() => HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).map(part => ({ book: book.title, url: part.url }))));
+  const sections = await page.evaluate(() => HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).map(part => ({ book: book.title, label: part.label, url: part.url }))));
   expect(sections).toHaveLength(165);
   for (const section of sections) {
+    expect(section.label, `${section.book} needs its published section title`).toBeTruthy();
+    expect(section.label, `${section.book} still has a generic chapter label`).not.toMatch(/^Chapter \d+$/);
     const file = path.join(process.cwd(), ...section.url.split('/'));
     expect(fs.existsSync(file), `${section.book}: ${section.url}`).toBe(true);
     const descriptor = fs.openSync(file, 'r');
@@ -196,9 +198,9 @@ test('every declared offline textbook section is a real local PDF', async ({ pag
   }
 });
 
-test('Education uses one compact command bar with persistent subject tabs and exam tracks', async ({ page }) => {
+test('Education uses the page header for learners, subjects and exam tracks', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
-  await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
+  await expect(page.locator('.learning-command-bar')).toBeHidden();
   await expect(page.locator('.learning-track-tabs')).toContainText('CBSE');
   await expect(page.locator('.learning-track-tabs')).toContainText('JEE Main');
   await expect(page.locator('#headerKpis')).toBeHidden();
@@ -206,23 +208,26 @@ test('Education uses one compact command bar with persistent subject tabs and ex
   await expect(page.locator('.subject-tabs')).toContainText('Physics');
   await expect(page.locator('#nav')).toContainText('Education');
   await expect(page.locator('#educationHeaderTabs')).toBeVisible();
-  const barLayout = await page.evaluate(() => {
-    const barElement = document.querySelector('.learning-command-bar');
-    const bar = barElement.getBoundingClientRect();
-    const subjects = document.querySelector('.subject-tabs').getBoundingClientRect();
-    const activities = document.querySelector('.learning-section-tabs').getBoundingClientRect();
-    return { height: bar.height, subjectTop: subjects.top, activityTop: activities.top, scrollWidth: barElement.scrollWidth, clientWidth: barElement.clientWidth };
+  await expect(page.locator('#educationHeaderTabs .learner-switch button')).toHaveCount(2);
+  await expect(page.locator('.education-command-row .learner-switch')).toHaveCount(0);
+  const headerLayout = await page.evaluate(() => {
+    const header = document.querySelector('.topbar').getBoundingClientRect();
+    const learners = document.querySelector('#educationHeaderTabs .learner-bar').getBoundingClientRect();
+    return { headerHeight: header.height, learnersTop: learners.top, headerTop: header.top };
   });
-  expect(barLayout.height).toBeLessThanOrEqual(52);
-  expect(barLayout.subjectTop).toBeLessThan(barLayout.activityTop);
-  expect(barLayout.scrollWidth).toBeLessThanOrEqual(barLayout.clientWidth + 1);
+  expect(headerLayout.headerHeight).toBeLessThanOrEqual(58);
+  expect(headerLayout.learnersTop).toBeGreaterThanOrEqual(headerLayout.headerTop);
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
   await expect(page.locator('[data-book-card]')).toHaveCount(1);
-  await expect(page.locator('.book-volume-tabs button')).toHaveCount(2);
+  await expect(page.locator('.book-volume-tabs')).toHaveCount(0);
+  await expect(page.locator('.inline-book-volume-head')).toHaveCount(2);
+  await expect(page.locator('.inline-book-volume-head').nth(0)).toContainText('Part I');
+  await expect(page.locator('.inline-book-volume-head').nth(1)).toContainText('Part II');
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph101\.pdf/);
   await expect(page.locator('.inline-book-chapters')).toBeVisible();
   await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(10);
-  await page.locator('[data-inline-book-chapter]').filter({ hasText: 'Chapter 4' }).click();
+  await expect(page.locator('.inline-book-chapters')).toContainText('Electric Charges and Fields');
+  await page.locator('[data-inline-book-chapter]').filter({ hasText: 'Moving Charges and Magnetism' }).click();
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph104\.pdf#view=FitH/);
   await expect(page.locator('[data-book-card="g12-physics-1"] [data-book-state]')).toContainText('Bundled offline');
   await page.locator('[data-book-open="g12-physics-1"]').click();
@@ -230,6 +235,9 @@ test('Education uses one compact command bar with persistent subject tabs and ex
   await expect(page.locator('#bookPart option')).toHaveCount(10);
   await expect(page.locator('#bookFrame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph1\/leph104\.pdf/);
   await page.locator('#bookReaderDialog [data-close-dialog]').click();
+  await page.locator('.inline-book-volume-head').filter({ hasText: 'Part II' }).click();
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/leph2\/leph201\.pdf/);
+  await expect(page.locator('.inline-book-chapters')).toContainText('Ray Optics and Optical Instruments');
   await page.reload();
   await expect(page.getByRole('button', { name: 'Physics', exact: true })).toHaveAttribute('aria-pressed', 'true');
 
@@ -240,23 +248,39 @@ test('Education uses one compact command bar with persistent subject tabs and ex
   await expect(page.locator('.exam-readiness-grid')).toContainText('JEE Main readiness');
 });
 
-test('Class 12 and Class 7 learning tabs keep books and curriculum focused', async ({ page }) => {
+test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page }) => {
   for (const learnerId of ['p3', 'p4']) {
     await page.goto(`${app}#/study/books`);
     await page.locator(`[data-learner="${learnerId}"]`).click();
-    await expect(page.locator('.learning-section-tabs button')).toHaveCount(7);
+    await expect(page.locator('.learning-section-tabs button')).toHaveCount(4);
     await expect(page.locator('.inline-book-reader')).toBeVisible();
     await expect(page.locator('.curriculum-summary')).toBeHidden();
     await expect(page.locator('.reflection-grid')).toHaveCount(0);
 
     await page.goto(`${app}#/study/curriculum`);
-    await expect(page.locator('.textbook-section')).toBeHidden();
-    await expect(page.locator('.curriculum-summary')).toBeVisible();
-
-    await page.locator('.learning-section-tabs [data-route="study/assignments"]').click();
-    await expect(page).toHaveURL(/#\/study\/assignments$/);
-    await expect(page.locator('.learning-integrations')).not.toHaveAttribute('open', '');
+    await expect(page.locator('.curriculum-journey-list')).toBeVisible();
+    await expect(page.locator('.curriculum-journey-row').first()).toContainText('%');
+    await expect(page.locator('.chapter-primary-action').first()).toContainText('Study chapter');
   }
+});
+
+test('one full-screen chapter workspace connects teaching, book, practice, assignments and progress', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  await page.getByRole('button', { name: 'Physics', exact: true }).click();
+  await page.locator('.chapter-primary-action').first().click();
+  await expect(page.locator('#chapterWorkspaceDialog')).toBeVisible();
+  await expect(page.locator('.chapter-workspace-tabs button')).toHaveCount(6);
+  await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
+  await page.locator('[data-chapter-workspace-tab="book"]').click();
+  await expect(page.locator('.chapter-book-panel iframe')).toHaveAttribute('src', /leph101\.pdf/);
+  await page.locator('[data-chapter-workspace-tab="practice"]').click();
+  await expect(page.locator('.chapter-guided-practice')).toContainText('Why B is correct');
+  await expect(page.locator('.chapter-guided-practice input, .chapter-guided-practice textarea')).toHaveCount(0);
+  await page.locator('[data-chapter-workspace-tab="assignments"]').click();
+  await expect(page.locator('.chapter-assignment-panel')).toContainText('Assignments connected to this subject');
+  await page.locator('[data-chapter-workspace-tab="progress"]').click();
+  await page.locator('[data-chapter-mastery="80"]').click();
+  await expect(page.locator('.chapter-mastery-ring')).toContainText('80%');
 });
 
 test('Genius Mind provides subject and chapter-specific recall guidance', async ({ page }) => {
@@ -279,7 +303,7 @@ test('Genius Mind provides subject and chapter-specific recall guidance', async 
   await expect(page.locator('.genius-section-tabs')).not.toContainText('Test Yourself');
   await page.locator('[data-practice-open]').last().click();
   await expect(page.locator('.mcq-workspace')).toBeVisible();
-  await expect(page.locator('.practice-recall li')).toHaveCount(3);
+  await expect(page.locator('.practice-recall')).toContainText('ANSWER GUIDE');
 
   await page.goto(`${app}#/study/genius`);
   await page.locator('[data-learner="p4"]').click();
@@ -321,8 +345,9 @@ test('Genius Mind adds a chapter-wise JEE Main workflow for Class 12 PCM', async
 
 test('Practice and assessments are one chapter-based MCQ workspace', async ({ page }) => {
   await page.goto(`${app}#/study/practice`);
-  await expect(page.locator('.learning-section-tabs')).toContainText('Practice & Tests');
+  await expect(page.locator('.learning-section-tabs')).toContainText('Learning Path');
   await expect(page.locator('.mcq-question')).toContainText('no inverse function');
+  await expect(page.locator('.mcq-workspace textarea')).toHaveCount(0);
   await page.locator('[data-mcq-answer="0"]').click();
   await expect(page.locator('.mcq-feedback')).toContainText('Repair this exact idea');
   await expect(page.locator('.mcq-option.correct')).toContainText('not one-to-one');

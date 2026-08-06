@@ -363,16 +363,20 @@
   function placeEducationMasterControls() {
     const slot = $('#educationHeaderTabs');
     if (!slot) return;
+    const contentLearners = $('#content .learner-bar');
     const contentControls = $('#content .education-master-controls');
     const controls = contentControls || slot.querySelector('.education-master-controls');
+    const learners = contentLearners || slot.querySelector('.learner-bar');
     const row = $('#content .education-command-row');
     const useHeader = route.startsWith('study/') && window.innerWidth >= 1100;
     slot.hidden = !useHeader;
-    if (!controls) { slot.replaceChildren(); return; }
+    if (!controls && !learners) { slot.replaceChildren(); return; }
     if (useHeader) {
-      if (contentControls) slot.replaceChildren(controls);
+      slot.replaceChildren(...[learners, controls].filter(Boolean));
     } else if (row) {
-      row.insertBefore(controls, row.querySelector('.learning-section-tabs'));
+      const sectionTabs = row.querySelector('.learning-section-tabs');
+      if (learners) row.insertBefore(learners, sectionTabs);
+      if (controls) row.insertBefore(controls, sectionTabs);
       slot.replaceChildren();
     }
   }
@@ -1610,6 +1614,41 @@
         button.classList.toggle('active', active);
         button.setAttribute('aria-current', active ? 'page' : 'false');
       });
+      return;
+    }
+    const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
+    if (chapterWorkspace) {
+      const dialog = $('#chapterWorkspaceDialog');
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, chapterWorkspace.dataset.chapterSection || 'learn');
+      if (!dialog.open) dialog.showModal();
+      refreshIcons();
+      return;
+    }
+    const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
+    if (chapterTab) {
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(chapterTab.dataset.lesson, chapterTab.dataset.chapterWorkspaceTab);
+      refreshIcons();
+      return;
+    }
+    const chapterMastery = event.target.closest('[data-chapter-mastery]');
+    if (chapterMastery) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterMastery.dataset.lesson;
+      const mastery = +chapterMastery.dataset.chapterMastery;
+      const status = mastery >= 80 ? 'mastered' : mastery ? 'learning' : 'not-started';
+      if (chapterMastery.dataset.jee === 'true') {
+        D.state.settings.chapterMastery ||= {};
+        D.state.settings.chapterMastery[learnerId] ||= {};
+        D.state.settings.chapterMastery[learnerId][lessonId] = { mastery, status };
+      } else {
+        const lesson = D.state.syllabusItems.find(item => item.id === lessonId && item.studentId === learnerId);
+        if (lesson) { lesson.mastery = mastery; lesson.status = status; }
+      }
+      D.save();
+      render();
+      $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, 'progress');
+      refreshIcons();
+      toast('Chapter progress updated');
       return;
     }
     const inlineBook = event.target.closest('[data-inline-book]');
