@@ -281,6 +281,9 @@ test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page 
 
     await page.goto(`${app}#/study/curriculum`);
     await expect(page.locator('.curriculum-journey-list')).toBeVisible();
+    await expect(page.locator('.curriculum-progress-strip')).toContainText('Stages complete');
+    await expect(page.locator('.curriculum-progress-strip')).toContainText('Exam ready');
+    await expect(page.locator('.curriculum-progress-strip')).not.toContainText('One complete learning journey');
     await expect(page.locator('.curriculum-journey-row').first()).toContainText('%');
     await expect(page.locator('.chapter-primary-action').first()).toContainText('Open chapter');
     await expect(page.locator('.curriculum-journey-row').first().locator('[data-chapter-workspace]')).toHaveCount(1);

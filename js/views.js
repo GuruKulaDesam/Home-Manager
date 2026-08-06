@@ -877,15 +877,19 @@
     D.state.settings.chapterMastery ||= {};
     D.state.settings.chapterMastery[c.activeId] ||= {};
     const masteryFor = lesson => D.state.settings.chapterMastery[c.activeId][lesson.id]?.mastery ?? (+lesson.mastery || 0);
-    const completed = lessons.filter(lesson => chapterTracking(c, lesson).complete === chapterStages.length).length;
-    const average = averageOf(lessons.map(lesson => chapterTracking(c, lesson).percent));
+    const tracking = lessons.map(lesson => chapterTracking(c, lesson));
+    const completedStages = tracking.reduce((total, item) => total + item.complete, 0);
+    const examReady = tracking.filter(item => item.status.exam).length;
+    const mastered = tracking.filter(item => item.status.progress).length;
+    const nextLesson = lessons.find((lesson, index) => tracking[index].complete < chapterStages.length);
     const rows = lessons.map((lesson, index) => {
       const mastery = masteryFor(lesson);
       const tracking = chapterTracking(c, lesson);
       const tracker = `<div class="chapter-seven-track" aria-label="${tracking.complete} of 7 chapter stages complete">${chapterStages.map(([key, label]) => `<i class="${tracking.status[key] ? 'complete' : ''}" title="${e(label)}" aria-label="${e(label)} ${tracking.status[key] ? 'complete' : 'not complete'}"></i>`).join('')}</div>`;
       return `<article class="curriculum-journey-row chapter-tone-${index % 6 + 1}" data-filter-row><span class="chapter-sequence">${String(index + 1).padStart(2, '0')}</span><div class="chapter-journey-copy"><span class="section-kicker">${e(lesson.term)} · ${e(lesson.competency)}</span><h2>${e(lesson.title)}</h2><div class="chapter-progress-line"><span><i style="width:${tracking.percent}%"></i></span><b>${tracking.complete}/7 complete · ${mastery}% mastery</b></div>${tracker}</div><div class="chapter-journey-actions"><button type="button" class="chapter-primary-action" data-chapter-workspace="${e(lesson.id)}">${icon('arrow-up-right')}<span>Open chapter</span></button></div></article>`;
     }).join('');
-    return `${learnerBar(c)}<section class="curriculum-journey-hero"><div><span class="section-kicker">${jeeMode ? 'JEE MAIN' : `CBSE · CLASS ${e(c.profile.grade)}`}</span><h2>One chapter. One complete learning journey.</h2><p>Open a chapter to learn the idea, read the exact book section, understand every practice answer, see assignments and record mastery—without moving across seven pages.</p></div><div class="journey-score"><strong>${average}%</strong><span>${completed}/${lessons.length} secure</span></div></section><div class="curriculum-journey-tools"><label>${icon('search')}<input data-filter aria-label="Find a chapter" placeholder="Find a chapter"></label><span>${lessons.length} chapters in ${e(c.selectedSubject)}</span></div><section class="curriculum-journey-list">${rows || '<p class="empty">Choose a curriculum subject to see its chapters.</p>'}</section>`;
+    const metrics = [[lessons.length, 'Chapters'], [`${completedStages}/${lessons.length * chapterStages.length}`, 'Stages complete'], [examReady, 'Exam ready'], [mastered, 'Mastered']];
+    return `${learnerBar(c)}<section class="curriculum-progress-strip" aria-label="${e(c.selectedSubject)} chapter progress"><header><span class="section-kicker">${jeeMode ? 'JEE MAIN' : `CBSE · CLASS ${e(c.profile.grade)}`} · ${e(c.selectedSubject)}</span><b>${nextLesson ? `Next: ${e(nextLesson.title)}` : 'All chapter stages complete'}</b><small>${nextLesson ? `${chapterStages.length - chapterTracking(c, nextLesson).complete} stages remain in this chapter` : 'Choose a chapter to revise mastery'}</small></header><div class="curriculum-strip-metrics">${metrics.map(([value, label], index) => `<article class="metric-tone-${index + 1}"><strong>${value}</strong><span>${label}</span></article>`).join('')}</div></section><div class="curriculum-journey-tools"><label>${icon('search')}<input data-filter aria-label="Find a chapter" placeholder="Find a chapter"></label><span>${lessons.length} chapters · 7 tracked outcomes each</span></div><section class="curriculum-journey-list">${rows || '<p class="empty">Choose a curriculum subject to see its chapters.</p>'}</section>`;
   }
 
   function chapterWorkspace(lessonId, section = 'understand') {
