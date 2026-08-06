@@ -1692,20 +1692,23 @@ button.primary:hover, .primary:hover { background: #4338ca; border-color: #4338c
 .chapter-journey-actions button svg { width: 16px; }
 .chapter-journey-actions .chapter-primary-action { width: auto; display: flex; gap: 6px; padding: 0 12px; color: #fff; border-color: var(--chapter-color); background: var(--chapter-color); }
 
-.chapter-workspace-dialog { width: calc(100vw - 28px); max-width: 1500px; height: calc(100vh - 28px); max-height: none; padding: 0; overflow: hidden; color: var(--ink); border: 1px solid rgba(15,23,42,.14); border-radius: 18px; background: #fbfaf8; box-shadow: 0 30px 90px rgba(36,24,55,.28); }
+.chapter-workspace-dialog { position: fixed; inset: 0; width: 100vw; max-width: none; height: 100vh; max-height: none; margin: 0; padding: 0; overflow: hidden; color: var(--ink); border: 0; border-radius: 0; background: #fbfaf8; box-shadow: none; }
 .chapter-workspace-dialog::backdrop { background: rgba(34,24,44,.56); backdrop-filter: blur(7px); }
-#chapterWorkspaceBody { height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
-.chapter-workspace-head { min-height: 82px; display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 13px 18px; color: #fff; background: linear-gradient(118deg, #5b21b6, #7c3aed 46%, #e05a2a); }
-.chapter-workspace-head h1 { margin: 4px 0 1px; font-size: clamp(20px, 2.2vw, 31px); }
-.chapter-workspace-head p { margin: 0; color: rgba(255,255,255,.75); }
+#chapterWorkspaceBody { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.chapter-workspace-top { min-width: 0; min-height: 58px; display: flex; align-items: center; gap: 10px; padding: 6px 10px; color: #fff; background: linear-gradient(112deg, #5b21b6, #7c3aed 48%, #e05a2a); }
+.chapter-workspace-head { min-width: 230px; max-width: 390px; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 1px 7px; flex: 0 1 auto; padding: 0; }
+.chapter-workspace-head h1 { margin: 0; overflow: hidden; font-size: clamp(15px, 1.35vw, 20px); line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+.chapter-workspace-head p { grid-column: 2; margin: 0; color: rgba(255,255,255,.72); font-size: 9px; }
 .chapter-workspace-head .context-badge { color: #fff; border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.13); }
-.chapter-workspace-head > button { width: 39px; height: 39px; display: grid; place-items: center; color: #fff; border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.12); }
-.chapter-workspace-tabs { display: flex; gap: 4px; padding: 7px 12px; overflow-x: auto; border-bottom: 1px solid var(--line); background: #fff; }
-.chapter-workspace-tabs button { min-height: 39px; display: flex; align-items: center; gap: 6px; padding: 6px 12px; color: var(--ink-soft); border-color: transparent; background: transparent; white-space: nowrap; font-size: 10px; font-weight: 800; }
+.chapter-workspace-tabs { min-width: 0; display: flex; justify-content: flex-end; gap: 3px; flex: 1; padding: 0; overflow-x: auto; border: 0; background: transparent; }
+.chapter-workspace-tabs button { min-height: 38px; display: flex; align-items: center; gap: 5px; padding: 5px 10px; color: rgba(255,255,255,.88); border-color: transparent; background: rgba(255,255,255,.08); white-space: nowrap; font-size: 9px; font-weight: 800; }
 .chapter-workspace-tabs button:nth-child(1) svg { color: #7c3aed; }.chapter-workspace-tabs button:nth-child(2) svg { color: #0f766e; }.chapter-workspace-tabs button:nth-child(3) svg { color: #ea580c; }.chapter-workspace-tabs button:nth-child(4) svg { color: #c2415b; }.chapter-workspace-tabs button:nth-child(5) svg { color: #c47a0a; }.chapter-workspace-tabs button:nth-child(6) svg { color: #15803d; }
-.chapter-workspace-tabs button.active { color: #fff; background: #6d28d9; }
-.chapter-workspace-tabs button.active svg { color: #fff; }
+.chapter-workspace-tabs button svg, .chapter-workspace-tabs button:nth-child(n) svg { color: currentColor; }
+.chapter-workspace-tabs button.active { color: #5b21b6; background: #fff; }
+.chapter-workspace-tabs button.active svg { color: currentColor; }
+.chapter-workspace-close { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 38px; color: #fff; border-color: rgba(255,255,255,.32); background: rgba(255,255,255,.10); }
 .chapter-workspace-content { min-height: 0; padding: 16px; overflow-y: auto; }
+.chapter-workspace-content.chapter-section-book { padding: 0; overflow: hidden; }
 .chapter-learning-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .chapter-learning-grid > article, .chapter-exam-panel > article { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .chapter-learning-grid h2, .chapter-learning-grid h3, .chapter-exam-panel h2 { margin: 5px 0 10px; }
@@ -1717,10 +1720,7 @@ button.primary:hover, .primary:hover { background: #4338ca; border-color: #4338c
 .chapter-guru { display: flex; gap: 10px; padding: 13px; border-left: 4px solid #ea580c; border-radius: 8px; background: #fff7ed; }
 .chapter-guru > span { color: #ea580c; }
 .chapter-guru p { margin: 3px 0 0; }
-.chapter-book-panel { height: 100%; display: grid; grid-template-rows: auto minmax(520px, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
-.chapter-book-panel header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
-.chapter-book-panel h2, .chapter-book-panel p { margin: 1px 0; }
-.chapter-book-panel a { display: flex; align-items: center; gap: 6px; text-decoration: none; }
+.chapter-book-panel { width: 100%; height: 100%; overflow: hidden; background: #fff; }
 .chapter-book-panel iframe { width: 100%; height: 100%; border: 0; }
 .chapter-guided-practice { max-width: 1100px; margin: 0 auto; }
 .chapter-guided-practice > header { margin-bottom: 14px; }
@@ -1767,8 +1767,8 @@ button.primary:hover, .primary:hover { background: #4338ca; border-color: #4338c
 @media (max-width: 800px) {
   .curriculum-journey-hero { padding: 14px; }.journey-score { width: 70px; height: 70px; flex-basis: 70px; }
   .curriculum-journey-row { grid-template-columns: 38px minmax(0,1fr); }.chapter-journey-actions { grid-column: 1 / -1; justify-content: flex-end; }.chapter-journey-actions .chapter-primary-action { margin-right: auto; }
-  .chapter-workspace-dialog { width: 100vw; height: 100vh; margin: 0; border: 0; border-radius: 0; }
-  .chapter-workspace-head { min-height: 72px; }.chapter-workspace-tabs { padding: 5px; }.chapter-workspace-tabs button { padding: 5px 8px; }
+  .chapter-workspace-top { align-items: stretch; flex-wrap: wrap; gap: 4px; padding: 5px; }
+  .chapter-workspace-head { width: calc(100% - 43px); max-width: none; min-height: 41px; }.chapter-workspace-tabs { order: 3; width: 100%; justify-content: flex-start; }.chapter-workspace-tabs button { padding: 5px 8px; }
   .chapter-learning-grid, .chapter-exam-panel { grid-template-columns: 1fr; }.chapter-big-idea { grid-column: auto; }
   .chapter-concept-flow { justify-content: flex-start; }.guided-options { grid-template-columns: 1fr; }
   .chapter-progress-panel { grid-template-columns: 1fr; justify-items: center; gap: 18px; }.chapter-progress-panel > div:last-child { width: 100%; }

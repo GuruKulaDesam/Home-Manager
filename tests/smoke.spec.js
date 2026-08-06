@@ -273,6 +273,14 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('.chapter-learning-grid')).toContainText('THE IDEA THAT UNLOCKS THIS CHAPTER');
   await page.locator('[data-chapter-workspace-tab="book"]').click();
   await expect(page.locator('.chapter-book-panel iframe')).toHaveAttribute('src', /leph101\.pdf/);
+  const viewportUse = await page.evaluate(() => {
+    const dialog = document.querySelector('#chapterWorkspaceDialog').getBoundingClientRect();
+    const pdf = document.querySelector('.chapter-book-panel iframe').getBoundingClientRect();
+    return { dialogWidth: dialog.width, dialogHeight: dialog.height, pdfHeight: pdf.height, viewportWidth: innerWidth, viewportHeight: innerHeight };
+  });
+  expect(viewportUse.dialogWidth).toBe(viewportUse.viewportWidth);
+  expect(viewportUse.dialogHeight).toBe(viewportUse.viewportHeight);
+  expect(viewportUse.pdfHeight / viewportUse.viewportHeight).toBeGreaterThanOrEqual(.9);
   await page.locator('[data-chapter-workspace-tab="practice"]').click();
   await expect(page.locator('.chapter-guided-practice')).toContainText('Why B is correct');
   await expect(page.locator('.chapter-guided-practice input, .chapter-guided-practice textarea')).toHaveCount(0);
