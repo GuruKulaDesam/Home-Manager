@@ -1624,6 +1624,7 @@ button.primary:hover, .primary:hover { background: #4338ca; border-color: #4338c
 .genius-concept-lessons article > span { width: 26px; height: 26px; display: grid; place-items: center; color: #fff; border-radius: 8px; background: #4f46e5; font-size: 10px; font-weight: 900; }
 .genius-concept-lessons h3 { margin: 1px 0 6px; color: #1e293b; font-size: 13px; line-height: 1.3; }
 .genius-concept-lessons p { margin: 0; color: #64748b; font-size: 11px; line-height: 1.55; }
+.genius-concept-lessons .concept-visual { display: block; margin-top: 7px; padding: 6px 8px; color: #0f766e; border-radius: 7px; background: #ecfdf5; font-size: 9px; font-weight: 750; }
 .practice-recall { margin-top: 18px; padding: 15px; border: 1px solid rgba(79,70,229,.14); border-radius: 13px; background: #f8faff; }
 .practice-recall h3, .practice-recall p { margin: 4px 0; }
 .practice-recall ol { display: grid; gap: 7px; margin: 12px 0 0; padding-left: 22px; }
@@ -1720,6 +1721,12 @@ button.primary:hover, .primary:hover { background: #4338ca; border-color: #4338c
 .chapter-guru { display: flex; gap: 10px; padding: 13px; border-left: 4px solid #ea580c; border-radius: 8px; background: #fff7ed; }
 .chapter-guru > span { color: #ea580c; }
 .chapter-guru p { margin: 3px 0 0; }
+.chapter-deep-concepts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+.chapter-deep-concepts article { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 8px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.chapter-deep-concepts article > span { width: 27px; height: 27px; display: grid; place-items: center; color: #fff; border-radius: 8px; background: #7c3aed; font-size: 10px; font-weight: 900; }
+.chapter-deep-concepts h3, .chapter-deep-concepts p { margin: 0 0 4px; }
+.chapter-deep-concepts small { display: block; padding: 6px 8px; color: #0f766e; border-radius: 6px; background: #ecfdf5; font-weight: 750; }
+.worked-check { padding: 8px; color: #0f766e; border-radius: 8px; background: #ecfdf5; }
 .chapter-book-panel { width: 100%; height: 100%; overflow: hidden; background: #fff; }
 .chapter-book-panel iframe { width: 100%; height: 100%; border: 0; }
 .chapter-guided-practice { max-width: 1100px; margin: 0 auto; }
@@ -1770,6 +1777,7 @@ button.primary:hover, .primary:hover { background: #4338ca; border-color: #4338c
   .chapter-workspace-top { align-items: stretch; flex-wrap: wrap; gap: 4px; padding: 5px; }
   .chapter-workspace-head { width: calc(100% - 43px); max-width: none; min-height: 41px; }.chapter-workspace-tabs { order: 3; width: 100%; justify-content: flex-start; }.chapter-workspace-tabs button { padding: 5px 8px; }
   .chapter-learning-grid, .chapter-exam-panel { grid-template-columns: 1fr; }.chapter-big-idea { grid-column: auto; }
+  .chapter-deep-concepts { grid-template-columns: 1fr; }
   .chapter-concept-flow { justify-content: flex-start; }.guided-options { grid-template-columns: 1fr; }
   .chapter-progress-panel { grid-template-columns: 1fr; justify-items: center; gap: 18px; }.chapter-progress-panel > div:last-child { width: 100%; }
 }

@@ -183,7 +183,7 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
 test('every declared offline textbook section is a real local PDF', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   const sections = await page.evaluate(() => HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).map(part => ({ book: book.title, label: part.label, url: part.url }))));
-  expect(sections).toHaveLength(165);
+  expect(sections).toHaveLength(173);
   for (const section of sections) {
     expect(section.label, `${section.book} needs its published section title`).toBeTruthy();
     expect(section.label, `${section.book} still has a generic chapter label`).not.toMatch(/^Chapter \d+$/);
@@ -196,6 +196,27 @@ test('every declared offline textbook section is a real local PDF', async ({ pag
     expect(header.toString(), `${section.book}: ${section.url}`).toBe('%PDF');
     expect(fs.statSync(file).size, `${section.book}: ${section.url}`).toBeGreaterThan(10_000);
   }
+});
+
+test('every real book chapter and JEE unit has a rich specialist teaching record', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  const coverage = await page.evaluate(() => {
+    const content = HM.geniusContent;
+    const ignored = /^(prelims|answers|appendix|complete book|प्रारंभिक पृष्ठ)/i;
+    const bookKeys = HM.views.textbookCatalog.flatMap(book => (book.pdfFiles || []).filter(part => !ignored.test(part.label)).map(part => `${book.subject}::${part.label}`));
+    const jeeKeys = HM.genius.jeeSyllabus.map(unit => `${unit.subject}::${unit.title}`);
+    const invalid = value => !value?.insight || value.concepts?.length !== 3 || !value.worked?.steps?.length || value.guidedQuestions?.length !== 2;
+    return {
+      bookCount: bookKeys.length,
+      jeeCount: jeeKeys.length,
+      missingBooks: bookKeys.filter(key => invalid(content.school[key])),
+      missingJee: jeeKeys.filter(key => invalid(content.jee[key]))
+    };
+  });
+  expect(coverage.bookCount).toBe(147);
+  expect(coverage.jeeCount).toBe(54);
+  expect(coverage.missingBooks).toEqual([]);
+  expect(coverage.missingJee).toEqual([]);
 });
 
 test('Education uses the page header for learners, subjects and exam tracks', async ({ page }) => {
@@ -316,9 +337,9 @@ test('Genius Mind provides subject and chapter-specific recall guidance', async 
   await page.goto(`${app}#/study/genius`);
   await page.locator('[data-learner="p4"]').click();
   await page.getByRole('button', { name: 'Science', exact: true }).click();
-  await expect(page.locator('.genius-lessons > button')).toHaveCount(10);
-  await page.getByRole('button', { name: /Heat and temperature/ }).click();
-  await expect(page.locator('.genius-teach-panel')).toContainText('Science explains an observation');
+  await expect(page.locator('.genius-lessons > button')).toHaveCount(12);
+  await page.getByRole('button', { name: /Heat Transfer in Nature/ }).click();
+  await expect(page.locator('.genius-teach-panel')).toContainText('heat');
 });
 
 test('Genius Mind adds a chapter-wise JEE Main workflow for Class 12 PCM', async ({ page }) => {
@@ -328,10 +349,10 @@ test('Genius Mind adds a chapter-wise JEE Main workflow for Class 12 PCM', async
   await expect(page.locator('.subject-master-tabs button')).toHaveCount(3);
   await expect(page.locator('.genius-lessons > button')).toHaveCount(20);
   await page.locator('[data-genius-lesson]').filter({ hasText: 'Kinematics' }).click();
-  await expect(page.locator('.genius-teach-panel')).toContainText('Motion Graphs and Relative Motion');
-  await expect(page.locator('.genius-concept-lessons')).toContainText('slope gives velocity');
+  await expect(page.locator('.genius-teach-panel')).toContainText('Motion Graphs');
+  await expect(page.locator('.genius-concept-lessons')).toContainText('Slope of x–t is v');
   await expect(page.locator('.genius-teach-panel')).toContainText('KEY CONCEPTS');
-  await expect(page.locator('.teacher-talk')).toContainText('Position, velocity and acceleration are three different stories');
+  await expect(page.locator('.teacher-talk')).toContainText('Choose the frame before chasing the object');
   await expect(page.locator('.genius-teacher-hero')).toHaveCount(0);
   await page.locator('[data-genius-section="worked"]').click();
   await expect(page.locator('#content')).toContainText('TIMED DRILL');
@@ -348,7 +369,7 @@ test('Genius Mind adds a chapter-wise JEE Main workflow for Class 12 PCM', async
   await expect(page.locator('.genius-lessons > button')).toHaveCount(14);
   await page.locator('[data-genius-lesson]').filter({ hasText: 'Complex Numbers' }).click();
   await page.locator('[data-genius-section="understand"]').click();
-  await expect(page.locator('.genius-teach-panel')).toContainText('Argand plane');
+  await expect(page.locator('.genius-teach-panel')).toContainText('Argand Geometry');
 });
 
 test('Practice and assessments are one chapter-based MCQ workspace', async ({ page }) => {
@@ -366,15 +387,17 @@ test('Practice and assessments are one chapter-based MCQ workspace', async ({ pa
   await expect(page.locator('.mcq-workspace')).toBeVisible();
 });
 
-test('the supplied unified Class 7 Tamil book is bundled as one real offline PDF', async ({ page }) => {
+test('the supplied unified Class 7 Tamil book exposes its verified units inside one real offline PDF', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await page.locator('[data-learner="p4"]').click();
   await page.getByRole('button', { name: 'Tamil', exact: true }).click();
   await expect(page.locator('#content')).toContainText('Class 7 Tamil — Complete Book');
-  await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(1);
-  await expect(page.locator('.inline-book-chapters')).toContainText('Complete book — 2024 revised edition');
-  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /tamil7-cbse-complete\.pdf/);
-  await expect(page.locator('[data-book-card="g7-tamil"] [data-book-state]')).toContainText('Bundled offline - 1 sections');
+  await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(9);
+  await expect(page.locator('.inline-book-chapters')).toContainText('அமுதத் தமிழ்');
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /tamil7-cbse-complete\.pdf#page=11/);
+  await page.locator('[data-inline-book-chapter]').filter({ hasText: 'மானுடம் வெல்லும்' }).click();
+  await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /tamil7-cbse-complete\.pdf#page=201/);
+  await expect(page.locator('[data-book-card="g7-tamil"] [data-book-state]')).toContainText('Bundled offline - 9 sections');
   await page.locator('[data-book-open="g7-tamil"]').click();
   await expect(page.locator('#bookReaderDialog')).toBeVisible();
   await expect(page.locator('#bookReaderTitle')).toHaveText('Class 7 Tamil — Complete Book');

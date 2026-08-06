@@ -220,10 +220,23 @@
     return guruRules.find(([pattern]) => pattern.test(item.title))?.[1] || `The doorway into ${item.title} is ${note.concepts[0]}. If that relationship is clear enough to explain without vocabulary shortcuts, the remaining details have somewhere logical to attach.`;
   }
 
+  function richChapter(item) {
+    const key = `${item.subject}::${item.title}`;
+    const mode = String(item.id || '').startsWith('jee-') ? 'jee' : 'school';
+    return window.HM.geniusContent?.[mode]?.[key] || window.HM.geniusContent?.school?.[key] || null;
+  }
+
   function teacherNotes(item) {
+    const rich = richChapter(item);
     const match = teacherRules.find(([pattern]) => pattern.test(item.title));
-    const concepts = (conceptRules.find(([pattern]) => pattern.test(item.title)) || [null, fallbackConcepts(item)])[1];
-    const note = match?.[1] || {
+    const concepts = rich ? rich.concepts.map(concept => concept.title) : (conceptRules.find(([pattern]) => pattern.test(item.title)) || [null, fallbackConcepts(item)])[1];
+    const note = rich ? {
+      bigIdea: rich.insight,
+      visual: rich.concepts.map(concept => concept.visual || concept.title),
+      must: rich.mustKnow,
+      example: [rich.worked.problem, `${rich.worked.steps.join(' → ')} Therefore: ${rich.worked.answer}`],
+      exam: rich.examTips
+    } : match?.[1] || {
       bigIdea: `${item.title} is best understood as a connected model: define the parts, show how they interact, then use the model in a new situation.`,
       visual: [concepts[0], concepts[1], concepts[2]],
       must: concepts.map(value => `Explain ${value} with a definition, one example and one boundary case.`),
@@ -234,9 +247,10 @@
       ...note,
       concepts,
       check: [`In one sentence, what is the central idea of ${item.title}?`, `Which of these relationships would you use first: ${concepts.join(' / ')}? Explain why.`, 'What is the most tempting wrong answer or method, and what check exposes it?'],
-      revision: [note.bigIdea, ...note.must].slice(0, 4)
+      revision: [note.bigIdea, ...note.must].slice(0, 4),
+      rich
     };
-    result.wisdom = guruWisdom(item, result);
+    result.wisdom = rich ? `${rich.whyItMatters} Memory hook: ${rich.memoryHook}` : guruWisdom(item, result);
     return result;
   }
 

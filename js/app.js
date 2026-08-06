@@ -197,7 +197,11 @@
       activeBookReader = { book, studentId };
       const profile = D.state.academicProfiles.find(item => item.personId === studentId);
       const progress = readingProgress(bookId, studentId);
-      if (bundled && bundled.some(part => part.url === progress.currentPart)) activeBookUrl = progress.currentPart;
+      const selectedBundledPart = bundled?.find(part => (part.key || part.url) === progress.currentPart || (!part.key && part.url === progress.currentPart)) || bundled?.[0];
+      if (selectedBundledPart) {
+        activeBookUrl = selectedBundledPart.url;
+        if (!progress.currentPart && selectedBundledPart.page) progress.currentPage = selectedBundledPart.page;
+      }
       if (progress.status === 'not-started') progress.status = 'reading';
       progress.lastOpened = new Date().toISOString();
       D.save();
@@ -206,7 +210,7 @@
       $('#bookReaderMeta').textContent = bundled ? `${book.publisher} - official PDFs bundled for offline reading` : `${book.publisher} - ${stored.name} - stored only in this browser`;
       $('#bookPartSection').hidden = !bundled;
       $('#bookPart').innerHTML = bundled ? bundled.map((part, index) => `<option value="${index}">${D.esc(part.label)}</option>`).join('') : '';
-      if (bundled) $('#bookPart').value = String(Math.max(0, bundled.findIndex(part => part.url === activeBookUrl)));
+      if (bundled) $('#bookPart').value = String(Math.max(0, bundled.indexOf(selectedBundledPart)));
       $('#removeBookFile').hidden = Boolean(bundled);
       $('#bookNote').value = '';
       refreshBookReader(true);
@@ -1604,9 +1608,11 @@
     const inlineChapter = event.target.closest('[data-inline-book-chapter]');
     if (inlineChapter) {
       const frame = document.querySelector('[data-inline-book-frame]');
-      if (frame) frame.src = `${inlineChapter.dataset.inlineBookChapter}#view=FitH`;
+      const page = +inlineChapter.dataset.bookPage || 1;
+      if (frame) frame.src = `${inlineChapter.dataset.inlineBookChapter}#${page > 1 ? `page=${page}&` : ''}view=FitH`;
       const progress = readingProgress(inlineChapter.dataset.bookId, D.state.settings.activeLearnerId);
-      progress.currentPart = inlineChapter.dataset.inlineBookChapter;
+      progress.currentPart = inlineChapter.dataset.bookPartKey || inlineChapter.dataset.inlineBookChapter;
+      progress.currentPage = page;
       progress.lastOpened = new Date().toISOString();
       D.save();
       document.querySelectorAll('[data-inline-book-chapter]').forEach(button => {
@@ -1636,7 +1642,7 @@
       const lessonId = chapterMastery.dataset.lesson;
       const mastery = +chapterMastery.dataset.chapterMastery;
       const status = mastery >= 80 ? 'mastered' : mastery ? 'learning' : 'not-started';
-      if (chapterMastery.dataset.jee === 'true') {
+      if (chapterMastery.dataset.jee === 'true' || lessonId.startsWith('book-')) {
         D.state.settings.chapterMastery ||= {};
         D.state.settings.chapterMastery[learnerId] ||= {};
         D.state.settings.chapterMastery[learnerId][lessonId] = { mastery, status };
@@ -1696,7 +1702,7 @@
     const mcqAnswer = event.target.closest('[data-mcq-answer]');
     if (mcqAnswer) {
       const learnerId = D.state.settings.activeLearnerId;
-      const lesson = D.state.syllabusItems.find(item => item.id === mcqAnswer.dataset.lesson);
+      const lesson = V.lessonById(mcqAnswer.dataset.lesson);
       const questions = lesson ? HM.genius.questions(lesson) : [];
       const questionIndex = +mcqAnswer.dataset.question;
       const question = questions[questionIndex];
@@ -1718,7 +1724,7 @@
     const mcqNext = event.target.closest('[data-mcq-next]');
     if (mcqNext) {
       const learnerId = D.state.settings.activeLearnerId;
-      const lesson = D.state.syllabusItems.find(item => item.id === mcqNext.dataset.mcqNext);
+      const lesson = V.lessonById(mcqNext.dataset.mcqNext);
       const progress = D.state.settings.mcqProgress?.[learnerId]?.[mcqNext.dataset.mcqNext];
       if (lesson && progress) {
         const count = HM.genius.questions(lesson).length;
@@ -1887,8 +1893,8 @@
     if (!part) return;
     activeBookUrl = part.url;
     const progress = readingProgress(activeBookReader.book.id, activeBookReader.studentId);
-    progress.currentPart = part.url;
-    progress.currentPage = 1;
+    progress.currentPart = part.key || part.url;
+    progress.currentPage = part.page || 1;
     D.save();
     refreshBookReader(true);
   };

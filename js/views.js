@@ -99,8 +99,8 @@
     book.pdfFiles = bundledBookParts[book.code].map((part, index) => ({ label: bundledBookTitles[book.code][part], url: `assets/textbooks/${gradeFolder}/${book.code}${nested}/${book.code}${part}.pdf`, order: index + 1 }));
   });
   textbookCatalog.find(book => book.id === 'g7-tamil').pdfFiles = [
-    { label: 'Complete book — 2024 revised edition', url: 'assets/textbooks/class-7/tamil/tamil7-cbse-complete.pdf', order: 1 }
-  ];
+    ['அமுதத் தமிழ்', 11], ['அணிநிழல் காடு', 35], ['நாடு அதை நாடு', 61], ['அறிவியல் ஆக்கம்', 85], ['ஓதுவது ஒழியேல்', 109], ['கலைவண்ணம்', 131], ['நயத்தகு நாகரிகம்', 157], ['ஒப்புரவு ஒழுகு', 177], ['மானுடம் வெல்லும்', 201]
+  ].map(([label, page], index) => ({ key: `tamil-unit-${index + 1}`, label, page, url: 'assets/textbooks/class-7/tamil/tamil7-cbse-complete.pdf', order: index + 1 }));
 
   const titles = {
     'global/overview': ['Today', 'Your home command center'],
@@ -691,6 +691,38 @@
     };
   }
 
+  const nonChapterLabels = /^(prelims|answers|appendix|complete book|प्रारंभिक पृष्ठ)/i;
+  function schoolCurriculumLessons(context) {
+    const books = textbookCatalog.filter(book => book.grade === +context.profile.grade && book.subject === context.selectedSubject);
+    return books.flatMap(book => (book.pdfFiles || [])
+      .filter(part => !nonChapterLabels.test(part.label))
+      .map((part, index) => {
+        const saved = (D.state.syllabusItems || []).find(item => item.studentId === context.activeId && item.subject === book.subject && String(item.title).toLowerCase() === String(part.label).toLowerCase());
+        return {
+          id: `book-${book.id}-${part.order || index + 1}`,
+          studentId: context.activeId,
+          subject: book.subject,
+          title: part.label,
+          term: book.title,
+          competency: saved?.competency || 'CBSE chapter',
+          status: saved?.status || 'not-started',
+          mastery: +saved?.mastery || 0,
+          bookId: book.id,
+          partUrl: part.url,
+          partKey: part.key || part.url,
+          partPage: part.page || 1
+        };
+      }));
+  }
+
+  function curriculumLessons(context, jeeMode = false) {
+    return jeeMode ? HM.genius.jeeSyllabus.filter(item => item.subject === context.selectedSubject) : schoolCurriculumLessons(context);
+  }
+
+  function curriculumLessonById(context, lessonId) {
+    return HM.genius.jeeSyllabus.find(item => item.id === lessonId) || schoolCurriculumLessons(context).find(item => item.id === lessonId) || (D.state.syllabusItems || []).find(item => item.id === lessonId && item.studentId === context.activeId);
+  }
+
   const averageOf = values => values.length ? Math.round(values.reduce((total, value) => total + (+value || 0), 0) / values.length) : 0;
   const assessmentPercent = item => Math.round(((+item.score || 0) + (+item.practicalScore || 0)) / Math.max(1, (+item.maxScore || 0) + (+item.practicalMax || 0)) * 100);
   const practicePercent = items => Math.round(items.reduce((sumValue, item) => sumValue + (+item.correct || 0), 0) / Math.max(1, items.reduce((sumValue, item) => sumValue + (+item.attempted || 0), 0)) * 100);
@@ -814,10 +846,10 @@
   function curriculumJourney() {
     const c = academicContext();
     const jeeMode = +c.profile.grade === 12 && D.state.settings.activeLearningTrack?.[c.activeId] === 'jee';
-    const lessons = jeeMode ? HM.genius.jeeSyllabus.filter(item => item.subject === c.selectedSubject) : c.syllabus;
+    const lessons = curriculumLessons(c, jeeMode);
     D.state.settings.chapterMastery ||= {};
     D.state.settings.chapterMastery[c.activeId] ||= {};
-    const masteryFor = lesson => jeeMode ? (D.state.settings.chapterMastery[c.activeId][lesson.id]?.mastery || 0) : (+lesson.mastery || 0);
+    const masteryFor = lesson => D.state.settings.chapterMastery[c.activeId][lesson.id]?.mastery ?? (+lesson.mastery || 0);
     const completed = lessons.filter(lesson => masteryFor(lesson) >= 80).length;
     const average = averageOf(lessons.map(masteryFor));
     const rows = lessons.map((lesson, index) => {
@@ -831,7 +863,7 @@
   function chapterWorkspace(lessonId, section = 'learn') {
     const c = academicContext();
     const jeeLesson = HM.genius.jeeSyllabus.find(item => item.id === lessonId);
-    const lesson = jeeLesson || (D.state.syllabusItems || []).find(item => item.id === lessonId && item.studentId === c.activeId);
+    const lesson = curriculumLessonById(c, lessonId);
     if (!lesson) return '<section class="panel"><p class="empty">This chapter is no longer available.</p></section>';
     const jeeMode = Boolean(jeeLesson);
     const notes = HM.genius.teacherNotes(lesson);
@@ -840,17 +872,20 @@
     const list = values => `<ul>${values.map(value => `<li>${e(value)}</li>`).join('')}</ul>`;
     const norm = value => String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const books = textbookCatalog.filter(book => book.grade === +c.profile.grade && book.subject === lesson.subject);
-    const bookMatches = books.flatMap(book => (book.pdfFiles || []).map(part => ({ book, part }))).filter(entry => norm(entry.part.label) === norm(lesson.title) || norm(entry.part.label).includes(norm(lesson.title)) || norm(lesson.title).includes(norm(entry.part.label)));
+    const bookMatches = books.flatMap(book => (book.pdfFiles || []).map(part => ({ book, part }))).filter(entry => (lesson.partKey && (entry.part.key || entry.part.url) === lesson.partKey) || norm(entry.part.label) === norm(lesson.title) || norm(entry.part.label).includes(norm(lesson.title)) || norm(lesson.title).includes(norm(entry.part.label)));
     const bookEntry = bookMatches[0] || (books[0]?.pdfFiles?.[0] ? { book: books[0], part: books[0].pdfFiles[0] } : null);
     const assignments = (D.state.academicDeliverables || []).filter(item => item.studentId === c.activeId && item.subject === lesson.subject);
     D.state.settings.chapterMastery ||= {};
     D.state.settings.chapterMastery[c.activeId] ||= {};
     const stored = D.state.settings.chapterMastery[c.activeId][lesson.id] || {};
-    const mastery = jeeMode ? (+stored.mastery || 0) : (+lesson.mastery || 0);
-    const statusValue = jeeMode ? (stored.status || (mastery >= 80 ? 'mastered' : mastery ? 'learning' : 'not-started')) : lesson.status;
-    const learn = `<section class="chapter-learning-grid"><article class="chapter-big-idea"><span class="section-kicker">THE IDEA THAT UNLOCKS THIS CHAPTER</span><h2>${e(notes.bigIdea)}</h2><div class="chapter-concept-flow">${notes.visual.map((value, index) => `${index ? icon('arrow-right') : ''}<span>${e(value)}</span>`).join('')}</div><div class="chapter-guru"><span>${icon('sparkles')}</span><div><b>Guru’s insight</b><p>${e(notes.wisdom)}</p></div></div></article><article><span class="section-kicker">NON-NEGOTIABLE KNOWLEDGE</span><h3>What you must understand</h3>${list(notes.must)}</article><article><span class="section-kicker">WORKED REASONING</span><h3>See how the thinking moves</h3><p><b>Start:</b> ${e(notes.example[0])}</p><p><b>Reason:</b> ${e(notes.example[1])}</p></article><article><span class="section-kicker">COMMON TRAPS</span><h3>Where marks disappear</h3>${list(guide.traps)}</article></section>`;
-    const bookPanel = bookEntry ? `<section class="chapter-book-panel"><iframe title="${e(bookEntry.part.label)} textbook section" src="${e(`${bookEntry.part.url}#view=FitH`)}"></iframe></section>` : `<section class="chapter-empty-state">${icon('book-x')}<h2>No exact book section is mapped yet</h2><p>The teacher notes and guided questions remain available.</p></section>`;
-    const practice = `<section class="chapter-guided-practice"><header><span class="section-kicker">GUIDED ASSIGNMENT</span><h2>Think first—then study every answer</h2><p>No typing and no unexplained answer key. Each question identifies the correct choice and teaches the reason.</p></header>${questions.map((question, questionIndex) => `<article><span class="question-number">${questionIndex + 1}</span><div><h3>${e(question.stem)}</h3><div class="guided-options">${question.options.map((option, optionIndex) => `<div class="${optionIndex === question.answer ? 'correct' : ''}"><span>${String.fromCharCode(65 + optionIndex)}</span><p>${e(option)}</p>${optionIndex === question.answer ? icon('circle-check-big') : ''}</div>`).join('')}</div><div class="guided-explanation"><span>${icon('lightbulb')}</span><p><b>Why ${String.fromCharCode(65 + question.answer)} is correct:</b> ${e(question.why)}</p></div></div></article>`).join('')}</section>`;
+    const mastery = stored.mastery ?? (+lesson.mastery || 0);
+    const statusValue = stored.status || lesson.status || (mastery >= 80 ? 'mastered' : mastery ? 'learning' : 'not-started');
+    const deepConcepts = notes.rich ? `<section class="chapter-deep-concepts">${notes.rich.concepts.map((concept, index) => `<article><span>${index + 1}</span><div><h3>${e(concept.title)}</h3><p>${e(concept.explain)}</p><small>${e(concept.visual)}</small></div></article>`).join('')}</section>` : '';
+    const workedSteps = notes.rich ? `<ol>${notes.rich.worked.steps.map(step => `<li>${e(step)}</li>`).join('')}</ol><p><b>Answer:</b> ${e(notes.rich.worked.answer)}</p><p class="worked-check"><b>Check:</b> ${e(notes.rich.worked.check)}</p>` : `<p><b>Reason:</b> ${e(notes.example[1])}</p>`;
+    const learn = `<section class="chapter-learning-grid"><article class="chapter-big-idea"><span class="section-kicker">THE IDEA THAT UNLOCKS THIS CHAPTER</span><h2>${e(notes.bigIdea)}</h2><div class="chapter-concept-flow">${notes.visual.map((value, index) => `${index ? icon('arrow-right') : ''}<span>${e(value)}</span>`).join('')}</div><div class="chapter-guru"><span>${icon('sparkles')}</span><div><b>Guru’s insight</b><p>${e(notes.wisdom)}</p></div></div>${deepConcepts}</article><article><span class="section-kicker">NON-NEGOTIABLE KNOWLEDGE</span><h3>What you must understand</h3>${list(notes.must)}</article><article><span class="section-kicker">WORKED REASONING</span><h3>See how the thinking moves</h3><p><b>Problem:</b> ${e(notes.example[0])}</p>${workedSteps}</article><article><span class="section-kicker">COMMON TRAPS</span><h3>Where marks disappear</h3>${list(notes.rich?.traps || guide.traps)}</article></section>`;
+    const bookPanel = bookEntry ? `<section class="chapter-book-panel"><iframe title="${e(bookEntry.part.label)} textbook section" src="${e(`${bookEntry.part.url}#${bookEntry.part.page ? `page=${bookEntry.part.page}&` : ''}view=FitH`)}"></iframe></section>` : `<section class="chapter-empty-state">${icon('book-x')}<h2>No exact book section is mapped yet</h2><p>The teacher notes and guided questions remain available.</p></section>`;
+    const explainedChecks = notes.rich?.guidedQuestions?.map((question, index) => `<article class="guided-teaching-check"><span class="question-number">${questions.length + index + 1}</span><div><h3>${e(question.question)}</h3><div class="guided-explanation"><span>${icon('lightbulb')}</span><p><b>Teacher’s answer:</b> ${e(question.answer)} ${e(question.explanation)}</p></div></div></article>`).join('') || '';
+    const practice = `<section class="chapter-guided-practice"><header><span class="section-kicker">GUIDED ASSIGNMENT</span><h2>Think first—then study every answer</h2><p>No typing and no unexplained answer key. Each question identifies the correct choice and teaches the reason.</p></header>${questions.map((question, questionIndex) => `<article><span class="question-number">${questionIndex + 1}</span><div><h3>${e(question.stem)}</h3><div class="guided-options">${question.options.map((option, optionIndex) => `<div class="${optionIndex === question.answer ? 'correct' : ''}"><span>${String.fromCharCode(65 + optionIndex)}</span><p>${e(option)}</p>${optionIndex === question.answer ? icon('circle-check-big') : ''}</div>`).join('')}</div><div class="guided-explanation"><span>${icon('lightbulb')}</span><p><b>Why ${String.fromCharCode(65 + question.answer)} is correct:</b> ${e(question.why)}</p></div></div></article>`).join('')}${explainedChecks}</section>`;
     const assignmentPanel = `<section class="chapter-assignment-panel"><header><span class="section-kicker">SCHOOL WORK · ${e(lesson.subject)}</span><h2>Assignments connected to this subject</h2><p>Finish teacher-assigned work here; this learning view does not ask students to create more work.</p></header>${assignments.length ? assignments.map(item => `<article><span>${icon(item.type === 'Practical' ? 'flask-conical' : item.type === 'Project' ? 'presentation' : 'clipboard-check')}</span><div><b>${e(item.title)}</b><p>${e(item.notes || item.type)}</p><small>${D.date(item.dueDate)} · ${e(item.status)}</small></div>${academicStatus(item.status)}</article>`).join('') : '<p class="empty">No school assignment is currently recorded for this subject.</p>'}</section>`;
     const examPanel = `<section class="chapter-exam-panel"><article><span class="section-kicker">EXAM TIPS</span><h2>What earns marks</h2>${list(notes.exam)}</article><article><span class="section-kicker">30-SECOND REVISION</span><h2>Read, cover, reproduce</h2>${list(notes.revision)}</article><article><span class="section-kicker">PROOF OF UNDERSTANDING</span><h2>What a strong answer shows</h2><p>${e(guide.proof)}</p></article></section>`;
     const progressPanel = `<section class="chapter-progress-panel"><div class="chapter-mastery-ring" style="--mastery:${clamp(mastery)}"><strong>${mastery}%</strong><span>${e(statusValue.replace('-', ' '))}</span></div><div><span class="section-kicker">RECORD REAL MASTERY</span><h2>How securely can you use this chapter?</h2><p>Choose the strongest statement that is honestly true. You can revise it after another lesson or test.</p><div class="mastery-choices">${[[20,'I recognise it'],[40,'I can explain it'],[60,'I can solve standard questions'],[80,'I can handle unfamiliar questions'],[100,'I can teach and verify it']].map(([value, label]) => `<button type="button" data-chapter-mastery="${value}" data-lesson="${e(lesson.id)}" data-jee="${jeeMode}" class="${mastery === value ? 'active' : ''}"><b>${value}%</b><span>${label}</span></button>`).join('')}</div></div></section>`;
@@ -870,17 +905,19 @@
     const book = subjectBooks.find(item => item.id === savedBookId) || subjectBooks[0];
     if (!book) return `${learnerBar(c)}<section class="panel"><p class="empty">No textbook is configured for this subject.</p></section>`;
     const progress = (D.state.readingProgress || []).find(item => item.studentId === c.activeId && item.bookId === book.id);
-    const selectedPart = book.pdfFiles?.find(part => part.url === progress?.currentPart) || book.pdfFiles?.[0];
-    const directSource = selectedPart?.url || '';
+    const partKey = part => part.key || part.url;
+    const partSource = part => part?.url ? `${part.url}#${part.page ? `page=${part.page}&` : ''}view=FitH` : '';
+    const selectedPart = book.pdfFiles?.find(part => partKey(part) === progress?.currentPart || (!part.key && part.url === progress?.currentPart)) || book.pdfFiles?.[0];
+    const directSource = partSource(selectedPart);
     const sectionCount = subjectBooks.reduce((total, item) => total + (item.pdfFiles?.length || 0), 0);
     const bookNavLabel = item => item.title.match(/Part\s+[IVX]+$/i)?.[0] || item.title;
     const volumeGroups = subjectBooks.map(item => {
       const active = item.id === book.id;
-      const sections = active && item.pdfFiles?.length ? `<div class="inline-book-volume-sections">${item.pdfFiles.map((part, index) => `<button type="button" data-inline-book-chapter="${e(part.url)}" data-book-id="${e(item.id)}" class="inline-book-chapter ${part.url === directSource ? 'active' : ''}" aria-current="${part.url === directSource ? 'page' : 'false'}"><span>${String(index + 1).padStart(2, '0')}</span><b>${e(part.label)}</b></button>`).join('')}</div>` : '';
+      const sections = active && item.pdfFiles?.length ? `<div class="inline-book-volume-sections">${item.pdfFiles.map((part, index) => `<button type="button" data-inline-book-chapter="${e(part.url)}" data-book-part-key="${e(partKey(part))}" data-book-page="${part.page || 1}" data-book-id="${e(item.id)}" class="inline-book-chapter ${part === selectedPart ? 'active' : ''}" aria-current="${part === selectedPart ? 'page' : 'false'}"><span>${String(index + 1).padStart(2, '0')}</span><b>${e(part.label)}</b></button>`).join('')}</div>` : '';
       return `<section class="inline-book-volume ${active ? 'active' : ''}"><button type="button" class="inline-book-volume-head" data-inline-book="${e(item.id)}" aria-expanded="${active}"><span>${icon(active ? 'book-open' : 'book')}</span><span><b>${e(bookNavLabel(item))}</b><small>${item.pdfFiles?.length || 0} offline sections</small></span>${icon(active ? 'chevron-down' : 'chevron-right')}</button>${sections}</section>`;
     }).join('');
     const chapterNav = `<aside class="inline-book-chapters" aria-label="${e(selectedSubject)} books and chapters"><header><span>${icon('list-tree')}</span><span><b>Books & chapters</b><small>${subjectBooks.length} ${subjectBooks.length === 1 ? 'book' : 'books'} · ${sectionCount} sections</small></span></header><nav>${volumeGroups}</nav></aside>`;
-    return `${learnerBar(c)}<section class="inline-book-reader" data-book-card="${e(book.id)}" data-student="${e(c.activeId)}"><div class="inline-book-head"><div class="inline-book-identity"><span class="section-kicker">${e(selectedSubject)}</span><h2>${e(book.title)}</h2><p data-book-library-summary>${e(book.publisher)} · ${progress ? `Page ${progress.currentPage || 1}` : 'Ready to read'}</p></div><div class="inline-book-actions">${book.pdfFiles?.length ? '' : `<button type="button" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}"><span data-book-import-label>Add PDF</span></button>`}<button type="button" data-book-open="${e(book.id)}" data-student="${e(c.activeId)}" ${book.pdfFiles?.length ? '' : 'disabled'} title="Open reading tools">${icon('maximize-2')}<span>Tools</span></button><a href="${e(book.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open official source">${icon('external-link')}<span>Source</span></a><span class="book-local-state" data-book-state>Checking…</span></div></div><div class="inline-book-workspace">${chapterNav}<div class="inline-book-frame-wrap"><iframe class="inline-book-frame" data-inline-book-frame title="${e(book.title)} PDF" src="${e(directSource ? `${directSource}#view=FitH` : 'about:blank')}"></iframe><div class="inline-book-missing" ${directSource ? 'hidden' : ''}><span>${icon('file-up')}</span><h3>Add this PDF to read it here</h3><p>The file stays in this browser and is excluded from backups.</p><button type="button" class="primary" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}">${icon('file-up')}<span>Add PDF</span></button></div></div></div></section><div class="book-rights-note">${icon('shield-check')}<span><b>Your PDFs stay on this device.</b> Use lawfully obtained copies. Uploaded files remain in browser storage and are excluded from Home Manager JSON backups.</span></div>`;
+    return `${learnerBar(c)}<section class="inline-book-reader" data-book-card="${e(book.id)}" data-student="${e(c.activeId)}"><div class="inline-book-head"><div class="inline-book-identity"><span class="section-kicker">${e(selectedSubject)}</span><h2>${e(book.title)}</h2><p data-book-library-summary>${e(book.publisher)} · ${progress ? `Page ${progress.currentPage || 1}` : 'Ready to read'}</p></div><div class="inline-book-actions">${book.pdfFiles?.length ? '' : `<button type="button" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}"><span data-book-import-label>Add PDF</span></button>`}<button type="button" data-book-open="${e(book.id)}" data-student="${e(c.activeId)}" ${book.pdfFiles?.length ? '' : 'disabled'} title="Open reading tools">${icon('maximize-2')}<span>Tools</span></button><a href="${e(book.sourceUrl)}" target="_blank" rel="noopener noreferrer" title="Open official source">${icon('external-link')}<span>Source</span></a><span class="book-local-state" data-book-state>Checking…</span></div></div><div class="inline-book-workspace">${chapterNav}<div class="inline-book-frame-wrap"><iframe class="inline-book-frame" data-inline-book-frame title="${e(book.title)} PDF" src="${e(directSource || 'about:blank')}"></iframe><div class="inline-book-missing" ${directSource ? 'hidden' : ''}><span>${icon('file-up')}</span><h3>Add this PDF to read it here</h3><p>The file stays in this browser and is excluded from backups.</p><button type="button" class="primary" data-book-import="${e(book.id)}" data-student="${e(c.activeId)}">${icon('file-up')}<span>Add PDF</span></button></div></div></div></section><div class="book-rights-note">${icon('shield-check')}<span><b>Your PDFs stay on this device.</b> Use lawfully obtained copies. Uploaded files remain in browser storage and are excluded from Home Manager JSON backups.</span></div>`;
   }
 
   function geniusMind() {
@@ -910,7 +947,7 @@
     D.state.settings.activeGeniusLesson ||= {};
     D.state.settings.activeGeniusSection ||= {};
     const mode = jeeEligible && (activeRenderRoute === 'study/jee' || D.state.settings.activeGeniusMode[c.activeId] === 'jee') ? 'jee' : 'school';
-    const lessons = mode === 'jee' ? HM.genius.jeeSyllabus.filter(item => item.subject === c.selectedSubject) : c.syllabus;
+    const lessons = curriculumLessons(c, mode === 'jee');
     const lesson = lessons.find(item => item.id === D.state.settings.activeGeniusLesson[c.activeId]) || lessons[0];
     if (!lesson) return `${learnerBar(c)}<section class="panel"><p class="empty">Add curriculum chapters to begin a Genius lesson.</p></section>`;
     const guide = mode === 'jee' ? HM.genius.jeeGuide(lesson) : HM.genius.guide(lesson);
@@ -931,7 +968,7 @@
       'motion graphs and relative motion': 'On a position–time graph, slope gives velocity. On a velocity–time graph, slope gives acceleration and signed area gives displacement. Relative velocity is always one velocity measured against another.',
       'projectile components and constraints': 'Resolve the launch velocity once. Horizontal motion has constant velocity while vertical motion has acceleration −g; time is the constraint that reconnects the two components.'
     };
-    const conceptCards = notes.concepts.map((concept, index) => `<article><span>${index + 1}</span><div><h3>${e(titleCase(concept))}</h3><p>${e(conceptTeaching[String(concept).toLowerCase()] || notes.must[index] || `Connect this relationship to the chapter model, then test where it stops applying.`)}</p></div></article>`).join('');
+    const conceptCards = notes.concepts.map((concept, index) => { const richConcept = notes.rich?.concepts?.[index]; return `<article><span>${index + 1}</span><div><h3>${e(titleCase(concept))}</h3><p>${e(richConcept?.explain || conceptTeaching[String(concept).toLowerCase()] || notes.must[index] || `Connect this relationship to the chapter model, then test where it stops applying.`)}</p>${richConcept?.visual ? `<small class="concept-visual">${e(richConcept.visual)}</small>` : ''}</div></article>`; }).join('');
     const visual = `<div class="genius-flow" aria-label="Concept flow">${notes.visual.map((value, index) => `${index ? icon('arrow-right') : ''}<span>${e(titleCase(value))}</span>`).join('')}</div>`;
     const understand = `<section class="genius-teach-panel"><span class="section-kicker">THE IDEA THAT UNLOCKS THE CHAPTER</span><h2>${e(notes.bigIdea)}</h2>${visual}<div class="teacher-talk"><span>${icon('sparkles')}</span><div><b>Guru's insight</b><p>${e(notes.wisdom)}</p></div></div><section class="genius-concept-lessons"><div><span class="section-kicker">KEY CONCEPTS</span><h3>Understand the relationships—not isolated definitions</h3></div>${conceptCards}</section><div class="genius-note-grid"><section><span class="section-kicker">YOU MUST KNOW</span><h3>The non-negotiables</h3>${list(notes.must)}</section><section><span class="section-kicker">USE IT LIKE A TOP STUDENT</span><h3>Explain, connect, then challenge</h3><p>For every concept above, reproduce the relationship without notes, solve one unfamiliar case, and state one condition under which the method would fail.</p></section></div></section>`;
     const examSheet = `<section class="genius-teach-panel"><span class="section-kicker">EXAM TIPS</span><h2>What earns marks in ${e(lesson.title)}</h2><div class="genius-note-grid"><section><span class="section-kicker">WRITE / USE THESE</span><h3>High-value notes</h3>${list(notes.must)}</section><section><span class="section-kicker">EXAMINER'S LENS</span><h3>Show this evidence</h3>${list(notes.exam)}<p class="teacher-proof">${e(guide.proof)}</p></section><section><span class="section-kicker">MARK-LOSING TRAPS</span><h3>Catch these before submission</h3>${list(guide.traps)}</section><section class="genius-revision-card"><span class="section-kicker">30-SECOND REVISION CARD</span><h3>Read, cover, reproduce</h3>${list(notes.revision)}</section></div></section>`;
@@ -1005,7 +1042,7 @@
   function practiceAndTests() {
     const c = academicContext();
     const jeeMode = +c.profile.grade === 12 && D.state.settings.activeLearningTrack?.[c.activeId] === 'jee';
-    const lessons = jeeMode ? HM.genius.jeeSyllabus.filter(item => item.subject === c.selectedSubject) : c.syllabus;
+    const lessons = curriculumLessons(c, jeeMode);
     D.state.settings.activePracticeLesson ||= {};
     D.state.settings.mcqProgress ||= {};
     const lesson = lessons.find(item => item.id === D.state.settings.activePracticeLesson[c.activeId]) || lessons[0];
@@ -1198,6 +1235,7 @@
     natureBackgrounds,
     textbookCatalog,
     chapterWorkspace,
+    lessonById: lessonId => curriculumLessonById(academicContext(), lessonId),
     titles,
     render,
     renderQuestionResults,
