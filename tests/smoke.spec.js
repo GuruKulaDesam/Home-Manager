@@ -567,11 +567,14 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('.app-header')).toBeVisible();
   const chapterShellSurface = await page.evaluate(() => ({
     body: getComputedStyle(document.body).backgroundImage,
+    primaryContent: getComputedStyle(document.body, '::after').backgroundImage,
+    chapterContent: getComputedStyle(document.querySelector('#chapterWorkspace')).backgroundImage,
     sidebar: getComputedStyle(document.querySelector('#sidebar')).backgroundImage,
     header: getComputedStyle(document.querySelector('.app-header')).backgroundImage,
     headerBlur: getComputedStyle(document.querySelector('.app-header')).backdropFilter
   }));
   expect(chapterShellSurface.body).toContain('radial-gradient');
+  expect(chapterShellSurface.chapterContent).toBe(chapterShellSurface.primaryContent);
   expect(chapterShellSurface.sidebar).toBe('none');
   expect(chapterShellSurface.header).toBe(chapterShellSurface.body);
   expect(chapterShellSurface.headerBlur).toBe('none');
@@ -631,13 +634,17 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
     height: summary.scrollHeight,
     storyFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-summary-story')).fontSize),
     stepFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-slow-steps p')).fontSize),
+    vocabularyFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-word-cards p')).fontSize),
+    conceptFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-concept-lessons p')).fontSize),
     formulaFont: parseFloat(getComputedStyle(summary.querySelector('.chapter-formula-card p')).fontSize),
     formulaFamily: getComputedStyle(summary.querySelector('.chapter-formula-card p')).fontFamily,
     viewportHeight: innerHeight
   }));
   expect(lessonReadability.height).toBeGreaterThan(lessonReadability.viewportHeight * 2);
   expect(lessonReadability.storyFont).toBeGreaterThanOrEqual(16);
-  expect(lessonReadability.stepFont).toBeGreaterThanOrEqual(16);
+  expect(lessonReadability.stepFont).toBe(lessonReadability.storyFont);
+  expect(lessonReadability.vocabularyFont).toBe(lessonReadability.storyFont);
+  expect(lessonReadability.conceptFont).toBe(lessonReadability.storyFont);
   expect(lessonReadability.formulaFont).toBeGreaterThanOrEqual(18);
   expect(lessonReadability.formulaFamily).toContain('Cambria Math');
   const firstSummary = await page.locator('.chapter-summary-bigidea').textContent();

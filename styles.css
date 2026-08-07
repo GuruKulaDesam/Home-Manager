@@ -1906,7 +1906,7 @@ button.primary:hover, .primary:hover { background: var(--accent-hover); border-c
 .chapter-card-open-hint { display: flex; align-items: center; gap: 4px; color: var(--subject-complement); font-size: 9px; font-weight: 850; }
 .chapter-card-open-hint svg { width: 14px; height: 14px; }
 
-.chapter-workspace { position: fixed; inset: 56px var(--utility) 0 var(--sidebar); z-index: 100; overflow: hidden; color: var(--ink); border-radius: 20px 20px 0 0; background: #fbfaf8; box-shadow: 0 -1px 0 rgba(255,255,255,.16), 0 -12px 34px rgba(10,16,31,.12); }
+.chapter-workspace { position: fixed; inset: 56px var(--utility) 0 var(--sidebar); z-index: 100; overflow: hidden; color: var(--ink); border-radius: 20px 20px 0 0; background-color: var(--app-bg); background-image: linear-gradient(rgba(253,249,245,.88), rgba(247,252,250,.93)), var(--nature-image); background-position: center; background-repeat: no-repeat; background-size: cover; background-attachment: fixed; box-shadow: 0 -1px 0 rgba(255,255,255,.16), 0 -12px 34px rgba(10,16,31,.12); }
 .chapter-workspace[hidden] { display: none; }
 body.chapter-workspace-open { overflow: hidden; }
 body.chapter-workspace-open > #bottomNav,
@@ -2113,6 +2113,34 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 .chapter-note-panel { max-width: 900px; margin: 20px auto 70px; padding: 24px; font-size: 15px; }
 .chapter-note-panel textarea { min-height: 260px; padding: 18px; font-size: 16px; line-height: 1.75; }
 .chapter-empty-state { display: grid; place-content: center; justify-items: center; min-height: 55vh; text-align: center; }
+
+/* One reading scale across every chapter learning section. */
+.chapter-workspace-content { --chapter-copy: 17px; --chapter-secondary: 15px; --chapter-label: 11px; --chapter-h2: clamp(25px, 2vw, 30px); --chapter-h3: 20px; font-size: var(--chapter-copy); line-height: 1.75; }
+.chapter-workspace-content :where(p, li) { font-size: var(--chapter-copy); line-height: 1.75; }
+.chapter-workspace-content :where(h2) { font-size: var(--chapter-h2); line-height: 1.25; }
+.chapter-workspace-content :where(h3) { font-size: var(--chapter-h3); line-height: 1.35; }
+.chapter-workspace-content :where(.section-kicker, .chapter-lesson-heading small, .chapter-opening-copy > div > small, .chapter-example-answer small) { font-size: var(--chapter-label); line-height: 1.4; }
+.chapter-workspace-content :where(.chapter-lesson-heading > p, .chapter-relationship-visual figcaption, .chapter-concept-lessons small, .chapter-slow-steps article > div > small, .chapter-assignment-panel small) { font-size: var(--chapter-secondary); line-height: 1.65; }
+.chapter-workspace-content .chapter-summary-bigidea { font-size: clamp(21px, 1.65vw, 24px); line-height: 1.55; }
+.chapter-workspace-content .chapter-summary-story { font-size: var(--chapter-copy); line-height: 1.8; }
+.chapter-workspace-content .chapter-slow-steps p,
+.chapter-workspace-content .chapter-word-cards p,
+.chapter-workspace-content .chapter-concept-lessons p,
+.chapter-workspace-content .chapter-learning-grid p,
+.chapter-workspace-content .chapter-learning-grid li,
+.chapter-workspace-content .chapter-exam-panel p,
+.chapter-workspace-content .chapter-exam-panel li { font-size: var(--chapter-copy); line-height: 1.75; }
+.chapter-workspace-content .chapter-formula-card p { font-size: clamp(20px, 1.55vw, 23px); line-height: 1.6; }
+.chapter-workspace-content .chapter-support-card h2 { font-size: 18px; }
+.chapter-workspace-content .chapter-support-card :where(li, p) { font-size: var(--chapter-secondary); line-height: 1.65; }
+.chapter-workspace-content :where(.guided-options p, .guided-explanation p, .chapter-assignment-panel p, .chapter-note-panel, .chapter-note-panel textarea) { font-size: var(--chapter-copy); line-height: 1.7; }
+.chapter-learning-grid > article,
+.chapter-exam-panel > article,
+.chapter-guided-practice > article,
+.chapter-assignment-panel > article,
+.chapter-note-panel,
+.mastery-choices button,
+.chapter-seven-status article { background: rgba(255,255,255,.82); backdrop-filter: blur(9px); }
 
 /* The dusk shell uses one calm, milky navigation language. */
 #sidebar #sectionNav button svg, #sidebar #sectionNav button.active svg { color: inherit; }
