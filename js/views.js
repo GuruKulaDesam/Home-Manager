@@ -11,7 +11,7 @@
       ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
     ]},
     kitchen: { label: 'சமையலறை', icon: 'cooking-pot', note: 'சமைக்க · திட்டமிட · நிரப்ப', route: 'kitchen/overview', items: [
-      ['முகப்பு', 'cooking-pot', 'kitchen/overview'], ['௧௦௦ பாரம்பரிய உணவுகள்', 'book-open', 'kitchen/recipes'], ['வார உணவுத் திட்டம்', 'calendar-range', 'kitchen/menus'], ['சரக்கறையும் இருப்பும்', 'package-open', 'kitchen/pantry'], ['வாங்க வேண்டியவை', 'shopping-cart', 'kitchen/shopping']
+      ['முகப்பு', 'cooking-pot', 'kitchen/overview'], ['100 பாரம்பரிய உணவுகள்', 'book-open', 'kitchen/recipes'], ['வார உணவுத் திட்டம்', 'calendar-range', 'kitchen/menus'], ['சரக்கறையும் இருப்பும்', 'package-open', 'kitchen/pantry'], ['வாங்க வேண்டியவை', 'shopping-cart', 'kitchen/shopping']
     ]},
     family: { label: 'Family', icon: 'users-round', note: 'Plans and togetherness', route: 'home/family', items: [
       ['Overview', 'users-round', 'home/family'], ['Calendar', 'calendar-days', 'home/calendar'], ['Celebrations', 'party-popper', 'home/life/festivals'], ['Documents', 'folders', 'home/life/documents'], ['Contacts', 'contact-round', 'home/directory'], ['Protection & legacy', 'shield-check', 'home/family/protection']

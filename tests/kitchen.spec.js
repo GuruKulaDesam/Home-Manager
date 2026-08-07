@@ -10,8 +10,17 @@ test.beforeEach(async ({ page }) => {
 test('Kitchen provides 100 recipes and seven editable weekly menus', async ({ page }) => {
   await page.goto(`${app}#/kitchen/recipes`);
   await expect(page.locator('.kitchen-recipe-card')).toHaveCount(100);
-  await page.locator('[data-filter]').fill('fever');
-  await expect(page.locator('.kitchen-recipe-card:visible').first()).toContainText(/fever/i);
+  await page.locator('[data-filter]').fill('காய்ச்சல்');
+  await expect(page.locator('.kitchen-recipe-card:visible').first()).toContainText(/காய்ச்சல்/);
+  await expect(page.locator('#content')).not.toContainText(/[௦-௯]/);
+  const kitchenTheme = await page.locator('.kitchen-hero').evaluate(hero => ({
+    background: getComputedStyle(hero).backgroundImage,
+    headingColor: getComputedStyle(hero.querySelector('h2')).color,
+    headingFont: getComputedStyle(hero.querySelector('h2')).fontFamily
+  }));
+  expect(kitchenTheme.background).toContain('linear-gradient');
+  expect(kitchenTheme.headingColor).toBe('rgb(23, 32, 51)');
+  expect(kitchenTheme.headingFont.toLowerCase()).not.toContain('georgia');
 
   await page.goto(`${app}#/kitchen/menus`);
   await expect(page.locator('[data-menu-tab]')).toHaveCount(7);
@@ -42,7 +51,7 @@ test('persona drafts stay separate and the Home Manager finalizes the month', as
   page.once('dialog', dialog => dialog.accept('Lemon Saadham + pachai payaru sundal'));
   await page.locator('[data-edit-menu="0:0:lunch"]').click();
   await page.locator('[data-finalize-menu="0"]').click();
-  await expect(page.locator('[data-menu-panel="0"]')).toContainText('Finalized by Mother');
+  await expect(page.locator('[data-menu-panel="0"] .finalized-stamp')).toContainText('தாய்');
 
   await page.evaluate(() => localStorage.setItem('home-manager-active-persona-v1', 'p1'));
   await page.reload();
