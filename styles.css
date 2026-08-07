@@ -1906,17 +1906,16 @@ button.primary:hover, .primary:hover { background: var(--accent-hover); border-c
 .chapter-card-open-hint { display: flex; align-items: center; gap: 4px; color: var(--subject-complement); font-size: 9px; font-weight: 850; }
 .chapter-card-open-hint svg { width: 14px; height: 14px; }
 
-.chapter-workspace { position: fixed; inset: 56px 0 0 var(--sidebar); z-index: 100; overflow: hidden; color: var(--ink); border-radius: 20px 20px 0 0; background: #fbfaf8; box-shadow: 0 -1px 0 rgba(255,255,255,.16), 0 -12px 34px rgba(10,16,31,.12); }
+.chapter-workspace { position: fixed; inset: 56px var(--utility) 0 var(--sidebar); z-index: 100; overflow: hidden; color: var(--ink); border-radius: 20px 20px 0 0; background: #fbfaf8; box-shadow: 0 -1px 0 rgba(255,255,255,.16), 0 -12px 34px rgba(10,16,31,.12); }
 .chapter-workspace[hidden] { display: none; }
 body.chapter-workspace-open { overflow: hidden; }
-body.chapter-workspace-open > #utilityRail,
 body.chapter-workspace-open > #bottomNav,
 body.chapter-workspace-open > #notificationPanel { visibility: hidden; pointer-events: none; }
 body.chapter-workspace-open #content { visibility: hidden; pointer-events: none; }
 body.chapter-workspace-open > #sidebar { visibility: visible; pointer-events: auto; }
-body.chapter-workspace-open .app-header { position: fixed; inset: 0 0 auto var(--sidebar); z-index: 110; height: 56px; background-color: #192d47; background-image: var(--shell-navigation-bg); background-position: center; background-size: cover; background-attachment: fixed; box-shadow: none; backdrop-filter: none; }
+body.chapter-workspace-open .app-header { position: fixed; inset: 0 var(--utility) auto var(--sidebar); z-index: 110; height: 56px; background-color: #192d47; background-image: var(--shell-navigation-bg); background-position: center; background-size: cover; background-attachment: fixed; box-shadow: none; backdrop-filter: none; }
 body.chapter-workspace-open .app-header .topbar { height: 56px; }
-body.chapter-workspace-open .app-shell { margin-right: 0; }
+body.chapter-workspace-open .app-shell { margin-right: var(--utility); }
 .collapsed .chapter-workspace, body.chapter-workspace-open.collapsed .app-header { left: 68px; }
 #chapterWorkspaceBody, .chapter-workspace-shell { width: 100%; height: 100%; }
 .chapter-workspace-shell { position: relative; min-height: 0; display: grid; grid-template-rows: 42px minmax(0, 1fr); }
@@ -1992,52 +1991,56 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 .chapter-opening-copy { display: grid; grid-template-columns: 62px minmax(0,1fr); gap: 20px; }
 .chapter-opening-copy > div > small { color: #0f766e; font-size: 11px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
 .chapter-summary-opening h1 { max-width: 760px; margin: 8px 0 28px; font-size: clamp(32px, 4vw, 48px); line-height: 1.08; letter-spacing: -.035em; }
-.chapter-summary-opening h2 { margin: 0 0 14px; color: #0f766e; font-size: 19px; line-height: 1.25; }
+.chapter-summary-opening h2 { margin: 0 0 14px; color: #0f766e; font-size: 19px; line-height: 1.25; text-transform: capitalize; }
 .chapter-summary-bigidea { margin: 0 0 22px; color: var(--ink); font-size: clamp(19px, 1.75vw, 24px); font-weight: 720; line-height: 1.55; }
 .chapter-summary-story { max-width: 760px; margin: 0; color: var(--ink-soft); font-size: 17px; line-height: 1.9; }
 .chapter-summary-icon { width: 58px; height: 58px; display: grid; place-items: center; color: #fff; border-radius: 18px; background: linear-gradient(145deg, #7c3aed, #0f766e 58%, #ea580c); box-shadow: 0 12px 28px rgba(91,33,182,.2); }
 .chapter-summary-icon svg { width: 27px; height: 27px; }
-.chapter-lesson-section { position: relative; padding: 52px 0 58px 70px; border-bottom: 1px solid var(--line); }
-.chapter-lesson-number { position: absolute; top: 52px; left: 2px; width: 46px; height: 46px; display: grid; place-items: center; color: #fff; border-radius: 15px; background: linear-gradient(145deg, #7c3aed, #0f766e); box-shadow: 0 9px 22px rgba(40,70,80,.16); font-size: 17px; font-weight: 900; }
+.chapter-lesson-section { position: relative; padding: 52px 0 58px; border-bottom: 1px solid var(--line); }
+.chapter-lesson-number { display: none; }
 .chapter-lesson-heading { max-width: 720px; margin-bottom: 28px; }
 .chapter-lesson-heading small { color: #0f766e; font-size: 10px; font-weight: 900; letter-spacing: .08em; }
-.chapter-lesson-heading h2 { margin: 8px 0 12px; font-size: clamp(23px, 2vw, 30px); line-height: 1.2; }
+.chapter-lesson-heading h2 { width: fit-content; margin: 8px 0 12px; font-size: clamp(23px, 2vw, 30px); line-height: 1.2; text-transform: capitalize; }
 .chapter-lesson-heading p { margin: 0; color: var(--muted); font-size: 15.5px; line-height: 1.75; }
 .chapter-foundation { padding-top: 32px; }
 .chapter-foundation .chapter-lesson-number { top: 32px; background: linear-gradient(145deg, #0f766e, #15803d); }
 .chapter-vocabulary .chapter-lesson-number { background: linear-gradient(145deg, #7c3aed, #c2415b); }
 .chapter-word-cards { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
-.chapter-word-cards article { display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: start; gap: 14px; min-height: 130px; padding: 20px; border: 1px solid rgba(124,58,237,.16); border-radius: 16px; background: linear-gradient(135deg, rgba(245,243,255,.64), rgba(255,247,237,.38), rgba(240,253,250,.48)); box-shadow: 0 10px 26px rgba(60,45,90,.055); }
+.chapter-word-cards article { min-height: 130px; padding: 20px; border: 1px solid rgba(124,58,237,.16); border-radius: 16px; background: linear-gradient(135deg, rgba(245,243,255,.64), rgba(255,247,237,.38), rgba(240,253,250,.48)); box-shadow: 0 10px 26px rgba(60,45,90,.055); }
 .chapter-word-cards article > span { width: 36px; height: 36px; display: grid; place-items: center; color: #fff; border-radius: 11px; background: linear-gradient(145deg, #7c3aed, #c2415b); font-size: 13px; font-weight: 900; }
-.chapter-word-cards h3 { margin: 1px 0 8px; color: #5b21b6; font-size: 20px; line-height: 1.3; }
+.chapter-word-cards h3 { width: fit-content; margin: 1px 0 8px; color: var(--ink); font-size: 20px; line-height: 1.3; }
 .chapter-word-cards p { margin: 0; color: var(--ink-soft); font-size: 16px; line-height: 1.72; }
 .chapter-picture-section .chapter-lesson-number { background: linear-gradient(145deg, #0369a1, #0f766e); }
 .chapter-relationship-visual { margin: 0; padding: 28px 24px 22px; border: 1px solid rgba(3,105,161,.18); border-radius: 18px; background: linear-gradient(135deg, rgba(239,246,255,.82), rgba(240,253,250,.7), rgba(255,247,237,.48)); box-shadow: 0 14px 34px rgba(20,80,100,.07); }
 .relationship-nodes { display: flex; align-items: stretch; gap: 12px; }
 .relationship-nodes article { min-width: 0; flex: 1 1 0; display: grid; place-content: center; justify-items: center; gap: 10px; min-height: 128px; padding: 18px 14px; text-align: center; border: 2px solid rgba(15,118,110,.18); border-radius: 16px; background: rgba(255,255,255,.9); }
 .relationship-nodes article:nth-of-type(3n+1) { border-color: rgba(124,58,237,.23); }.relationship-nodes article:nth-of-type(3n+2) { border-color: rgba(234,88,12,.25); }.relationship-nodes article:nth-of-type(3n) { border-color: rgba(15,118,110,.25); }
-.relationship-nodes article > span { width: 34px; height: 34px; display: grid; place-items: center; color: #fff; border-radius: 50%; background: #0f766e; font-size: 12px; font-weight: 900; }
+.relationship-nodes article > span { display: none; }
 .relationship-nodes article b { font-size: 16px; line-height: 1.4; }
 .relationship-arrow { flex: 0 0 36px; display: grid; place-content: center; justify-items: center; gap: 4px; color: #7c3aed; }
 .relationship-arrow small { max-width: 70px; color: #9a3412; font-size: 10px; font-weight: 800; text-align: center; }
 .relationship-arrow svg { width: 24px; height: 24px; stroke-width: 2.5; }
 .chapter-relationship-visual figcaption { margin-top: 18px; color: var(--ink-soft); font-size: 15px; line-height: 1.65; text-align: center; }
 .chapter-concept-lessons { display: grid; gap: 22px; }
-.chapter-concept-lessons article { display: grid; grid-template-columns: 40px minmax(0,1fr); gap: 15px; padding: 20px 22px; border: 1px solid rgba(124,58,237,.14); border-radius: 15px; background: linear-gradient(135deg, rgba(245,243,255,.55), rgba(240,253,250,.38)); }
-.chapter-concept-lessons article > span { width: 38px; height: 38px; display: grid; place-items: center; color: #fff; border-radius: 12px; background: #7c3aed; font-size: 14px; font-weight: 900; }
-.chapter-concept-lessons h3 { margin: 1px 0 9px; font-size: 20px; line-height: 1.3; }
+.chapter-concept-lessons article { padding: 20px 22px; border: 1px solid rgba(124,58,237,.14); border-radius: 15px; background: linear-gradient(135deg, rgba(245,243,255,.55), rgba(240,253,250,.38)); }
+.chapter-concept-lessons article > span { display: none; }
+.chapter-concept-lessons h3 { width: fit-content; margin: 1px 0 9px; font-size: 20px; line-height: 1.3; }
 .chapter-concept-lessons p { margin: 0 0 10px; color: var(--ink-soft); font-size: 16px; line-height: 1.75; }
 .chapter-concept-lessons small { color: #0f766e; font-size: 13px; font-weight: 750; line-height: 1.55; }
 .chapter-concept-lessons aside { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; padding: 12px 14px; color: #075985; border-left: 3px solid #0ea5e9; border-radius: 8px; background: rgba(240,249,255,.8); font-size: 14px; font-weight: 700; line-height: 1.55; }
 .chapter-concept-lessons aside svg { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 1px; }
-.chapter-slow-steps { display: grid; gap: 18px; }
-.chapter-slow-steps article { display: grid; grid-template-columns: 38px minmax(0,1fr); align-items: start; gap: 15px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.72); box-shadow: 0 8px 24px rgba(37,44,66,.045); }
-.chapter-slow-steps article > span { width: 36px; height: 36px; display: grid; place-items: center; color: #fff; border-radius: 11px; background: #0f766e; font-size: 13px; font-weight: 900; }
-.chapter-slow-steps p { margin: 3px 0 0; color: var(--ink-soft); font-size: 16.5px; line-height: 1.75; }
+.chapter-slow-steps { display: grid; gap: 10px; margin: 0; padding-left: 26px; }
+.chapter-slow-steps > li { padding-left: 6px; color: var(--ink); }
+.chapter-teaching-list > li::marker { color: var(--ink); font-size: 1.05em; }
+.chapter-sequence-list > li::marker { color: var(--ink-soft); font-weight: 800; }
+.chapter-slow-steps article { padding: 5px 0 9px; }
+.chapter-slow-steps article > span { width: 36px; height: 36px; display: grid; place-items: center; color: #5b21b6; border: 1px solid rgba(124,58,237,.2); border-radius: 11px; background: #fff; }
+.chapter-slow-steps p { margin: 0; color: var(--ink-soft); font-size: 16.5px; line-height: 1.75; }
+.chapter-critical-term { padding: 0 .08em; color: inherit; background: linear-gradient(transparent 60%, rgba(253,224,71,.5) 60%); font-weight: 800; }
 .chapter-slow-steps article > div > small { display: block; margin-top: 10px; color: #0f766e; font-size: 13px; font-weight: 720; line-height: 1.55; }
-.chapter-slow-steps .chapter-formula-card { padding: 22px 24px; border: 2px solid rgba(124,58,237,.24); border-left: 6px solid #7c3aed; background: linear-gradient(120deg, rgba(245,243,255,.9), rgba(240,253,250,.62), rgba(255,247,237,.48)); box-shadow: 0 12px 30px rgba(91,33,182,.08); }
-.chapter-slow-steps .chapter-formula-card > span { color: #5b21b6; background: #fff; border: 1px solid rgba(124,58,237,.2); }
-.chapter-slow-steps .chapter-formula-card > span svg { width: 19px; height: 19px; }
+.chapter-slow-steps .chapter-formula-card { margin: 6px 0; padding: 0; list-style: none; }
+.chapter-slow-steps .chapter-formula-card article { display: grid; grid-template-columns: 38px minmax(0,1fr); gap: 15px; padding: 22px 24px; border: 2px solid rgba(124,58,237,.24); border-left: 6px solid #7c3aed; border-radius: 14px; background: linear-gradient(120deg, rgba(245,243,255,.9), rgba(240,253,250,.62), rgba(255,247,237,.48)); box-shadow: 0 12px 30px rgba(91,33,182,.08); }
+.chapter-slow-steps .chapter-formula-card article > span svg { width: 19px; height: 19px; }
 .chapter-formula-card p { color: #312e81; font-family: "Cambria Math", "STIX Two Math", "DejaVu Math TeX Gyre", "Times New Roman", serif; font-size: clamp(19px, 1.65vw, 23px); font-weight: 600; line-height: 1.6; letter-spacing: .012em; font-variant-numeric: lining-nums tabular-nums; font-feature-settings: "lnum" 1, "tnum" 1; }
 .chapter-example-answer { display: flex; gap: 14px; margin-top: 22px; padding: 22px 24px; color: #14532d; border: 2px solid rgba(21,128,61,.22); border-radius: 16px; background: linear-gradient(125deg, rgba(240,253,244,.94), rgba(240,253,250,.72)); }
 .chapter-example-answer > span { flex: 0 0 auto; width: 40px; height: 40px; display: grid; place-items: center; color: #fff; border-radius: 12px; background: #15803d; }
@@ -2122,6 +2125,12 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 
 @media (min-width: 1251px) {
   .chapter-summary-layout .chapter-summary-exam .chapter-exam-teaching > div:last-child { display: none; }
+}
+
+@media (max-width: 1050px) {
+  .chapter-workspace { right: 0; }
+  body.chapter-workspace-open .app-header { right: 0; }
+  body.chapter-workspace-open .app-shell { margin-right: 0; }
 }
 
 @media (max-width: 1250px) {
