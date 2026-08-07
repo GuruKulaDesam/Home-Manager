@@ -140,6 +140,27 @@ test('global persona persists and scopes owned content while preserving shared r
   await expect(page.locator('body')).toHaveAttribute('data-active-persona', 'family');
 });
 
+test('Money navigation and routes are unavailable to child personas', async ({ page }) => {
+  await expect(page.locator('#nav').getByRole('button', { name: /Money menu/ })).toBeVisible();
+
+  await choosePersona(page, 'p3');
+  await expect(page.locator('body')).toHaveAttribute('data-persona-role', 'children');
+  await expect(page.locator('#nav').getByRole('button', { name: /Money menu/ })).toHaveCount(0);
+
+  await page.goto(`${app}#/home/money/budget`);
+  await expect(page).toHaveURL(/#\/global\/overview$/);
+  await expect(page.locator('#nav').getByRole('button', { name: /Money menu/ })).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.locator('#personaName')).toHaveText(/.+/);
+  await expect(page.locator('body')).toHaveAttribute('data-persona-role', 'children');
+  await expect(page.locator('#nav').getByRole('button', { name: /Money menu/ })).toHaveCount(0);
+
+  await choosePersona(page, 'p1');
+  await expect(page.locator('body')).toHaveAttribute('data-persona-role', 'parents');
+  await expect(page.locator('#nav').getByRole('button', { name: /Money menu/ })).toBeVisible();
+});
+
 test('offline assistant selects safe domain roles and ships its local runtime', async ({ page }) => {
   await expect.poll(() => page.evaluate(() => Boolean(window.HomeAI))).toBe(true);
   await page.click('#offlineAssistant');
