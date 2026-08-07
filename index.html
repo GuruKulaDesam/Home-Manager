@@ -101,6 +101,33 @@
     <div class="dialog-actions"><button type="button" data-close-dialog="offlineAiDialog">Cancel</button><button type="button" id="runOfflineAi" class="primary"><i data-lucide="sparkles"></i><span>Ask privately</span></button></div>
   </dialog>
 
+  <dialog id="deepDiveDialog" class="deep-dive-dialog" aria-labelledby="deepDiveTitle">
+    <div class="deep-dive-head">
+      <div><small id="deepDiveContext">CHAPTER · DEEP DIVE</small><h2 id="deepDiveTitle">Explore This Idea</h2><p id="deepDiveChapter"></p></div>
+      <button type="button" data-close-dialog="deepDiveDialog" aria-label="Close Deep Dive"><i data-lucide="x"></i></button>
+    </div>
+    <div class="deep-dive-layout">
+      <section class="deep-dive-brief" aria-label="Topic teaching brief">
+        <div class="deep-dive-engine"><span><i data-lucide="database-zap"></i> Chapter DLM</span><small>Immediate · authored · offline</small></div>
+        <h3 id="deepDiveTopic"></h3>
+        <p id="deepDiveExplanation"></p>
+        <div id="deepDiveConnections" class="deep-dive-connections"></div>
+      </section>
+      <section class="deep-dive-inquiry" aria-label="Ask about this topic">
+        <header><div><small>DRILL INTO THE IDEA</small><h3>What Should We Unpack?</h3></div><span id="deepDiveEngineStatus">Local SLM · ready on demand</span></header>
+        <div id="deepDivePrompts" class="deep-dive-prompts">
+          <button type="button" data-deep-dive-prompt="Explain this from the most basic idea, then build it up with one familiar analogy.">Build From Basics</button>
+          <button type="button" data-deep-dive-prompt="Walk me through a new worked example. Explain every decision and check the final answer.">Show Another Example</button>
+          <button type="button" data-deep-dive-prompt="Show the common misconception, why it seems reasonable, and how to correct it.">Repair a Misconception</button>
+          <button type="button" data-deep-dive-prompt="Ask me one short conceptual question, then explain the answer so I can check my understanding.">Check My Understanding</button>
+        </div>
+        <label for="deepDivePrompt"><span>Ask Your Own Question</span><textarea id="deepDivePrompt" rows="3" placeholder="What does this mean? Why does it work? Can you show a different case?"></textarea></label>
+        <div class="deep-dive-actions"><button type="button" id="runDeepDive" class="primary"><i data-lucide="sparkles"></i><span>Ask Locally</span></button><button type="button" id="runDeepReasoning" title="First use downloads and caches the stronger 1.7B local model (about 1.06 GB)."><i data-lucide="brain-circuit"></i><span>Deep Reasoning · 1.7B</span></button></div>
+        <div id="deepDiveAnswer" class="deep-dive-answer" aria-live="polite" hidden></div>
+      </section>
+    </div>
+  </dialog>
+
   <dialog id="bookReaderDialog" class="book-reader-dialog" aria-labelledby="bookReaderTitle">
     <div class="book-reader-head">
       <div><small id="bookReaderContext">PRIVATE LIBRARY</small><h2 id="bookReaderTitle">Textbook reader</h2><p id="bookReaderMeta"></p></div>
@@ -158,6 +185,7 @@
   <script src="js/chapter-foundations-chemistry.js"></script>
   <script src="js/chapter-foundations-mathematics.js"></script>
   <script src="js/chapter-foundations-senior-language-cs.js"></script>
+  <script src="js/kitchen.js"></script>
   <script src="js/views.js"></script>
   <script type="module" src="js/cloud.js"></script>
   <script type="module" src="js/offline-ai.js"></script>

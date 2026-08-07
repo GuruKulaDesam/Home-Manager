@@ -14,7 +14,9 @@
   let activeBookObjectUrl = false;
   let activeInlineBookUrl = '';
   let activeChapterWorkspace = null;
+  let activeDeepDive = null;
   let chapterSupportCleanup = null;
+  let chapterRailMode = 'guide';
   const googleSessions = new Map();
   const googleWorkspaceSessions = new Map();
   HM.workspace = { cache: {}, selected: {} };
@@ -30,6 +32,17 @@
     if (window.lucide) window.lucide.createIcons({ attrs: { 'aria-hidden': 'true' } });
   }
 
+  function applyChapterRailMode(rail, mode = chapterRailMode) {
+    if (!rail) return;
+    chapterRailMode = mode === 'notes' ? 'notes' : 'guide';
+    rail.querySelectorAll('[data-chapter-rail-tab]').forEach(button => {
+      const active = button.dataset.chapterRailTab === chapterRailMode;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-selected', String(active));
+    });
+    rail.querySelectorAll('[data-chapter-rail-panel]').forEach(panel => { panel.hidden = panel.dataset.chapterRailPanel !== chapterRailMode; });
+  }
+
   function syncChapterSupportRail() {
     chapterSupportCleanup?.();
     chapterSupportCleanup = null;
@@ -40,15 +53,28 @@
     const definitions = layout.classList.contains('chapter-understand-layout')
       ? [['concepts', '.chapter-learning-grid > article:nth-child(1)'], ['results', '.chapter-learning-grid > article:nth-child(2)'], ['reasoning', '.chapter-learning-grid > article:nth-child(3)'], ['traps', '.chapter-learning-grid > article:nth-child(4)']]
       : [['foundation', '.chapter-foundation'], ['vocabulary', '.chapter-vocabulary'], ['opening', '.chapter-summary-opening'], ['picture', '.chapter-picture-section'], ['concepts', '.chapter-summary-map'], ['results', '.chapter-summary-results'], ['example', '.chapter-first-example'], ['reasoning', '.chapter-summary-reasoning'], ['traps', '.chapter-summary-traps'], ['exam', '.chapter-summary-exam'], ['recall', '.chapter-summary-recall']];
-    const sections = definitions.map(([key, selector]) => ({ key, element: layout.querySelector(selector) })).filter(item => item.element);
+    const sections = definitions.map(([key, selector]) => ({ key, element: layout.querySelector(selector) })).filter(item => item.element && getComputedStyle(item.element).display !== 'none');
     const cards = [...rail.querySelectorAll('[data-support-for]')];
+    const sectionLabels = { foundation: 'Foundation Bridge', vocabulary: 'New Words, in Plain Words', opening: 'The Chapter’s Central Idea', picture: 'How the Pieces Connect', concepts: 'Connect the Ideas', results: 'Facts and Formulas', example: 'Guided Examples', reasoning: 'How to Work Through a Question', traps: 'Mistakes to Watch For', exam: 'Writing an Exam Answer', recall: 'Recall and Revision' };
     const update = () => {
       const anchor = scroller.getBoundingClientRect().top + Math.min(190, scroller.clientHeight * .28);
       let current = sections[0];
       sections.forEach(item => { if (item.element.getBoundingClientRect().top <= anchor) current = item; });
       const active = cards.filter(card => (card.dataset.supportFor || '').split(/\s+/).includes(current?.key));
       cards.forEach(card => card.classList.toggle('is-active', active.includes(card)));
-      rail.hidden = !active.length;
+      const currentKey = current?.key || 'opening';
+      rail.dataset.activeChapterSection = currentKey;
+      const currentLabel = sectionLabels[currentKey] || 'Chapter Section';
+      rail.querySelectorAll('[data-note-section-label]').forEach(label => { label.textContent = currentLabel; });
+      const noteCards = [...rail.querySelectorAll('.chapter-margin-note[data-note-for]')];
+      let visibleNotes = 0;
+      noteCards.forEach(note => {
+        const visible = note.dataset.noteFor === currentKey || note.dataset.noteFor === 'chapter';
+        note.hidden = !visible;
+        if (visible) visibleNotes += 1;
+      });
+      rail.querySelectorAll('[data-chapter-note-empty]').forEach(empty => { empty.hidden = visibleNotes > 0; });
+      rail.hidden = false;
     };
     scroller.addEventListener('scroll', update, { passive: true });
     window.addEventListener('resize', update, { passive: true });
@@ -56,6 +82,7 @@
       scroller.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
     };
+    applyChapterRailMode(rail);
     requestAnimationFrame(update);
   }
 
@@ -488,6 +515,14 @@
   function render() {
     HM.life.ensure();
     route = location.hash.slice(2) || route;
+    const legacyPracticeRoute = ['study/practice', 'study/assessments', 'study/focus'].includes(route);
+    const legacyPracticeLesson = legacyPracticeRoute
+      ? (D.state.settings.activePracticeLesson?.[D.state.settings.activeLearnerId] || D.state.settings.activeGeniusLesson?.[D.state.settings.activeLearnerId] || V.defaultLessonId())
+      : '';
+    if (legacyPracticeRoute) {
+      route = 'study/curriculum';
+      history.replaceState(null, '', `${location.pathname}${location.search}#/study/curriculum`);
+    }
     const movedLifeRoute = route.match(/^settings\/life\/([^/]+)$/);
     if (movedLifeRoute) {
       go(`home/life/${movedLifeRoute[1]}`);
@@ -529,6 +564,7 @@
     $('#menu').setAttribute('aria-expanded', 'false');
     refreshIcons();
     requestAnimationFrame(() => $('#sectionNav .active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    if (legacyPracticeLesson) requestAnimationFrame(() => openChapterWorkspace(legacyPracticeLesson, 'practice'));
   }
 
   function inputAttributes(name, type) {
@@ -559,6 +595,7 @@
     liability: () => [field('Loan or liability', 'title'), field('Type', 'type'), field('Outstanding balance', 'balance', 'number'), field('Monthly payment', 'payment', 'number'), field('Interest rate %', 'interestRate', 'number')],
     moneyGoal: () => [field('Savings goal', 'title'), field('Target amount', 'target', 'number'), field('Already saved', 'saved', 'number'), field('Monthly contribution', 'contribution', 'number'), field('Target date', 'dueDate', 'date')],
     inventory: () => [field('Item', 'name'), field('Category', 'category'), field('Quantity', 'quantity', 'number'), field('Unit', 'unit')],
+    kitchenRecipe: () => [field('Dish name', 'name'), field('Tamil name', 'tamil'), field('Category', 'category'), area('Definite purpose / when to serve', 'purpose'), area('Ingredients', 'ingredients'), area('Method', 'method'), field('Time', 'time'), field('Difficulty', 'difficulty', 'text', ['Easy', 'Everyday', 'Weekend'])],
     meal: () => [field('Meal', 'name'), field('Meal type', 'mealType', 'text', ['Breakfast', 'Lunch', 'Dinner', 'Snack']), field('Cook', 'cook'), field('Date', 'date', 'date')],
     issue: () => [field('Issue', 'title'), field('Category', 'category'), field('Location', 'location'), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
     asset: () => [field('Asset', 'name'), field('Category', 'category'), field('Value', 'value', 'number'), field('Status', 'status', 'text', ['active', 'secured', 'maintenance'])],
@@ -593,7 +630,7 @@
     }
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
+  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', inventory: 'inventoryItems', kitchenRecipe: 'kitchenRecipeEdits', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
@@ -716,7 +753,7 @@
     const subject = $('#subjectFilter')?.value || '';
     document.querySelectorAll('[data-filter-row]').forEach(row => {
       const matchesText = !query || row.textContent.toLowerCase().includes(query);
-      const matchesStatus = !status || row.dataset.status === status;
+      const matchesStatus = !status || row.dataset.status === status || row.dataset.category === status;
       const matchesCategory = !category || row.dataset.category === category;
       const matchesSubject = !subject || row.dataset.subject === subject;
       row.hidden = !(matchesText && matchesStatus && matchesCategory && matchesSubject);
@@ -726,6 +763,45 @@
   function bindView() {
     document.querySelectorAll('[data-filter], [data-status-filter], [data-category-filter], #subjectFilter').forEach(control => {
       control.addEventListener(control.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+    });
+    const showKitchenWeek = index => {
+      document.querySelectorAll('[data-menu-tab]').forEach(button => button.classList.toggle('active', +button.dataset.menuTab === +index));
+      document.querySelectorAll('[data-menu-panel]').forEach(panel => panel.classList.toggle('active', +panel.dataset.menuPanel === +index));
+    };
+    document.querySelectorAll('[data-menu-tab]').forEach(button => button.onclick = () => showKitchenWeek(button.dataset.menuTab));
+    document.querySelectorAll('[data-kitchen-month]').forEach(input => input.onchange = () => {
+      D.state.settings.kitchenMonth = input.value;
+      save('Kitchen month changed'); render();
+    });
+    document.querySelectorAll('[data-edit-menu]').forEach(button => button.onclick = () => {
+      const [week, day, meal] = button.dataset.editMenu.split(':');
+      const personaId = button.dataset.persona || HM.persona.current().id;
+      const month = button.dataset.month || D.state.settings.kitchenMonth || new Date().toISOString().slice(0, 7);
+      const saved = D.state.kitchenMenus.find(item => +item.week === +week && item.personaId === personaId && item.month === month);
+      const days = saved?.days || HM.kitchen.defaultMenu(+week).map(item => ({ ...item }));
+      const next = prompt(`Edit ${days[day].day} ${meal}`, days[day][meal]);
+      if (next === null || !next.trim()) return;
+      days[day][meal] = next.trim();
+      if (saved) saved.days = days; else D.state.kitchenMenus.push({ id: D.uid('km'), week: +week, personaId, month, days });
+      save('Weekly menu updated'); render();
+      requestAnimationFrame(() => showKitchenWeek(week));
+    });
+    document.querySelectorAll('[data-reset-kitchen-week]').forEach(button => button.onclick = () => {
+      const week = +button.dataset.resetKitchenWeek;
+      if (!confirm('Restore this week to its original menu?')) return;
+      D.state.kitchenMenus = D.state.kitchenMenus.filter(item => !(+item.week === week && item.personaId === button.dataset.persona && item.month === button.dataset.month));
+      save('Weekly menu restored'); render();
+      requestAnimationFrame(() => showKitchenWeek(week));
+    });
+    document.querySelectorAll('[data-finalize-menu]').forEach(button => button.onclick = () => {
+      const week = +button.dataset.finalizeMenu, persona = HM.persona.current(), month = button.dataset.month;
+      if (!/home manager|mother|wife/i.test(persona.householdRole || '')) { toast('Only the Home Manager can finalize a monthly menu.'); return; }
+      const days = (D.state.kitchenMenus.find(item => +item.week === week && item.personaId === persona.id && item.month === month)?.days || HM.kitchen.defaultMenu(week)).map(day => ({ ...day }));
+      const existing = D.state.kitchenFinalMenus.find(item => item.month === month && +item.week === week);
+      const final = { id: existing?.id || D.uid('kf'), month, week, days, approvedBy: persona.name, approvedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, final); else D.state.kitchenFinalMenus.push(final);
+      save(`Menu finalized by ${persona.name}`); render();
+      requestAnimationFrame(() => showKitchenWeek(week));
     });
     document.querySelectorAll('[data-topic]').forEach(card => card.ondragstart = event => event.dataTransfer.setData('topic', card.dataset.topic));
     document.querySelectorAll('[data-drop]').forEach(column => {
@@ -1066,6 +1142,58 @@
       answer.textContent = `Offline assistant unavailable: ${error.message}`;
     } finally {
       button.disabled = false;
+    }
+  }
+
+  function showDeepDive(trigger) {
+    const lesson = V.lessonById(trigger.dataset.lesson);
+    if (!lesson) return;
+    activeDeepDive = {
+      lessonId: lesson.id,
+      subject: lesson.subject,
+      chapter: lesson.title,
+      topic: trigger.dataset.topic || lesson.title,
+      explanation: trigger.dataset.explanation || '',
+      connection: trigger.dataset.connection || ''
+    };
+    $('#deepDiveContext').textContent = `${activeDeepDive.subject.toUpperCase()} · DEEP DIVE`;
+    $('#deepDiveTitle').textContent = activeDeepDive.topic;
+    $('#deepDiveChapter').textContent = activeDeepDive.chapter;
+    $('#deepDiveTopic').textContent = 'The Essential Meaning';
+    $('#deepDiveExplanation').textContent = activeDeepDive.explanation;
+    $('#deepDiveConnections').innerHTML = `<article><small>CONNECTION</small><p>${D.esc(activeDeepDive.connection || `This idea supports the central reasoning in ${activeDeepDive.chapter}.`)}</p></article><article><small>FOCUS</small><p>Every explanation here stays anchored to this topic and its role in the chapter.</p></article>`;
+    $('#deepDivePrompt').value = '';
+    $('#deepDiveAnswer').hidden = true;
+    $('#deepDiveEngineStatus').textContent = 'Local SLM · ready on demand';
+    $('#deepDiveDialog').showModal();
+    refreshIcons();
+  }
+
+  async function runDeepDive(deep = false) {
+    const prompt = $('#deepDivePrompt').value.trim();
+    if (!prompt || !activeDeepDive || !window.HomeAI) return;
+    const primary = $('#runDeepDive');
+    const reasoning = $('#runDeepReasoning');
+    const answer = $('#deepDiveAnswer');
+    primary.disabled = true;
+    reasoning.disabled = true;
+    answer.hidden = false;
+    $('#deepDiveEngineStatus').textContent = deep ? 'Stronger local LM · 1.7B reasoning' : 'Local SLM · focused explanation';
+    answer.textContent = deep ? 'Loading the stronger local model and building a deeper explanation…' : 'Asking the local chapter tutor…';
+    const context = JSON.stringify({ learner: HM.persona.current()?.name, subject: activeDeepDive.subject, chapter: activeDeepDive.chapter, topic: activeDeepDive.topic, authoredMeaning: activeDeepDive.explanation, chapterConnection: activeDeepDive.connection });
+    const instruction = deep
+      ? `Reason carefully about the topic before answering. Build from prerequisites, explain the relationship, walk through one concrete example, identify one tempting mistake, and end with a one-sentence check for understanding. Do not reveal hidden chain-of-thought. Student question: ${prompt}`
+      : `Answer this student's question about the exact topic. Use plain language, one small example, and no unrelated lecture. Student question: ${prompt}`;
+    try {
+      answer.textContent = deep && window.HomeAI.askDeep
+        ? await window.HomeAI.askDeep({ message: instruction, context, maxTokens: 640 })
+        : await window.HomeAI.ask({ role: 'learning', message: instruction, context, maxTokens: deep ? 512 : 384 });
+    } catch (error) {
+      answer.textContent = `The local tutor could not load: ${error.message}`;
+      $('#deepDiveEngineStatus').textContent = 'Local model unavailable';
+    } finally {
+      primary.disabled = false;
+      reasoning.disabled = false;
     }
   }
 
@@ -1871,7 +1999,41 @@
     }
     const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
     if (chapterWorkspace) {
-      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'summary');
+      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, chapterWorkspace.dataset.chapterSection || 'summary');
+      return;
+    }
+    const deepDive = event.target.closest('[data-deep-dive]');
+    if (deepDive) {
+      showDeepDive(deepDive);
+      return;
+    }
+    const subchapterProgress = event.target.closest('[data-subchapter-progress]');
+    if (subchapterProgress) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = subchapterProgress.dataset.lesson;
+      const topicId = subchapterProgress.dataset.subchapterProgress;
+      const states = ['not-started', 'learning', 'mastered'];
+      const current = subchapterProgress.dataset.state || 'not-started';
+      const next = states[(states.indexOf(current) + 1) % states.length];
+      D.state.settings.subchapterProgress ||= {};
+      D.state.settings.subchapterProgress[learnerId] ||= {};
+      D.state.settings.subchapterProgress[learnerId][lessonId] ||= {};
+      D.state.settings.subchapterProgress[learnerId][lessonId][topicId] = next;
+      D.save();
+      if (document.body.classList.contains('chapter-workspace-open')) {
+        refreshChapterWorkspace(lessonId, activeChapterWorkspace?.section || 'summary');
+        requestAnimationFrame(() => document.querySelector(`[data-summary-subchapter="${CSS.escape(topicId)}"]`)?.scrollIntoView({ block: 'start' }));
+      } else render();
+      toast(next === 'mastered' ? 'Subchapter mastered' : next === 'learning' ? 'Subchapter marked learning' : 'Subchapter reset');
+      return;
+    }
+    const chapterSubchapter = event.target.closest('[data-chapter-subchapter]');
+    if (chapterSubchapter) {
+      const lessonId = chapterSubchapter.dataset.lesson;
+      const topicId = chapterSubchapter.dataset.chapterSubchapter;
+      if (!document.body.classList.contains('chapter-workspace-open') || activeChapterWorkspace?.lessonId !== lessonId) openChapterWorkspace(lessonId, 'summary');
+      else refreshChapterWorkspace(lessonId, 'summary');
+      requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(`[data-summary-subchapter="${CSS.escape(topicId)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })));
       return;
     }
     const chapterCard = event.target.closest('[data-chapter-card]');
@@ -1882,6 +2044,56 @@
     const chapterSwitch = event.target.closest('[data-chapter-switch]');
     if (chapterSwitch) {
       refreshChapterWorkspace(chapterSwitch.dataset.chapterSwitch, activeChapterWorkspace?.section || 'summary');
+      return;
+    }
+    const chapterRailTab = event.target.closest('[data-chapter-rail-tab]');
+    if (chapterRailTab) {
+      applyChapterRailMode(chapterRailTab.closest('.chapter-support-rail'), chapterRailTab.dataset.chapterRailTab);
+      return;
+    }
+    const chapterNoteAdd = event.target.closest('[data-chapter-note-add]');
+    if (chapterNoteAdd) {
+      const rail = chapterNoteAdd.closest('.chapter-support-rail');
+      const draft = rail?.querySelector('[data-chapter-note-draft]');
+      const text = draft?.value.trim() || '';
+      if (!text) { toast('Write the note before adding the card'); return; }
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterNoteAdd.dataset.chapterNoteAdd;
+      const section = rail?.dataset.activeChapterSection || 'opening';
+      const sectionLabel = rail?.querySelector('[data-note-section-label]')?.textContent?.trim() || 'Chapter Section';
+      D.state.settings.chapterSectionNotes ||= {};
+      D.state.settings.chapterSectionNotes[learnerId] ||= {};
+      D.state.settings.chapterSectionNotes[learnerId][lessonId] ||= [];
+      D.state.settings.chapterSectionNotes[learnerId][lessonId].push({ id: crypto.randomUUID?.() || `note-${Date.now()}`, section, sectionLabel, text, updatedAt: new Date().toISOString() });
+      save('Note card added beside this section');
+      refreshChapterWorkspace(lessonId, activeChapterWorkspace?.section || 'summary');
+      return;
+    }
+    const chapterNoteSave = event.target.closest('[data-chapter-note-save]');
+    if (chapterNoteSave) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterNoteSave.dataset.lesson;
+      const notes = D.state.settings.chapterSectionNotes?.[learnerId]?.[lessonId] || [];
+      const note = notes.find(item => item.id === chapterNoteSave.dataset.chapterNoteSave);
+      const textarea = chapterNoteSave.closest('.chapter-margin-note')?.querySelector('[data-chapter-note-text]');
+      if (note && textarea?.value.trim()) {
+        note.text = textarea.value.trim();
+        note.updatedAt = new Date().toISOString();
+        save('Note card updated');
+        refreshChapterWorkspace(lessonId, activeChapterWorkspace?.section || 'summary');
+      }
+      return;
+    }
+    const chapterNoteDelete = event.target.closest('[data-chapter-note-delete]');
+    if (chapterNoteDelete) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = chapterNoteDelete.dataset.lesson;
+      const notes = D.state.settings.chapterSectionNotes?.[learnerId]?.[lessonId] || [];
+      if (confirm('Delete this note card?')) {
+        D.state.settings.chapterSectionNotes[learnerId][lessonId] = notes.filter(item => item.id !== chapterNoteDelete.dataset.chapterNoteDelete);
+        save('Note card deleted');
+        refreshChapterWorkspace(lessonId, activeChapterWorkspace?.section || 'summary');
+      }
       return;
     }
     const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
@@ -2055,11 +2267,22 @@
       D.state.settings.activePracticeLesson ||= {};
       D.state.settings.activePracticeLesson[learnerId] = practiceOpen.dataset.practiceOpen;
       D.save();
-      go('study/practice');
+      openChapterWorkspace(practiceOpen.dataset.practiceOpen, 'practice');
       return;
     }
     const routeTarget = event.target.closest('[data-route]');
-    if (routeTarget) { event.preventDefault(); go(routeTarget.dataset.route); if ($('#searchDialog').open) $('#searchDialog').close(); if ($('#emergencyDialog').open) $('#emergencyDialog').close(); toggleNotifications(false); return; }
+    if (routeTarget) {
+      event.preventDefault();
+      if (['study/practice', 'study/assessments', 'study/focus'].includes(routeTarget.dataset.route)) {
+        const lessonId = routeTarget.dataset.lesson || activeChapterWorkspace?.lessonId || D.state.settings.activeGeniusLesson?.[D.state.settings.activeLearnerId] || D.state.settings.activePracticeLesson?.[D.state.settings.activeLearnerId] || V.defaultLessonId();
+        if (lessonId) openChapterWorkspace(lessonId, 'practice');
+        else go('study/curriculum');
+      } else go(routeTarget.dataset.route);
+      if ($('#searchDialog').open) $('#searchDialog').close();
+      if ($('#emergencyDialog').open) $('#emergencyDialog').close();
+      toggleNotifications(false);
+      return;
+    }
     const agendaPerson = event.target.closest('[data-agenda-person]');
     if (agendaPerson) {
       const owner = agendaPerson.dataset.agendaPerson;
@@ -2123,7 +2346,13 @@
     const create = event.target.closest('[data-create]');
     if (create) { openForm(create.dataset.create, create.dataset); return; }
     const edit = event.target.closest('[data-edit]');
-    if (edit) { openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context, domain: edit.dataset.domain }); return; }
+    if (edit) {
+      if (edit.dataset.edit === 'kitchenRecipe' && !D.state.kitchenRecipeEdits.some(item => item.id === edit.dataset.id)) {
+        const base = HM.kitchen.recipes.find(item => item.id === edit.dataset.id);
+        if (base) D.state.kitchenRecipeEdits.push({ ...base });
+      }
+      openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context, domain: edit.dataset.domain }); return;
+    }
     const deletion = event.target.closest('[data-delete]');
     if (deletion) { const [collection, id] = deletion.dataset.delete.split(':'); if (confirm('Remove this item? You can undo with Ctrl+Z.')) remove(collection, id); return; }
     const complete = event.target.closest('[data-complete]');
@@ -2264,6 +2493,12 @@
   $('#searchInput').oninput = event => renderSearch(event.target.value);
   $('#askOfflineAi').onclick = askOfflineAssistant;
   $('#runOfflineAi').onclick = runRouteOfflineAssistant;
+  $('#runDeepDive').onclick = () => runDeepDive(false);
+  $('#runDeepReasoning').onclick = () => runDeepDive(true);
+  $('#deepDivePrompts').onclick = event => {
+    const prompt = event.target.closest('[data-deep-dive-prompt]');
+    if (prompt) { $('#deepDivePrompt').value = prompt.dataset.deepDivePrompt; $('#deepDivePrompt').focus(); }
+  };
   $('#offlineAiSuggestions').onclick = event => {
     const suggestion = event.target.closest('[data-ai-suggestion]');
     if (suggestion) { $('#offlineAiPrompt').value = suggestion.dataset.aiSuggestion; $('#offlineAiPrompt').focus(); }
