@@ -111,18 +111,18 @@
   const recipes = names.slice(0,100).map((r, i) => ({ id: `tr${i + 1}`, name:r[0], tamil:r[1], category:r[2], purpose:r[3], ingredients:r[4], time: `${15 + (i % 6) * 10} min`, difficulty: i % 5 === 0 ? 'Weekend' : i % 3 === 0 ? 'Easy' : 'Everyday', method: `Prepare ${r[4]}. Cook the main ingredients until tender; add the traditional seasoning in the correct order, simmer until the flavours come together, and serve fresh.` }));
 
   const weeks = [
-    ['Heritage Tamil Home','Traditional','Stone-ground batters, rice, dal and seasonal vegetables'],
-    ['Kongu & Village Table','Traditional + millet','More millets, greens and one-pot regional cooking'],
-    ['Balanced Family Week','Balanced','Traditional food with planned protein and vegetable variety'],
-    ['Busy School Week','Practical','Batch-friendly breakfasts and lunchbox-ready meals'],
-    ['Lighter Modern Tamil','Modernising','More steamed food, millet rotation and lighter dinners'],
-    ['Contemporary Fusion','Modern','Tamil flavours in bowls, wraps and quick assemblies'],
-    ['Smart Kitchen Week','Modern + flexible','Prep once, remix safely, and leave room for personal choice']
+    ['மரபுத் தமிழ் இல்லம்','முழுமையான மரபு','கல்லில் அரைத்த மாவு · சாதம் · பருப்பு · பருவக் காய்கள்'],
+    ['கொங்கு நாட்டுச் சுவை','மரபும் சிறுதானியமும்','சிறுதானியம் · கீரை · ஒரே பாத்திரச் சமையல்'],
+    ['சமச்சீர் குடும்ப வாரம்','சமச்சீர் உணவு','திட்டமிட்ட புரதமும் பலவகைக் காய்களும்'],
+    ['பள்ளி நாள் எளிமை','நடைமுறைத் திட்டம்','முன்தயாரிப்பு காலை உணவும் எடுத்துச் செல்லும் மதிய உணவும்'],
+    ['இலகுவான புதுத்தமிழ்','மிதமான புதுமை','ஆவியில் வேகும் உணவு · சிறுதானியம் · எளிய இரவு உணவு'],
+    ['புதுமையான கலவை','நவீன அணுகுமுறை','தமிழ்ச் சுவையுடன் விரைவான புதிய வடிவங்கள்'],
+    ['நெகிழ்வான சமையல்','திறமையான திட்டம்','ஒருமுறை தயாரித்து பாதுகாப்பாகப் பலவிதமாகப் பயன்படுத்துதல்']
   ];
-  const dayNames=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-  const breakfast=['Idli + sambar','Kambu koozh','Ven pongal','Aval upma','Ragi dosai','Adai + chutney','Appam + coconut milk'];
-  const lunch=['Sambar Saadham + beans poriyal','Puli Saadham + sundal','Keerai kootu + Milagu rasam','Lemon Saadham + pachai payaru sundal','Tomato Saadham + thayir pachadi','Avial + rice + appalam','Arachuvitta Sambar Saadham'];
-  const dinner=['Kal dosai + gothsu','Thinai pongal','Idiyappam + vegetable stew','Thayir Saadham + beetroot','Kuzhi paniyaram','Millet bowl + keerai','Rasam Saadham + podimas'];
+  const dayNames=['திங்கள்','செவ்வாய்','புதன்','வியாழன்','வெள்ளி','சனி','ஞாயிறு'];
+  const breakfast=['இட்லி · சாம்பார்','கம்பங்கூழ்','வெண் பொங்கல்','அவல் உப்புமா','கேழ்வரகு தோசை','அடை · சட்னி','ஆப்பம் · தேங்காய்ப்பால்'];
+  const lunch=['சாம்பார் சாதம் · பீன்ஸ் பொரியல்','புளி சாதம் · சுண்டல்','கீரைக் கூட்டு · மிளகு ரசம்','எலுமிச்சை சாதம் · பச்சைப்பயறு சுண்டல்','தக்காளி சாதம் · தயிர்ப் பச்சடி','அவியல் · சாதம் · அப்பளம்','அரைத்துவிட்ட சாம்பார் சாதம்'];
+  const dinner=['கல் தோசை · கொத்சு','தினைப் பொங்கல்','இடியாப்பம் · காய்கறிக் குழம்பு','தயிர் சாதம் · பீட்ரூட்','குழிப்பணியாரம்','சிறுதானியக் கிண்ணம் · கீரை','ரசம் சாதம் · பொடிமாஸ்'];
   function defaultMenu(index){ return dayNames.map((day,d)=>({day,breakfast:breakfast[(d+index)%7],lunch:lunch[(d+index*2)%7],dinner:dinner[(d+index*3)%7]})); }
   function mergedRecipes(state){ return recipes.map(base=>({...base,...(state.kitchenRecipeEdits||[]).find(x=>x.id===base.id)})); }
   function activeMonth(state){ return state.settings.kitchenMonth || new Date().toISOString().slice(0,7); }
