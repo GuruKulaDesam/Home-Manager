@@ -1042,11 +1042,10 @@
     };
     const formulaPattern = /(?:^\s*(?:equation|reaction|formula)\s*:|=|→|⇌|≈|≠|≤|≥|∑|∫|√|\^|\b(?:sin|cos|tan|log|det|lim|mol|pH)\b)/i;
     const titleCase = value => { const minor = new Set(['a','an','and','as','at','by','for','from','in','of','on','or','the','to','with']); return String(value || '').split(/\s+/).map((word, index) => index && minor.has(word.toLowerCase()) ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1)).join(' '); };
-    const criticalTerms = (foundation.newWords || []).map(word => String(typeof word === 'string' ? word : word.term || '').trim()).filter(term => term.length > 2).sort((a, b) => b.length - a.length);
-    const criticalPattern = criticalTerms.length ? new RegExp(`(?<![A-Za-z0-9])(${criticalTerms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?![A-Za-z0-9])`, 'gi') : null;
-    const teachingText = value => criticalPattern ? String(value || '').split(criticalPattern).map(part => criticalTerms.some(term => term.toLowerCase() === part.toLowerCase()) ? `<mark class="chapter-critical-term">${e(part)}</mark>` : e(part)).join('') : e(value);
+    const criticalSignalPattern = /\b(if and only if|only if|only when|must not|do not|not guaranteed|except(?: when)?|unless|cannot|never|always|at least|at most)\b/gi;
+    const teachingText = value => e(value).replace(criticalSignalPattern, '<strong class="chapter-critical-term">$1</strong>');
     const teachingSteps = (values, start = 1, formulaAware = false) => { const ordered = values === summary.problemFlow || values === example?.steps; const tag = ordered ? 'ol' : 'ul'; return `<${tag} class="chapter-slow-steps ${ordered ? 'chapter-sequence-list' : 'chapter-teaching-list'}" ${ordered ? `start="${start}"` : ''}>${(values || []).map(value => { const isFormula = formulaAware && formulaPattern.test(String(value)); return `<li class="${isFormula ? 'chapter-formula-card' : ''}"><article>${isFormula ? `<span aria-hidden="true">${icon('sigma')}</span>` : ''}<div><p>${teachingText(value)}</p>${isFormula ? '<small>Read the relationship from left to right, then identify every symbol before substituting numbers.</small>' : ''}</div></article></li>`; }).join('')}</${tag}>`; };
-    const wordCards = (foundation.newWords || []).map(word => { const item = typeof word === 'string' ? { term: word, plain: '' } : word; return `<article><div><h3><mark class="chapter-critical-term">${e(titleCase(item.term))}</mark></h3><p>${teachingText(item.plain || 'This word names one of the chapter’s central ideas.')}</p></div></article>`; }).join('');
+    const wordCards = (foundation.newWords || []).map(word => { const item = typeof word === 'string' ? { term: word, plain: '' } : word; return `<article><div><h3>${e(titleCase(item.term))}</h3><p>${teachingText(item.plain || 'This word names one of the chapter’s central ideas.')}</p></div></article>`; }).join('');
     const visualNodes = (foundation.visual?.nodes || notes.visual || []).map((node, index) => typeof node === 'string' ? { id: `node-${index + 1}`, label: node } : node);
     const visualEdges = foundation.visual?.edges || visualNodes.slice(1).map((_, index) => ({ from: visualNodes[index]?.id, to: visualNodes[index + 1]?.id }));
     const relationshipCaption = foundation.visual?.caption || `A relationship map for ${lesson.title}. Follow the boxes and arrows from one idea to the next.`;
@@ -1093,6 +1092,7 @@
     const supportRail = contextualSupports.length ? `<aside class="chapter-support-rail" aria-label="Contextual chapter study support">${contextualSupports.join('')}</aside>` : '';
     const cleanSummaryPanel = summaryPanel
       .replace(/<span class="chapter-lesson-number">\d+<\/span>/g, '')
+      .replace(/<span class="chapter-summary-icon">[\s\S]*?<\/span>/, '')
       .replace(/<article><span>\d+<\/span><b>/g, '<article><b>')
       .replace(/<(h[23])>([^<]+)<\/\1>/g, (_, tag, text) => `<${tag}>${titleCase(text)}</${tag}>`)
       .replace(e(summary.bigIdea), () => teachingText(summary.bigIdea))
