@@ -18,7 +18,7 @@
     if (id === FAMILY_ID) return { id: FAMILY_ID, name: 'Family', householdRole: 'Shared household', isFamily: true, isStudent: false };
     const person = people().find(item => item.id === id);
     const role = String(person?.householdRole || 'Family member');
-    return { ...person, isFamily: false, isStudent: /student|child|learner/i.test(role) };
+    return { ...person, isFamily: false, isStudent: /student|child|learner|daughter|son/i.test(role) };
   }
 
   function academic(person = current()) {
