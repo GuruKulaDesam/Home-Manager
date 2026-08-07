@@ -4,6 +4,13 @@ const path = require('path');
 
 const app = 'http://127.0.0.1:8765/';
 
+async function choosePersona(page, personaId) {
+  if (await page.locator('#personaSwitcher').getAttribute('aria-expanded') !== 'true') {
+    await page.locator('#personaSwitcher').click();
+  }
+  await page.locator(`#personaMenu [data-persona="${personaId}"]`).click();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto(app);
   await page.evaluate(async () => {
@@ -21,6 +28,42 @@ test('household identity drives the shell, map link and browser title', async ({
   await expect(page.locator('#brandAddress')).toHaveText('32 SSS Jaya Enclave, Kovaipudur, Coimbatore, 641042');
   await expect(page.locator('#brandAddress')).toHaveAttribute('href', /google\.com\/maps\/search/);
   await expect(page).toHaveTitle('Today - Lotus Naga Home');
+  const shellSurface = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).backgroundImage,
+    sidebar: getComputedStyle(document.querySelector('#sidebar')).backgroundImage,
+    header: getComputedStyle(document.querySelector('.app-header')).backgroundImage,
+    headerBlur: getComputedStyle(document.querySelector('.app-header')).backdropFilter,
+    utility: getComputedStyle(document.querySelector('#utilityRail')).backgroundImage,
+    contentInset: {
+      top: getComputedStyle(document.body, '::after').top,
+      right: getComputedStyle(document.body, '::after').right,
+      left: getComputedStyle(document.body, '::after').left,
+      radius: getComputedStyle(document.body, '::after').borderTopLeftRadius
+    },
+    title: getComputedStyle(document.querySelector('#pageTitle')).color
+  }));
+  expect(shellSurface.body).toContain('radial-gradient');
+  expect(shellSurface.sidebar).toBe('none');
+  expect(shellSurface.header).toBe(shellSurface.body);
+  expect(shellSurface.headerBlur).toBe('none');
+  expect(shellSurface.utility).toBe('none');
+  expect(shellSurface.contentInset).toEqual({ top: '56px', right: '64px', left: '252px', radius: '20px' });
+  expect(shellSurface.title).toBe('rgb(255, 255, 255)');
+  const breadcrumbLayout = await page.evaluate(() => {
+    const section = document.querySelector('#breadcrumb');
+    const title = document.querySelector('#pageTitle');
+    const sectionBox = section.getBoundingClientRect();
+    const titleBox = title.getBoundingClientRect();
+    return {
+      display: getComputedStyle(section.parentElement).display,
+      separator: getComputedStyle(section, '::after').content,
+      centerDelta: Math.abs((sectionBox.top + sectionBox.height / 2) - (titleBox.top + titleBox.height / 2))
+    };
+  });
+  expect(breadcrumbLayout.display).toBe('flex');
+  expect(breadcrumbLayout.separator).toContain('›');
+  expect(breadcrumbLayout.centerDelta).toBeLessThan(2);
+  expect(await page.locator('.page-identity').evaluate(element => [...element.children].map(child => child.id || child.className))).toEqual(['persona-crumb', 'breadcrumb', 'pageTitle']);
 
   await page.goto(`${app}#/settings/household`);
   await page.locator('#householdSettings [name="householdName"]').fill('Jaya Community Home');
@@ -29,6 +72,70 @@ test('household identity drives the shell, map link and browser title', async ({
   await expect(page.locator('#brandName')).toHaveText('Jaya Community Home');
   await expect(page.locator('#brandAddress')).toHaveText('Kovaipudur, Coimbatore');
   await expect(page).toHaveTitle('Household profile - Jaya Community Home');
+});
+
+test('global persona persists and scopes owned content while preserving shared records', async ({ page }) => {
+  await expect(page.locator('#personaSwitcher')).toHaveAccessibleName(/Current view: Family/);
+  await page.click('#personaSwitcher');
+  await expect(page.locator('#personaMenu')).toBeVisible();
+  await expect(page.locator('.persona-option')).toHaveCount(5);
+  await expect(page.locator('#personaMenu [data-persona="family"]')).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#personaMenu')).toBeHidden();
+  await page.locator('#personaSwitcher').press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#personaName')).toHaveText('Father');
+
+  await page.evaluate(() => {
+    HM.data.state.tasks.push(
+      { id: 'persona-p3', context: 'home', type: 'task', title: 'P3 private sentinel', category: 'Test', assignee: 'Ananya', dueAt: '2026-08-20', priority: 'medium', status: 'todo' },
+      { id: 'persona-p4', context: 'home', type: 'task', title: 'P4 private sentinel', category: 'Test', assignee: 'Arjun', dueAt: '2026-08-20', priority: 'medium', status: 'todo' },
+      { id: 'persona-shared', context: 'home', type: 'task', title: 'Shared family sentinel', category: 'Test', assignee: 'Family', dueAt: '2026-08-20', priority: 'medium', status: 'todo' }
+    );
+    HM.data.save();
+  });
+
+  await page.click('#personaSwitcher');
+  await page.click('[data-persona="p4"]');
+  await expect(page.locator('body')).toHaveAttribute('data-active-persona', 'p4');
+  await expect(page.locator('#content')).toHaveAttribute('data-active-persona', 'p4');
+  await expect(page.locator('#personaName')).toHaveText('Arjun');
+  expect(await page.evaluate(() => localStorage.getItem(HM.persona.KEY))).toBe('p4');
+
+  await page.goto(`${app}#/home/tasks`);
+  await expect(page.locator('#content')).toContainText('P4 private sentinel');
+  await expect(page.locator('#content')).toContainText('Shared family sentinel');
+  await expect(page.locator('#content')).not.toContainText('P3 private sentinel');
+
+  await page.reload();
+  await expect(page.locator('#personaName')).toHaveText('Arjun');
+  await expect(page.locator('#content')).toContainText('P4 private sentinel');
+  await expect(page.locator('#content')).not.toContainText('P3 private sentinel');
+
+  await page.goto(`${app}#/study/curriculum`);
+  await expect(page.locator('body')).toHaveAttribute('data-active-persona', 'p4');
+  await expect(page.locator('.learner-switch')).toHaveCount(0);
+  await expect(page.locator('#educationHeaderTabs [data-learning-subject="Tamil"]')).toBeVisible();
+
+  await page.locator('.curriculum-chapter-card').first().click({ position: { x: 18, y: 90 } });
+  await expect(page.locator('#chapterWorkspace')).toBeVisible();
+  await page.click('#personaSwitcher');
+  await page.click('[data-persona="p3"]');
+  await expect(page.locator('#chapterWorkspace')).toBeHidden();
+  await expect(page.locator('body')).toHaveAttribute('data-active-persona', 'p3');
+  await expect(page.locator('#educationHeaderTabs [data-learning-subject="Physics"]')).toBeVisible();
+
+  await page.click('#personaSwitcher');
+  await page.click('[data-persona="family"]');
+  await page.goto(`${app}#/home/tasks`);
+  await expect(page.locator('#content')).toContainText('P3 private sentinel');
+  await expect(page.locator('#content')).toContainText('P4 private sentinel');
+
+  await page.evaluate(() => localStorage.setItem(HM.persona.KEY, 'deleted-person'));
+  await page.reload();
+  await expect(page.locator('#personaName')).toHaveText('Family');
+  await expect(page.locator('body')).toHaveAttribute('data-active-persona', 'family');
 });
 
 test('offline assistant selects safe domain roles and ships its local runtime', async ({ page }) => {
@@ -202,7 +309,7 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('.inline-book-identity')).toContainText('Chemistry Part I');
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-12\/lech1\/lech101\.pdf/);
 
-  await page.locator('[data-learner="p4"]').click();
+  await choosePersona(page, 'p4');
   await expect(page.locator('.subject-tabs button')).toHaveCount(7);
   await expect(page.locator('[data-book-card]')).toHaveCount(1);
   await expect(page.locator('#content')).toContainText('Ganita Prakash Part I');
@@ -285,7 +392,7 @@ test('every real book chapter and JEE unit has a rich specialist teaching record
   expect(coverage.missingJee).toEqual([]);
 });
 
-test('Education uses the page header for learners, subjects and exam tracks', async ({ page }) => {
+test('Education uses the page header for persona, subjects and exam tracks', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await expect(page.locator('.learning-command-bar')).toBeHidden();
   await expect(page.locator('.learning-track-tabs')).toContainText('CBSE');
@@ -295,15 +402,15 @@ test('Education uses the page header for learners, subjects and exam tracks', as
   await expect(page.locator('.subject-tabs')).toContainText('Physics');
   await expect(page.locator('#nav')).toContainText('Education');
   await expect(page.locator('#educationHeaderTabs')).toBeVisible();
-  await expect(page.locator('#educationHeaderTabs .learner-switch button')).toHaveCount(2);
-  await expect(page.locator('.education-command-row .learner-switch')).toHaveCount(0);
+  await expect(page.locator('.learner-switch')).toHaveCount(0);
+  await expect(page.locator('#personaSwitcher')).toBeVisible();
   const headerLayout = await page.evaluate(() => {
     const header = document.querySelector('.topbar').getBoundingClientRect();
-    const learners = document.querySelector('#educationHeaderTabs .learner-bar').getBoundingClientRect();
-    return { headerHeight: header.height, learnersTop: learners.top, headerTop: header.top };
+    const persona = document.querySelector('#personaSwitcher').getBoundingClientRect();
+    return { headerHeight: header.height, personaTop: persona.top, headerTop: header.top };
   });
   expect(headerLayout.headerHeight).toBeLessThanOrEqual(58);
-  expect(headerLayout.learnersTop).toBeGreaterThanOrEqual(headerLayout.headerTop);
+  expect(headerLayout.personaTop).toBeGreaterThanOrEqual(headerLayout.headerTop);
   await page.locator('#educationHeaderTabs').getByRole('button', { name: 'Physics', exact: true }).click();
   await expect(page.locator('[data-book-card]')).toHaveCount(1);
   await expect(page.locator('.book-volume-tabs')).toHaveCount(0);
@@ -338,7 +445,7 @@ test('Education uses the page header for learners, subjects and exam tracks', as
 test('Class 12 and Class 7 use a curriculum-first learning path', async ({ page }) => {
   for (const learnerId of ['p3', 'p4']) {
     await page.goto(`${app}#/study/books`);
-    await page.locator(`[data-learner="${learnerId}"]`).click();
+    await choosePersona(page, learnerId);
     await expect(page.locator('.learning-section-tabs button')).toHaveCount(5);
     await expect(page.locator('#sectionNav')).toContainText('Genius Mind');
     await expect(page.locator('.inline-book-reader')).toBeVisible();
@@ -378,9 +485,10 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   }));
   expect(matchingTheme.card).toBe(matchingTheme.tab);
   expect(matchingTheme.numberGradient).toContain('linear-gradient');
-  const shellTheme = await page.locator('#sidebar').evaluate(element => ({ background: getComputedStyle(element).backgroundImage, color: getComputedStyle(element).color }));
-  expect(shellTheme.background).toContain('linear-gradient');
-  expect(shellTheme.background).toContain('rgb(38, 31, 56)');
+  const shellTheme = await page.locator('#sidebar').evaluate(element => ({ background: getComputedStyle(element).backgroundImage, canvas: getComputedStyle(document.body).backgroundImage, color: getComputedStyle(element).color }));
+  expect(shellTheme.background).toBe('none');
+  expect(shellTheme.canvas).toContain('linear-gradient');
+  expect(shellTheme.canvas).toContain('rgb(36, 29, 54)');
   expect(shellTheme.color).toBe('rgb(248, 250, 252)');
   const menuIconColors = await page.locator('#nav > .nav-tree-item > .nav-parent .nav-icon').evaluateAll(items => items.slice(0, 6).map(item => getComputedStyle(item).color));
   expect(new Set(menuIconColors).size).toBeGreaterThan(3);
@@ -453,6 +561,17 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   expect(backPlacement.bottomGap).toBeLessThan(24);
   await expect(page.locator('.chapter-workspace-sidebar')).toHaveCount(0);
   await expect(page.locator('.app-header')).toBeVisible();
+  const chapterShellSurface = await page.evaluate(() => ({
+    body: getComputedStyle(document.body).backgroundImage,
+    sidebar: getComputedStyle(document.querySelector('#sidebar')).backgroundImage,
+    header: getComputedStyle(document.querySelector('.app-header')).backgroundImage,
+    headerBlur: getComputedStyle(document.querySelector('.app-header')).backdropFilter
+  }));
+  expect(chapterShellSurface.body).toContain('radial-gradient');
+  expect(chapterShellSurface.sidebar).toBe('none');
+  expect(chapterShellSurface.header).toBe(chapterShellSurface.body);
+  expect(chapterShellSurface.headerBlur).toBe('none');
+  await expect(page.locator('#chapterWorkspace')).toHaveCSS('border-top-left-radius', '20px');
   await expect(page.locator('#educationHeaderTabs [data-learning-subject="Physics"]')).toBeVisible();
   const shellWidths = await page.evaluate(() => ({ configured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar')), shell: document.querySelector('#sidebar').getBoundingClientRect().width, workspaceLeft: document.querySelector('#chapterWorkspace').getBoundingClientRect().left }));
   expect(shellWidths.shell).toBe(shellWidths.configured);
@@ -640,7 +759,7 @@ test('Genius Mind provides subject and chapter-specific recall guidance', async 
   await expect(page.locator('.practice-recall')).toContainText('ANSWER GUIDE');
 
   await page.goto(`${app}#/study/genius`);
-  await page.locator('[data-learner="p4"]').click();
+  await choosePersona(page, 'p4');
   await page.getByRole('button', { name: 'Science', exact: true }).click();
   await expect(page.locator('.genius-lessons > button')).toHaveCount(12);
   await page.getByRole('button', { name: /Heat Transfer in Nature/ }).click();
@@ -702,7 +821,7 @@ test('Practice and assessments are one chapter-based MCQ workspace', async ({ pa
 
 test('the supplied unified Class 7 Tamil book exposes its verified units inside one real offline PDF', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
-  await page.locator('[data-learner="p4"]').click();
+  await choosePersona(page, 'p4');
   await page.locator('.book-subject-switch').getByRole('button', { name: 'Tamil', exact: true }).click();
   await expect(page.locator('#content')).toContainText('Class 7 Tamil — Complete Book');
   await expect(page.locator('[data-inline-book-chapter]')).toHaveCount(9);
