@@ -8,6 +8,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('Kitchen provides 100 recipes and seven editable weekly menus', async ({ page }) => {
+  await page.locator('#languageSwitcher [data-language="ta"]').click();
   await page.goto(`${app}#/kitchen/recipes`);
   await expect(page.locator('.kitchen-recipe-card')).toHaveCount(100);
   await page.locator('[data-filter]').fill('காய்ச்சல்');
@@ -19,7 +20,7 @@ test('Kitchen provides 100 recipes and seven editable weekly menus', async ({ pa
     headingFont: getComputedStyle(hero.querySelector('h2')).fontFamily
   }));
   expect(kitchenTheme.background).toContain('linear-gradient');
-  expect(kitchenTheme.headingColor).toBe('rgb(23, 32, 51)');
+  expect(kitchenTheme.headingColor).toBe('rgb(23, 32, 58)');
   expect(kitchenTheme.headingFont.toLowerCase()).not.toContain('georgia');
 
   await page.goto(`${app}#/kitchen/menus`);
@@ -41,20 +42,20 @@ test('Kitchen pantry editing drives the refill list', async ({ page }) => {
 test('persona drafts stay separate and the Home Manager finalizes the month', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('home-manager-active-persona-v1', 'p1'));
   await page.goto(`${app}#/kitchen/menus`);
-  page.once('dialog', dialog => dialog.accept('Puli Saadham + sundal'));
+  page.once('dialog', dialog => dialog.accept('புளி சாதம் · சுண்டல்'));
   await page.locator('[data-edit-menu="0:0:lunch"]').click();
-  await expect(page.locator('[data-menu-panel="0"]')).toContainText('Puli Saadham + sundal');
+  await expect(page.locator('[data-edit-menu="0:0:lunch"] b')).toHaveText('புளி சாதம் · சுண்டல்');
 
   await page.evaluate(() => localStorage.setItem('home-manager-active-persona-v1', 'p2'));
   await page.reload();
   await expect(page.locator('[data-edit-menu="0:0:lunch"] b')).toHaveText('சாம்பார் சாதம் · பீன்ஸ் பொரியல்');
-  page.once('dialog', dialog => dialog.accept('Lemon Saadham + pachai payaru sundal'));
+  page.once('dialog', dialog => dialog.accept('எலுமிச்சை சாதம் · பச்சைப்பயறு சுண்டல்'));
   await page.locator('[data-edit-menu="0:0:lunch"]').click();
   await page.locator('[data-finalize-menu="0"]').click();
   await expect(page.locator('[data-menu-panel="0"] .finalized-stamp')).toContainText('தாய்');
 
   await page.evaluate(() => localStorage.setItem('home-manager-active-persona-v1', 'p1'));
   await page.reload();
-  await expect(page.locator('[data-menu-panel="0"]')).toContainText('Lemon Saadham + pachai payaru sundal');
+  await expect(page.locator('[data-menu-panel="0"]')).toContainText('எலுமிச்சை சாதம் · பச்சைப்பயறு சுண்டல்');
   await expect(page.locator('[data-edit-menu="0:0:lunch"]')).toBeDisabled();
 });

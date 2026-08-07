@@ -157,6 +157,12 @@
       const optionInitials = option.isFamily ? 'FN' : HM.persona.initials({ ...option, isFamily: false });
       return `<button type="button" class="persona-option" role="option" data-persona="${D.esc(option.id)}" aria-selected="${selected}" tabindex="${selected ? '0' : '-1'}"><span>${D.esc(optionInitials)}</span><span><b>${D.esc(option.name)}</b><small>${D.esc(option.householdRole || 'Family member')}</small></span><i data-lucide="check"></i></button>`;
     }).join('');
+    const language = HM.i18n.current(persona);
+    document.querySelectorAll('#languageSwitcher [data-language]').forEach(button => {
+      const selected = button.dataset.language === language;
+      button.classList.toggle('active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
     return persona;
   }
 
@@ -425,7 +431,7 @@
       const navigation = direct ? `data-route="${item.route}"` : `data-group="${key}"`;
       return `<div class="nav-tree-item"><button class="nav-parent ${active ? 'active' : ''} ${expanded && !direct ? 'expanded' : ''}" ${navigation} aria-label="${D.esc(parentLabel)}" title="${D.esc(parentLabel)}"${expansionState}><span class="nav-icon"><i data-lucide="${item.icon}"></i></span><span>${D.esc(item.label)}</span>${chevron}</button>${children}</div>`;
     }).join('');
-    const mobileItems = [['Today', 'sparkles', 'global/overview'], ['Calendar', 'calendar-days', 'home/calendar'], ['Tasks', 'list-checks', 'home/tasks'], ['Food', 'shopping-basket', 'home/inventory']];
+    const mobileItems = [['Today', 'sparkles', 'global/overview'], ['Calendar', 'calendar-days', 'home/calendar'], ['Tasks', 'list-checks', 'home/tasks'], ['Food', 'shopping-basket', route.startsWith('kitchen/') ? 'kitchen/overview' : 'home/inventory']];
     $('#bottomNav').innerHTML = mobileItems.map(item => { const active = route === item[2]; return `<button data-route="${item[2]}" aria-label="Open ${D.esc(item[0])}" class="${active ? 'active' : ''}" ${active ? 'aria-current="page"' : ''}><i data-lucide="${item[1]}"></i><span>${D.esc(item[0])}</span></button>`; }).join('') + '<button id="bottomMore" aria-label="Open more navigation"><i data-lucide="layout-grid"></i><span>More</span></button>';
     $('#settingsNav').classList.toggle('active', Boolean(activeSettings));
     $('#helpNav').classList.toggle('active', route === 'global/questions');
@@ -578,6 +584,8 @@
     document.body.classList.remove('menu-open');
     $('#menu').setAttribute('aria-expanded', 'false');
     refreshIcons();
+    HM.i18n.apply(document, route);
+    document.title = `${$('#pageTitle').textContent} - ${homeName}`;
     requestAnimationFrame(() => $('#sectionNav .active')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
     if (legacyPracticeLesson) requestAnimationFrame(() => openChapterWorkspace(legacyPracticeLesson, 'practice'));
   }
@@ -780,6 +788,22 @@
   }
 
   function bindView() {
+    const kitchenMonthInput = document.querySelector('input[data-kitchen-month]');
+    if (kitchenMonthInput) {
+      const selectedMonth = kitchenMonthInput.value;
+      const selectedYear = +(selectedMonth.slice(0, 4) || new Date().getFullYear());
+      const monthSelect = document.createElement('select');
+      monthSelect.dataset.kitchenMonth = '';
+      monthSelect.setAttribute('aria-label', HM.i18n.current() === 'ta' ? 'திட்டமிடும் மாதம்' : 'Planning month');
+      for (let year = selectedYear - 1; year <= selectedYear + 1; year += 1) for (let month = 0; month < 12; month += 1) {
+        const option = document.createElement('option');
+        option.value = `${year}-${String(month + 1).padStart(2, '0')}`;
+        option.textContent = new Date(year, month, 2).toLocaleDateString(HM.i18n.current() === 'ta' ? 'ta-IN-u-nu-latn' : 'en-IN', { month: 'long', year: 'numeric' });
+        option.selected = option.value === selectedMonth;
+        monthSelect.append(option);
+      }
+      kitchenMonthInput.replaceWith(monthSelect);
+    }
     document.querySelectorAll('[data-filter], [data-status-filter], [data-category-filter], #subjectFilter').forEach(control => {
       control.addEventListener(control.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
     });
@@ -1970,6 +1994,13 @@
   }
 
   document.addEventListener('click', event => {
+    const languageOption = event.target.closest('[data-language]');
+    if (languageOption?.closest('#languageSwitcher')) {
+      HM.i18n.set(languageOption.dataset.language);
+      render();
+      toast(languageOption.dataset.language === 'ta' ? 'தமிழ் மொழி தேர்ந்தெடுக்கப்பட்டது' : 'English selected');
+      return;
+    }
     const personaTrigger = event.target.closest('#personaSwitcher');
     if (personaTrigger) {
       $('#personaMenu').hidden ? openPersonaMenu() : closePersonaMenu();
@@ -2369,7 +2400,7 @@
     if (edit) {
       if (edit.dataset.edit === 'kitchenRecipe' && !D.state.kitchenRecipeEdits.some(item => item.id === edit.dataset.id)) {
         const base = HM.kitchen.recipes.find(item => item.id === edit.dataset.id);
-        if (base) D.state.kitchenRecipeEdits.push({ ...base });
+        if (base) D.state.kitchenRecipeEdits.push(HM.i18n.current() === 'ta' ? HM.kitchen.tamilRecipe(base) : { ...base });
       }
       openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context, domain: edit.dataset.domain }); return;
     }

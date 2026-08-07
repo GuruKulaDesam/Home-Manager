@@ -1678,6 +1678,11 @@ body::after { inset: 56px var(--utility) 0 var(--sidebar); overflow: hidden; bor
 .brand > .brand-copy { min-width: 0; display: grid; gap: 3px; }
 .persona-crumb { position: relative; display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .persona-crumb::after { content: "›"; color: rgba(255,255,255,.42); font-size: 16px; font-weight: 500; line-height: 1; }
+.language-switcher{display:inline-flex;align-items:center;gap:2px;height:32px;padding:3px;border:1px solid rgba(255,255,255,.22);border-radius:10px;background:rgba(7,30,48,.24);box-shadow:inset 0 1px rgba(255,255,255,.08)}
+.language-switcher button{min-width:38px;height:24px;padding:0 8px;border:0;border-radius:7px;background:transparent;color:rgba(255,255,255,.68);font-family:"Noto Sans Tamil","Nirmala UI",inherit;font-size:10px;font-weight:800;line-height:1;box-shadow:none}
+.language-switcher button:hover{color:#fff;background:rgba(255,255,255,.1)}
+.language-switcher button.active{color:#5f1744;background:linear-gradient(135deg,#ffe2ed,#ffd2c2);box-shadow:0 3px 10px rgba(4,12,28,.2)}
+body[data-language="ta"] #content:not([data-view^="study/"]){font-family:"Noto Sans Tamil","Nirmala UI","Latha",sans-serif}
 .persona-switcher { min-width: 0; height: 34px; display: inline-flex; align-items: center; gap: 7px; padding: 3px 9px 3px 4px; color: #fff; border: 1px solid rgba(255,255,255,.3); border-radius: 11px; background: linear-gradient(135deg, #d92f74 0%, #e24b55 56%, #ee6542 100%); box-shadow: 0 8px 22px rgba(190,35,91,.28); }
 .persona-switcher:hover, .persona-switcher[aria-expanded="true"] { border-color: rgba(255,255,255,.5); background: linear-gradient(135deg, #c92267 0%, #d83a4b 56%, #e45235 100%); box-shadow: 0 10px 26px rgba(190,35,91,.38); }
 .persona-switcher > span { width: 26px; height: 26px; display: grid; place-items: center; flex: 0 0 26px; color: #a91e4e; border-radius: 8px; background: rgba(255,255,255,.9); font-size: 9px; font-weight: 900; }
@@ -2419,3 +2424,91 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 @media(max-width:1100px){.kitchen-path{grid-template-columns:repeat(4,1fr)}.kitchen-path>div{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--k-line)}.weekly-menu-grid{grid-template-columns:repeat(4,1fr)}.week-tabs{grid-template-columns:repeat(4,1fr)}.pantry-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.kitchen-hero{align-items:flex-start;padding:25px;flex-direction:column}.kitchen-stats,.recipe-grid,.kitchen-purpose-strip{grid-template-columns:1fr 1fr}.kitchen-path,.week-tabs{grid-template-columns:repeat(2,1fr)}.weekly-menu-grid,.pantry-grid{grid-template-columns:1fr}.kitchen-toolbar{align-items:stretch;flex-direction:column}.recipe-body{grid-template-columns:1fr}.recipe-body footer{flex-wrap:wrap}.kitchen-count{display:none}.menu-planning-bar{grid-template-columns:1fr}.menu-persona-chip{border:0}.weekly-menu>header{align-items:flex-start;flex-direction:column}.menu-head-actions{justify-content:flex-start;margin-top:12px}}
 @media(max-width:430px){.kitchen-stats,.recipe-grid,.kitchen-purpose-strip{grid-template-columns:1fr}.kitchen-path{grid-template-columns:1fr}.week-tabs{grid-template-columns:1fr 1fr}}
+
+/* Kitchen — Aurora Light */
+[data-view^="kitchen/"]{--aurora-ink:#17203a;--aurora-muted:#64708a;--aurora-line:rgba(92,105,145,.16);--aurora-cyan:#17b8c7;--aurora-blue:#5574ef;--aurora-violet:#8b5cf6;--aurora-mint:#5cd6ad;font-family:"Noto Sans Tamil","Nirmala UI","Latha",sans-serif;color:var(--aurora-ink)}
+[data-view^="kitchen/"] .kitchen-hero{min-height:190px;padding:34px 40px;margin-bottom:16px;border:1px solid rgba(109,125,180,.18);border-radius:24px;background:radial-gradient(circle at 83% 20%,rgba(116,235,213,.42),transparent 24%),radial-gradient(circle at 70% 100%,rgba(149,126,255,.28),transparent 34%),linear-gradient(125deg,rgba(252,254,255,.98),rgba(239,248,255,.96) 55%,rgba(245,240,255,.96));box-shadow:0 16px 46px rgba(52,65,110,.1)}
+[data-view^="kitchen/"] .kitchen-hero:after{content:'';right:-70px;top:-110px;width:320px;height:320px;border:1px solid rgba(255,255,255,.65);border-radius:50%;background:linear-gradient(135deg,rgba(255,255,255,.45),transparent);font-size:0;transform:none}
+[data-view^="kitchen/"] .kitchen-eyebrow{margin-bottom:12px;color:#4f6fca;font-size:11px;font-weight:800;letter-spacing:.06em}
+[data-view^="kitchen/"] .kitchen-hero h2{max-width:760px;color:var(--aurora-ink);font-family:inherit;font-size:clamp(30px,3.3vw,47px);font-weight:780;line-height:1.22;letter-spacing:-.025em}
+[data-view^="kitchen/"] .kitchen-hero p{max-width:760px;margin-top:12px;color:var(--aurora-muted);font-size:14px;line-height:1.75}
+[data-view^="kitchen/"] .kitchen-hero-action{padding:13px 17px!important;border:1px solid rgba(80,99,190,.16)!important;border-radius:13px!important;background:linear-gradient(135deg,#566feb,#875deb)!important;box-shadow:0 10px 26px rgba(91,89,220,.24);font-weight:750}
+[data-view^="kitchen/"] .kitchen-stats{overflow:hidden;gap:0;margin-bottom:16px;border:1px solid var(--aurora-line);border-radius:18px;background:rgba(255,255,255,.85);box-shadow:0 8px 26px rgba(56,69,110,.06)}
+[data-view^="kitchen/"] .kitchen-stats button{min-height:90px;padding:17px 22px;border:0!important;border-right:1px solid var(--aurora-line)!important;border-radius:0;background:transparent;box-shadow:none}
+[data-view^="kitchen/"] .kitchen-stats button:last-child{border-right:0!important}
+[data-view^="kitchen/"] .kitchen-stats button:hover{background:rgba(237,244,255,.72)}
+[data-view^="kitchen/"] .kitchen-stats b{color:var(--aurora-ink);font-family:inherit;font-size:27px;font-weight:780}
+[data-view^="kitchen/"] .kitchen-stats span{color:var(--aurora-muted);font-size:11px}
+[data-view^="kitchen/"] .kitchen-path{grid-template-columns:repeat(7,1fr);gap:8px;padding:20px;border:1px solid var(--aurora-line);border-radius:20px;background:rgba(255,255,255,.86);color:var(--aurora-ink);box-shadow:0 10px 34px rgba(56,69,110,.07)}
+[data-view^="kitchen/"] .kitchen-path>div{grid-column:1/-1;display:grid;grid-template-columns:220px 1fr;align-items:end;column-gap:24px;padding:4px 4px 12px}
+[data-view^="kitchen/"] .kitchen-path>div small{grid-column:1;align-self:start}
+[data-view^="kitchen/"] .kitchen-path>div h3{grid-column:1;margin-bottom:0}
+[data-view^="kitchen/"] .kitchen-path>div p{grid-column:2;grid-row:1/3;max-width:680px}
+[data-view^="kitchen/"] .kitchen-path>div{padding:10px 12px}
+[data-view^="kitchen/"] .kitchen-path>div small{color:#6275bf;font-weight:750}
+[data-view^="kitchen/"] .kitchen-path h3{color:var(--aurora-ink);font:750 22px/1.45 inherit}
+[data-view^="kitchen/"] .kitchen-path p{color:var(--aurora-muted);font-size:11px;line-height:1.7}
+[data-view^="kitchen/"] .kitchen-path button{min-height:132px;padding:13px;border:1px solid rgba(104,119,165,.14);border-radius:14px;background:linear-gradient(155deg,rgba(247,251,255,.95),rgba(242,240,255,.78));color:var(--aurora-ink)}
+[data-view^="kitchen/"] .kitchen-path button:hover{border-color:rgba(94,112,225,.35);background:linear-gradient(155deg,#effaff,#f1edff);box-shadow:0 9px 20px rgba(75,90,145,.1)}
+[data-view^="kitchen/"] .kitchen-path button>span{background:linear-gradient(135deg,#dffbfa,#e8e4ff);color:#5165c8}
+[data-view^="kitchen/"] .kitchen-path button b{font-size:11px;line-height:1.5}
+[data-view^="kitchen/"] .kitchen-path button small{color:#7b8499;font-size:9px}
+[data-view^="kitchen/"] .kitchen-purpose-strip>span{border-color:var(--aurora-line);border-radius:16px;background:rgba(255,255,255,.82)}
+[data-view^="kitchen/"] .kitchen-purpose-strip svg{color:#6578e9}
+[data-view^="kitchen/"] .kitchen-purpose-strip small{color:var(--aurora-muted);line-height:1.6}
+[data-view^="kitchen/"] .kitchen-toolbar{border-color:var(--aurora-line);border-radius:14px;background:rgba(250,253,255,.92);box-shadow:0 8px 24px rgba(53,66,110,.08)}
+[data-view^="kitchen/"] .kitchen-count{background:#ebeaff;color:#5b5ec5}
+[data-view^="kitchen/"] .kitchen-recipe-card{border-color:var(--aurora-line);border-radius:16px;background:rgba(255,255,255,.88);box-shadow:0 6px 18px rgba(52,65,105,.05)}
+[data-view^="kitchen/"] .kitchen-recipe-card[open]{border-color:rgba(93,112,232,.34);box-shadow:0 14px 32px rgba(67,80,138,.11)}
+[data-view^="kitchen/"] .recipe-number{border-radius:12px;background:linear-gradient(135deg,#e0fbfa,#ebe7ff);color:#5465c5;font:750 15px inherit}
+[data-view^="kitchen/"] .recipe-title small{color:#74809a;letter-spacing:0}
+[data-view^="kitchen/"] .recipe-title b{color:var(--aurora-ink);font:730 17px/1.5 inherit}
+[data-view^="kitchen/"] .recipe-title em{color:var(--aurora-muted);line-height:1.55}
+[data-view^="kitchen/"] .recipe-body{border-top:1px solid var(--aurora-line);background:linear-gradient(145deg,#fbfeff,#f8f7ff)}
+[data-view^="kitchen/"] .recipe-body small{color:#5b69bf;letter-spacing:.04em}
+[data-view^="kitchen/"] .recipe-body p,[data-view^="kitchen/"] .recipe-body footer{color:#59657d}
+[data-view^="kitchen/"] .kitchen-medical-note{background:#eef7ff;color:#53647d}
+[data-view^="kitchen/"] .menu-planning-bar{border-color:var(--aurora-line);background:rgba(255,255,255,.88);box-shadow:0 8px 24px rgba(52,65,105,.06)}
+[data-view^="kitchen/"] .menu-persona-chip{border-color:var(--aurora-line)}
+[data-view^="kitchen/"] .menu-persona-chip>span{background:linear-gradient(135deg,#38c9c5,#7468ec);box-shadow:0 7px 18px rgba(73,118,206,.2)}
+[data-view^="kitchen/"] .menu-persona-chip>span{font-size:0}
+[data-view^="kitchen/"] .menu-persona-chip>span:after{content:'கு';font-size:14px}
+[data-view^="kitchen/"] .menu-persona-chip small,[data-view^="kitchen/"] .season-card small{color:#6f7bb5;letter-spacing:.03em}
+[data-view^="kitchen/"] .menu-persona-chip em,[data-view^="kitchen/"] .season-card em{color:var(--aurora-muted)}
+[data-view^="kitchen/"] .season-card{background:linear-gradient(135deg,#e9fbf6,#eef3ff)}
+[data-view^="kitchen/"] .season-card>svg,[data-view^="kitchen/"] .season-card b{color:#327f79}
+[data-view^="kitchen/"] .family-draft-note{background:linear-gradient(135deg,#f0f8ff,#f2efff);color:#5261a1}
+[data-view^="kitchen/"] .week-tabs button{border-color:var(--aurora-line);background:rgba(255,255,255,.78)}
+[data-view^="kitchen/"] .week-tabs button span{background:#edf1fb;color:#6371bd}
+[data-view^="kitchen/"] .week-tabs button small{color:#7b8499}
+[data-view^="kitchen/"] .week-tabs button.active{border-color:rgba(89,111,230,.4);background:linear-gradient(145deg,#ecfbff,#f0edff);box-shadow:0 9px 22px rgba(74,88,158,.11)}
+[data-view^="kitchen/"] .week-tabs button.active span{background:linear-gradient(135deg,#45c7cc,#7768ea);color:white}
+[data-view^="kitchen/"] .weekly-menu>header{align-items:center;border:1px solid var(--aurora-line);border-bottom:0;background:linear-gradient(120deg,#f7fdff,#f2efff);color:var(--aurora-ink)}
+[data-view^="kitchen/"] .weekly-menu>header small{color:#6676c5;letter-spacing:.02em}
+[data-view^="kitchen/"] .weekly-menu>header h2{font:750 25px/1.4 inherit}
+[data-view^="kitchen/"] .weekly-menu>header p{color:var(--aurora-muted)}
+[data-view^="kitchen/"] .weekly-menu>header button{color:#54617b}
+[data-view^="kitchen/"] .finalize-menu{border:0!important;background:linear-gradient(135deg,#4fc9c8,#7568e9)!important;color:white!important;box-shadow:0 7px 18px rgba(83,104,207,.2)}
+[data-view^="kitchen/"] .finalized-stamp{background:#e4f8f2;color:#317a6a}
+[data-view^="kitchen/"] .weekly-menu-grid{border-color:var(--aurora-line);background:rgba(255,255,255,.86)}
+[data-view^="kitchen/"] .weekly-menu-grid article{border-color:var(--aurora-line)}
+[data-view^="kitchen/"] .weekly-menu-grid h3{color:var(--aurora-ink);font:720 14px inherit}
+[data-view^="kitchen/"] .weekly-menu-grid h3 span{background:#eef1fb;color:#6571bb}
+[data-view^="kitchen/"] .weekly-menu-grid article>button{background:#f5fbff}
+[data-view^="kitchen/"] .weekly-menu-grid article>button:nth-of-type(2){background:#f1fbf8}
+[data-view^="kitchen/"] .weekly-menu-grid article>button:nth-of-type(3){background:#f7f4ff}
+[data-view^="kitchen/"] .weekly-menu-grid button small{color:#6978bd;letter-spacing:.03em}
+[data-view^="kitchen/"] .weekly-menu-grid button b{color:#39435b;line-height:1.55}
+[data-view^="kitchen/"] .pantry-summary{border-color:var(--aurora-line);background:linear-gradient(120deg,#effcf9,#f2f5ff)}
+[data-view^="kitchen/"] .pantry-ring{background:radial-gradient(circle at center,#f9ffff 55%,transparent 57%),conic-gradient(#53c8ba calc(var(--stock)*1%),#e1e8f2 0)}
+[data-view^="kitchen/"] .pantry-ring b{color:#367c77}
+[data-view^="kitchen/"] .pantry-grid article{border-color:var(--aurora-line);background:rgba(255,255,255,.88)}
+[data-view^="kitchen/"] .pantry-grid article.low{border-color:rgba(132,102,225,.24);background:#f7f3ff}
+[data-view^="kitchen/"] .pantry-grid article>span{background:#e4faf6;color:#349c91}
+[data-view^="kitchen/"] .pantry-grid article.low>span{background:#ece6ff;color:#725bd0}
+[data-view^="kitchen/"] .shopping-board{border-color:var(--aurora-line);background:rgba(255,255,255,.9);box-shadow:0 14px 36px rgba(51,64,108,.08)}
+[data-view^="kitchen/"] .shopping-board>header{background:linear-gradient(120deg,#edfaff,#eeeaff);color:var(--aurora-ink)}
+[data-view^="kitchen/"] .shopping-board>header small{color:#6675bc}
+@media(max-width:1100px){[data-view^="kitchen/"] .kitchen-path{grid-template-columns:repeat(4,1fr)}[data-view^="kitchen/"] .kitchen-path>div{grid-column:1/-1}}
+@media(max-width:700px){[data-view^="kitchen/"] .kitchen-hero{min-height:0;padding:26px}[data-view^="kitchen/"] .kitchen-stats{display:grid;grid-template-columns:1fr 1fr}[data-view^="kitchen/"] .kitchen-stats button:nth-child(2){border-right:0!important}[data-view^="kitchen/"] .kitchen-stats button:nth-child(-n+2){border-bottom:1px solid var(--aurora-line)!important}[data-view^="kitchen/"] .kitchen-path>div{display:block}[data-view^="kitchen/"] .kitchen-path>div p{margin-top:8px}}
+@media(max-width:430px){[data-view^="kitchen/"]{min-width:0;overflow:hidden}[data-view^="kitchen/"] .kitchen-hero h2{font-size:32px}[data-view^="kitchen/"] .kitchen-path{grid-template-columns:1fr 1fr}[data-view^="kitchen/"] .kitchen-path button{min-width:0;min-height:118px}[data-view^="kitchen/"] .kitchen-purpose-strip{grid-template-columns:1fr}}

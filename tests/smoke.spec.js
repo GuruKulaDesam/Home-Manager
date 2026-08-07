@@ -63,7 +63,7 @@ test('household identity drives the shell, map link and browser title', async ({
   expect(breadcrumbLayout.display).toBe('flex');
   expect(breadcrumbLayout.separator).toContain('›');
   expect(breadcrumbLayout.centerDelta).toBeLessThan(2);
-  expect(await page.locator('.page-identity').evaluate(element => [...element.children].map(child => child.id || child.className))).toEqual(['persona-crumb', 'breadcrumb', 'pageTitle']);
+  expect(await page.locator('.page-identity').evaluate(element => [...element.children].map(child => child.id || child.className))).toEqual(['persona-crumb', 'languageSwitcher', 'breadcrumb', 'pageTitle']);
 
   await page.goto(`${app}#/settings/household`);
   await page.locator('#householdSettings [name="householdName"]').fill('Jaya Community Home');
@@ -159,6 +159,30 @@ test('Money navigation and routes are unavailable to child personas', async ({ p
   await choosePersona(page, 'p1');
   await expect(page.locator('body')).toHaveAttribute('data-persona-role', 'parents');
   await expect(page.locator('#nav').getByRole('button', { name: /Money menu/ })).toBeVisible();
+});
+
+test('parents default to Tamil and keep an independent language preference', async ({ page }) => {
+  await expect(page.locator('#languageSwitcher [data-language="en"]')).toHaveAttribute('aria-pressed', 'true');
+  await choosePersona(page, 'p1');
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'ta');
+  await expect(page.locator('#languageSwitcher [data-language="ta"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#nav')).toContainText('இல்லம்');
+  await expect(page.locator('#pageTitle')).toHaveText('இன்று');
+  await expect(page.locator('body')).not.toContainText(/[௦-௯]/);
+  await expect(page.locator('#personaName')).toHaveText('Father');
+
+  await page.locator('#languageSwitcher [data-language="en"]').click();
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'en');
+  await expect(page.locator('#nav')).toContainText('Household');
+  await page.reload();
+  await expect(page.locator('#languageSwitcher [data-language="en"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.goto(`${app}#/kitchen/recipes`);
+  await expect(page.locator('.kitchen-hero h2')).toHaveText('100 Tamil traditional recipes');
+
+  await choosePersona(page, 'p2');
+  await expect(page.locator('body')).toHaveAttribute('data-language', 'ta');
+  await expect(page.locator('.kitchen-hero h2')).toHaveText('தமிழ் உணவுக் களஞ்சியம்');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem(HM.i18n.KEY)))).toEqual({ p1: 'en' });
 });
 
 test('offline assistant selects safe domain roles and ships its local runtime', async ({ page }) => {
