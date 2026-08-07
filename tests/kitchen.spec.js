@@ -38,7 +38,7 @@ test('persona drafts stay separate and the Home Manager finalizes the month', as
 
   await page.evaluate(() => localStorage.setItem('home-manager-active-persona-v1', 'p2'));
   await page.reload();
-  await expect(page.locator('[data-edit-menu="0:0:lunch"] b')).toHaveText('Sambar Saadham + beans poriyal');
+  await expect(page.locator('[data-edit-menu="0:0:lunch"] b')).toHaveText('சாம்பார் சாதம் · பீன்ஸ் பொரியல்');
   page.once('dialog', dialog => dialog.accept('Lemon Saadham + pachai payaru sundal'));
   await page.locator('[data-edit-menu="0:0:lunch"]').click();
   await page.locator('[data-finalize-menu="0"]').click();
