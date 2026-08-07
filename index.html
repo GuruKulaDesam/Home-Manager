@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#edf7f3">
   <meta name="description" content="A private, local-first command center for home, community and study life.">
-  <title>Our Divine Nest</title>
+  <title>Lotus Naga Home</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,8 +16,11 @@
   <a class="skip-link" href="#content">Skip to content</a>
   <aside id="sidebar" aria-label="Primary navigation">
     <div class="brand">
-      <span class="brand-mark" aria-hidden="true"><i data-lucide="mountain-snow"></i></span>
-      <div><b>Our Divine Nest</b><small>Life, clearly organised</small></div>
+      <span class="brand-mark" aria-hidden="true"><i data-lucide="flower-2"></i></span>
+      <div class="brand-copy">
+        <b id="brandName">Lotus Naga Home</b>
+        <a id="brandAddress" href="https://www.google.com/maps/search/?api=1&amp;query=32%20SSS%20Jaya%20Enclave%2C%20Kovaipudur%2C%20Coimbatore%2C%20641042" target="_blank" rel="noopener noreferrer">32 SSS Jaya Enclave, Kovaipudur, Coimbatore, 641042</a>
+      </div>
     </div>
     <div id="workspaceMenuLabel" class="workspace-menu-label"></div>
     <nav id="nav"></nav>
@@ -35,7 +38,8 @@
       <div class="topbar">
         <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
         <div class="page-identity">
-          <small id="breadcrumb">Our Divine Nest</small>
+          <div class="persona-crumb"><button type="button" id="personaSwitcher" class="persona-switcher" aria-haspopup="listbox" aria-expanded="false" aria-controls="personaMenu"><span id="personaInitials">FN</span><strong id="personaName">Family</strong><i data-lucide="chevrons-up-down"></i></button><div id="personaMenu" class="persona-menu" role="listbox" aria-label="View the app as" hidden></div></div>
+          <small id="breadcrumb">Lotus Naga Home</small>
           <h1 id="pageTitle">Today</h1>
         </div>
         <div id="educationHeaderTabs" class="education-header-tabs" aria-label="Education track and subjects"></div>
@@ -53,7 +57,7 @@
     <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i></button>
     <span class="utility-spacer"></span>
     <button type="button" id="theme" class="icon-button" title="Next mountain background" aria-label="Choose next mountain background"><i data-lucide="palette"></i></button>
-    <span class="avatar" title="Local profile" aria-label="Local profile">S</span>
+    <span id="utilityPersonaAvatar" class="avatar" title="Family view" aria-label="Current persona: Family">FN</span>
   </aside>
 
   <aside id="notificationPanel" class="notification-panel" aria-label="Notifications" aria-hidden="true">
@@ -132,6 +136,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/data.js"></script>
+  <script src="js/persona.js"></script>
   <script src="js/life.js"></script>
   <script src="js/questions.js"></script>
   <script src="js/genius.js"></script>
@@ -142,6 +147,17 @@
   <script src="js/genius-content/middle-stem.js"></script>
   <script src="js/genius-content/middle-languages.js"></script>
   <script src="js/genius-content/middle-society-skills.js"></script>
+  <script src="js/chapter-summaries-physics.js"></script>
+  <script src="js/chapter-summaries-chemistry.js"></script>
+  <script src="js/chapter-summaries-mathematics.js"></script>
+  <script src="js/chapter-summaries-grade7-core.js"></script>
+  <script src="js/chapter-summaries-senior-language-cs.js"></script>
+  <script src="js/chapter-summaries-grade7-languages.js"></script>
+  <script src="js/chapter-foundations-grade7.js"></script>
+  <script src="js/chapter-foundations-physics.js"></script>
+  <script src="js/chapter-foundations-chemistry.js"></script>
+  <script src="js/chapter-foundations-mathematics.js"></script>
+  <script src="js/chapter-foundations-senior-language-cs.js"></script>
   <script src="js/views.js"></script>
   <script type="module" src="js/cloud.js"></script>
   <script type="module" src="js/offline-ai.js"></script>

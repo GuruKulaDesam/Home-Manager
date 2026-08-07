@@ -14,6 +14,7 @@
   let activeBookObjectUrl = false;
   let activeInlineBookUrl = '';
   let activeChapterWorkspace = null;
+  let chapterSupportCleanup = null;
   const googleSessions = new Map();
   const googleWorkspaceSessions = new Map();
   HM.workspace = { cache: {}, selected: {} };
@@ -29,6 +30,35 @@
     if (window.lucide) window.lucide.createIcons({ attrs: { 'aria-hidden': 'true' } });
   }
 
+  function syncChapterSupportRail() {
+    chapterSupportCleanup?.();
+    chapterSupportCleanup = null;
+    const layout = document.querySelector('.chapter-summary-layout');
+    const rail = layout?.querySelector('.chapter-support-rail');
+    const scroller = layout?.closest('.chapter-workspace-content');
+    if (!layout || !rail || !scroller) return;
+    const definitions = layout.classList.contains('chapter-understand-layout')
+      ? [['concepts', '.chapter-learning-grid > article:nth-child(1)'], ['results', '.chapter-learning-grid > article:nth-child(2)'], ['reasoning', '.chapter-learning-grid > article:nth-child(3)'], ['traps', '.chapter-learning-grid > article:nth-child(4)']]
+      : [['foundation', '.chapter-foundation'], ['vocabulary', '.chapter-vocabulary'], ['opening', '.chapter-summary-opening'], ['picture', '.chapter-picture-section'], ['concepts', '.chapter-summary-map'], ['results', '.chapter-summary-results'], ['example', '.chapter-first-example'], ['reasoning', '.chapter-summary-reasoning'], ['traps', '.chapter-summary-traps'], ['exam', '.chapter-summary-exam'], ['recall', '.chapter-summary-recall']];
+    const sections = definitions.map(([key, selector]) => ({ key, element: layout.querySelector(selector) })).filter(item => item.element);
+    const cards = [...rail.querySelectorAll('[data-support-for]')];
+    const update = () => {
+      const anchor = scroller.getBoundingClientRect().top + Math.min(190, scroller.clientHeight * .28);
+      let current = sections[0];
+      sections.forEach(item => { if (item.element.getBoundingClientRect().top <= anchor) current = item; });
+      const active = cards.filter(card => (card.dataset.supportFor || '').split(/\s+/).includes(current?.key));
+      cards.forEach(card => card.classList.toggle('is-active', active.includes(card)));
+      rail.hidden = !active.length;
+    };
+    scroller.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update, { passive: true });
+    chapterSupportCleanup = () => {
+      scroller.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+    requestAnimationFrame(update);
+  }
+
   function toast(message) {
     const element = $('#toast');
     clearTimeout(toastTimer);
@@ -38,6 +68,70 @@
   }
 
   function go(next) { location.hash = '#/' + next; }
+
+  function renderHomeIdentity() {
+    const name = String(D.state.settings.householdName || 'Lotus Naga Home').trim() || 'Lotus Naga Home';
+    const address = String(D.state.settings.primaryAddress || '32 SSS Jaya Enclave, Kovaipudur, Coimbatore, 641042').trim();
+    const brandName = $('#brandName');
+    const brandAddress = $('#brandAddress');
+    if (brandName) brandName.textContent = name;
+    if (brandAddress) {
+      brandAddress.textContent = address;
+      brandAddress.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      brandAddress.title = `Open ${address} in maps`;
+      brandAddress.hidden = !address;
+    }
+    return name;
+  }
+
+  function closePersonaMenu(restoreFocus = false) {
+    const menu = $('#personaMenu');
+    const trigger = $('#personaSwitcher');
+    if (!menu || !trigger) return;
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('persona-menu-open');
+    if (restoreFocus) trigger.focus();
+  }
+
+  function openPersonaMenu() {
+    const menu = $('#personaMenu');
+    const trigger = $('#personaSwitcher');
+    if (!menu || !trigger) return;
+    menu.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('persona-menu-open');
+    menu.querySelector('[aria-selected="true"]')?.focus();
+  }
+
+  function renderPersonaIdentity() {
+    const persona = HM.persona.current();
+    const profile = HM.persona.academic(persona);
+    if (profile) D.state.settings.activeLearnerId = persona.id;
+    document.body.dataset.activePersona = persona.id;
+    document.body.dataset.personaRole = HM.persona.roleGroup(persona);
+    const trigger = $('#personaSwitcher');
+    const initials = HM.persona.initials(persona);
+    $('#personaInitials').textContent = initials;
+    $('#personaName').textContent = persona.name;
+    trigger.setAttribute('aria-label', `Switch persona. Current view: ${persona.name}`);
+    const utilityAvatar = $('#utilityPersonaAvatar');
+    if (utilityAvatar) {
+      utilityAvatar.textContent = initials;
+      utilityAvatar.title = `${persona.name} view`;
+      utilityAvatar.setAttribute('aria-label', `Current persona: ${persona.name}`);
+    }
+    const options = [
+      { id: HM.persona.FAMILY_ID, name: 'Family', householdRole: 'Shared household', isFamily: true },
+      ...HM.persona.people()
+    ];
+    $('#personaMenu').innerHTML = options.map(option => {
+      const selected = option.id === persona.id;
+      const optionInitials = option.isFamily ? 'FN' : HM.persona.initials({ ...option, isFamily: false });
+      return `<button type="button" class="persona-option" role="option" data-persona="${D.esc(option.id)}" aria-selected="${selected}" tabindex="${selected ? '0' : '-1'}"><span>${D.esc(optionInitials)}</span><span><b>${D.esc(option.name)}</b><small>${D.esc(option.householdRole || 'Family member')}</small></span><i data-lucide="check"></i></button>`;
+    }).join('');
+    return persona;
+  }
 
   function save(message = 'Saved') {
     try {
@@ -303,14 +397,14 @@
 
   function notificationItems() {
     const today = new Date().toISOString().slice(0, 10);
-    const overdue = D.state.tasks.filter(x => D.status(x.status) !== 'done' && x.dueAt && String(x.dueAt).slice(0, 10) < today);
+    const overdue = HM.persona.scope(D.state.tasks).filter(x => D.status(x.status) !== 'done' && x.dueAt && String(x.dueAt).slice(0, 10) < today);
     const low = D.state.inventoryItems.filter(x => (+x.quantity || 0) <= 2);
     const issues = D.state.issues.filter(x => D.status(x.status) !== 'done' && x.priority === 'high');
     const inThirtyDays = new Date();
     inThirtyDays.setDate(inThirtyDays.getDate() + 30);
     const horizon = inThirtyDays.toISOString().slice(0, 10);
-    const lifeRecords = (D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
-    const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.status === 'pending').sort((a, b) => ({ high: 0, medium: 1, normal: 2 }[a.urgency] ?? 2) - ({ high: 0, medium: 1, normal: 2 }[b.urgency] ?? 2));
+    const lifeRecords = HM.persona.scope(D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
+    const gmail = HM.persona.scope(D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.status === 'pending').sort((a, b) => ({ high: 0, medium: 1, normal: 2 }[a.urgency] ?? 2) - ({ high: 0, medium: 1, normal: 2 }[b.urgency] ?? 2));
     return [
       ...gmail.map(item => ({ title: item.title, detail: `${item.decision || 'Review'}${item.actionDate ? ` by ${D.date(item.actionDate)}` : ''}`, route: 'global/intelligence' })),
       ...overdue.map(x => ({ title: x.title, detail: `Overdue since ${D.date(x.dueAt)}`, route: x.context === 'study' ? 'study/tasks' : 'home/tasks' })),
@@ -337,14 +431,14 @@
     const month = day.slice(0, 7);
     const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
     const weekEnd = nextWeek.toISOString().slice(0, 10);
-    const openTasks = D.state.tasks.filter(item => D.status(item.status) !== 'done');
+    const openTasks = HM.persona.scope(D.state.tasks).filter(item => D.status(item.status) !== 'done');
     const upcoming = D.state.events.filter(item => item.startAt && item.startAt.slice(0, 10) >= day && item.startAt.slice(0, 10) <= weekEnd);
     const lowStock = D.state.inventoryItems.filter(item => (+item.quantity || 0) <= 2);
     const routeDomain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
     const records = routeDomain ? (D.state.lifeRecords || []).filter(item => item.domain === routeDomain) : [];
     let items;
     if (route === 'global/intelligence') {
-      const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail');
+      const gmail = HM.persona.scope(D.state.syncSuggestions || []).filter(item => item.source === 'gmail');
       items = [['Signals', gmail.length, route, 'mail-search'], ['Needs review', gmail.filter(item => item.status === 'pending').length, route, 'list-checks'], ['Detected', D.money(gmail.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
     } else if (routeDomain) {
       items = [['Records', records.length, route, 'database'], ['Need attention', records.filter(item => item.dueDate && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, route, 'bell-ring'], ['Tracked', D.money(records.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
@@ -417,12 +511,15 @@
       D.state.settings.activeWorkspace = workspace;
       D.save();
     }
+    const persona = renderPersonaIdentity();
     renderNav();
-    const title = V.titles[route] || ['Today', 'Our Divine Nest'];
+    const homeName = renderHomeIdentity();
+    const title = V.titles[route] || ['Today', homeName];
     $('#breadcrumb').textContent = settingsSection() ? 'Settings' : V.groups[activeGroup].label;
     $('#pageTitle').textContent = title[0];
-    document.title = title[0] + ' - Our Divine Nest';
+    document.title = title[0] + ' - ' + homeName;
     $('#content').dataset.view = route;
+    $('#content').dataset.activePersona = persona.id;
     $('#content').innerHTML = V.render(route);
     placeEducationMasterControls();
     bindView();
@@ -520,6 +617,12 @@
     else {
       Object.entries(source).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
       if (form.elements.context) form.elements.context.value = source.context || workspace;
+      const persona = HM.persona.current();
+      if (!persona.isFamily) {
+        if (form.elements.assignee && !form.elements.assignee.value) form.elements.assignee.value = persona.name;
+        if (form.elements.owner && !form.elements.owner.value) form.elements.owner.value = persona.name;
+        if (form.elements.author && !form.elements.author.value) form.elements.author.value = persona.name;
+      }
     }
     $('#formDialog').showModal();
     refreshIcons();
@@ -550,13 +653,13 @@
       return;
     }
     switch (kind) {
-      case 'task': state.tasks.push({ id: id('t'), context: values.context, type: values.type, title: values.title, category: values.category, assignee: values.assignee, dueAt: values.dueAt, frequency: values.frequency || 'Once', priority: values.priority, status: 'todo' }); break;
+      case 'task': { const owner = state.people.find(person => person.name === values.assignee); state.tasks.push({ id: id('t'), context: values.context, type: values.type, title: values.title, category: values.category, assignee: values.assignee, personId: owner?.id || '', dueAt: values.dueAt, frequency: values.frequency || 'Once', priority: values.priority, status: 'todo' }); break; }
       case 'event': state.events.push({ id: id('e'), context: values.context, title: values.title, category: values.category, startAt: values.startAt, venue: values.venue }); break;
       case 'person': state.people.push({ id: id('p'), name: values.name, householdRole: values.householdRole, wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) }); break;
       case 'points': state.pointTransactions.push({ id: id('pt'), personId: meta.person, context: 'home', reason: values.reason, points: +values.points || 0, createdAt: new Date().toISOString().slice(0, 10) }); break;
       case 'expense': state.expenses.push({ id: id('x'), domain: meta.domain || 'family', title: values.title, category: values.category, amount: +values.amount || 0, date: values.date }); break;
       case 'budget': state.budgets.push({ id: id('b'), domain: meta.domain || 'family', category: values.category, amount: +values.amount || 0, bucket: values.bucket }); break;
-      case 'income': state.incomes.push({ id: id('in'), domain: meta.domain || 'family', source: values.source, owner: values.owner, amount: +values.amount || 0, frequency: values.frequency, date: values.date }); break;
+      case 'income': { const owner = state.people.find(person => person.name === values.owner); state.incomes.push({ id: id('in'), domain: meta.domain || 'family', source: values.source, owner: values.owner, ownerId: owner?.id || '', amount: +values.amount || 0, frequency: values.frequency, date: values.date }); break; }
       case 'liability': state.liabilities.push({ id: id('db'), domain: meta.domain || 'family', title: values.title, type: values.type, balance: +values.balance || 0, payment: +values.payment || 0, interestRate: +values.interestRate || 0 }); break;
       case 'moneyGoal': state.moneyGoals.push({ id: id('mg'), domain: meta.domain || 'family', title: values.title, target: Math.max(1, +values.target || 1), saved: +values.saved || 0, contribution: +values.contribution || 0, dueDate: values.dueDate }); break;
       case 'inventory': state.inventoryItems.push({ id: id('n'), name: values.name, category: values.category, quantity: +values.quantity || 0, unit: values.unit }); break;
@@ -582,7 +685,7 @@
       case 'reflection': state.learningReflections.push({ id: id('rf'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, confidence: Math.min(5, Math.max(1, +values.confidence || 3)), effort: Math.min(5, Math.max(1, +values.effort || 3)), clarity: Math.min(5, Math.max(1, +values.clarity || 3)), strength: values.strength, question: values.question, nextStep: values.nextStep }); break;
       case 'tutorFeedback': state.tutorFeedback.push({ id: id('tf'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, type: values.type, tutor: values.tutor, strength: values.strength, challenge: values.challenge, action: values.action, dueDate: values.dueDate, status: values.status }); break;
       case 'coCurricular': state.coCurricularRecords.push({ id: id('cc'), studentId: meta.student || state.settings.activeLearnerId, activity: values.activity, category: values.category, tutor: values.tutor, schedule: values.schedule, goal: values.goal, status: values.status, achievement: values.achievement }); break;
-      case 'life': state.lifeRecords.push({ id: id('lr'), domain: meta.domain || 'documents', title: values.title, category: values.category, owner: values.owner, provider: values.provider, reference: values.reference, amount: Math.max(0, +values.amount || 0), dueDate: values.dueDate, frequency: values.frequency, status: values.status, phone: values.phone, notes: values.notes, createdAt: new Date().toISOString() }); break;
+      case 'life': { const owner = state.people.find(person => person.name === values.owner); state.lifeRecords.push({ id: id('lr'), domain: meta.domain || 'documents', title: values.title, category: values.category, owner: values.owner, ownerId: owner?.id || '', provider: values.provider, reference: values.reference, amount: Math.max(0, +values.amount || 0), dueDate: values.dueDate, frequency: values.frequency, status: values.status, phone: values.phone, notes: values.notes, createdAt: new Date().toISOString() }); break; }
     }
     save('Added to Home Manager');
     render();
@@ -903,6 +1006,8 @@
 
   function offlineAiContextData() {
     const familyRoute = /^home\/(family|calendar|directory|life\/(travel|festivals|documents|insurance|legacy))/.test(route);
+    const persona = HM.persona.current();
+    const viewer = { id: persona.id, name: persona.name, role: persona.householdRole, sharedView: persona.isFamily };
     const compact = items => (items || []).slice(0, 7).map(item => {
       const allowed = ['title', 'name', 'label', 'date', 'due', 'status', 'owner', 'subject', 'category', 'amount', 'priority'];
       return Object.fromEntries(allowed.filter(key => item[key] !== undefined && item[key] !== '').map(key => [key, item[key]]));
@@ -911,6 +1016,7 @@
       const expenses = D.state.expenses || [];
       const incomes = D.state.incomes || [];
       return JSON.stringify({
+        viewer,
         currency: 'INR',
         recordedIncome: incomes.reduce((sum, item) => sum + (+item.amount || 0), 0),
         recordedExpenses: expenses.reduce((sum, item) => sum + (+item.amount || 0), 0),
@@ -923,15 +1029,15 @@
       const activeId = D.state.settings.activeLearnerId || profiles[0]?.personId;
       const profile = profiles.find(item => item.personId === activeId) || profiles[0];
       const forLearner = items => (items || []).filter(item => !item.studentId || item.studentId === activeId);
-      return JSON.stringify({ learner: profile?.name, grade: profile?.grade, subjects: profile?.subjects?.slice(0, 7), plans: compact(forLearner(D.state.studyPlans)), assignments: compact(forLearner(D.state.academicDeliverables)), assessments: compact(forLearner(D.state.academicAssessments)) });
+      return JSON.stringify({ viewer, learner: profile?.name, grade: profile?.grade, subjects: profile?.subjects?.slice(0, 7), plans: compact(forLearner(D.state.studyPlans)), assignments: compact(forLearner(D.state.academicDeliverables)), assessments: compact(forLearner(D.state.academicAssessments)) });
     }
     if (route.startsWith('home/care') || route.startsWith('home/health') || route.startsWith('home/life/medicines') || route.startsWith('home/life/appointments') || route.startsWith('home/life/elders')) {
       const careDomains = ['health', 'medicines', 'appointments', 'elders', 'emergency', 'pets'];
-      return JSON.stringify({ careRecords: compact((D.state.lifeRecords || []).filter(item => careDomains.includes(item.domain))) });
+      return JSON.stringify({ viewer, careRecords: compact(HM.persona.scope(D.state.lifeRecords || []).filter(item => careDomains.includes(item.domain))) });
     }
-    if (familyRoute) return JSON.stringify({ tasks: compact(D.state.tasks), events: compact(D.state.events), goals: compact(D.state.goals), discussions: compact(D.state.discussions) });
-    if (route.startsWith('home/')) return JSON.stringify({ tasks: compact(D.state.tasks), inventory: compact(D.state.inventoryItems), issues: compact(D.state.issues), recurringRecords: compact(D.state.lifeRecords) });
-    return JSON.stringify({ tasks: compact(D.state.tasks), events: compact(D.state.events), goals: compact(D.state.goals), notifications: compact(notificationItems()) });
+    if (familyRoute) return JSON.stringify({ viewer, tasks: compact(HM.persona.scope(D.state.tasks)), events: compact(D.state.events), goals: compact(D.state.goals), discussions: compact(D.state.discussions) });
+    if (route.startsWith('home/')) return JSON.stringify({ viewer, tasks: compact(HM.persona.scope(D.state.tasks)), inventory: compact(D.state.inventoryItems), issues: compact(D.state.issues), recurringRecords: compact(HM.persona.scope(D.state.lifeRecords)) });
+    return JSON.stringify({ viewer, tasks: compact(HM.persona.scope(D.state.tasks)), events: compact(D.state.events), goals: compact(D.state.goals), notifications: compact(notificationItems()) });
   }
 
   function showOfflineAssistant() {
@@ -996,7 +1102,61 @@
       .replace(/\b\d{6,}\b/g, number => `...${number.slice(-4)}`)
       .replace(/\s+/g, ' ')
       .trim()
-      .slice(0, 260);
+      .slice(0, 600);
+  }
+
+  function decodeGmailPart(data) {
+    if (!data) return '';
+    try {
+      const base64 = String(data).replace(/-/g, '+').replace(/_/g, '/');
+      const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=');
+      const bytes = Uint8Array.from(atob(padded), character => character.charCodeAt(0));
+      return new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    } catch { return ''; }
+  }
+
+  function gmailMessageText(payload) {
+    const plain = [];
+    const html = [];
+    const visit = part => {
+      if (!part) return;
+      const value = decodeGmailPart(part.body?.data);
+      if (value && part.mimeType === 'text/plain') plain.push(value);
+      else if (value && part.mimeType === 'text/html') html.push(value);
+      (part.parts || []).forEach(visit);
+    };
+    visit(payload);
+    const source = plain.join('\n') || html.join('\n');
+    if (!source) return '';
+    if (plain.length) return source.replace(/\r/g, '').replace(/\n{3,}/g, '\n\n').slice(0, 20000);
+    const documentHtml = new DOMParser().parseFromString(source, 'text/html');
+    documentHtml.querySelectorAll('script, style, svg, noscript').forEach(node => node.remove());
+    return String(documentHtml.body?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 20000);
+  }
+
+  function essentialMessageSummary(text, category) {
+    const cleaned = String(text || '').replace(/\r/g, ' ').replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
+    if (!cleaned) return '';
+    const categoryWords = {
+      bills: /(?:₹|rs\.?|inr|paid|due|debit|credit|invoice|receipt|renew|premium|transaction)/i,
+      school: /(?:school|class|exam|test|assignment|homework|submit|result|attendance|fee|meeting|holiday)/i,
+      travel: /(?:pnr|flight|train|bus|hotel|booking|depart|arriv|check-in|journey|trip)/i,
+      health: /(?:appointment|doctor|hospital|clinic|lab|medicine|pharmacy|health|consult)/i,
+      deliveries: /(?:order|delivery|dispatch|ship|courier|tracking)/i,
+      government: /(?:aadhaar|passport|tax|pan|certificate|challan|municipal|government)/i,
+      home: /(?:service|repair|maintenance|technician|electricity|water|gas|property)/i
+    }[category] || /./;
+    const sentences = cleaned.split(/(?<=[.!?])\s+|\n+/).map(value => value.trim()).filter(value => value.length > 12 && value.length < 420);
+    const selected = [...sentences.filter(value => categoryWords.test(value)), ...sentences].filter((value, index, all) => all.indexOf(value) === index).slice(0, 4);
+    return safeMessageSummary(selected.join(' '));
+  }
+
+  function messageTransactionType(text) {
+    const value = String(text || '');
+    if (/\b(refund(?:ed)?|cashback|amount credited|credit received)\b/i.test(value)) return 'credit';
+    if (/\b(payment due|amount due|outstanding|pay by|due date|renewal due|premium due)\b/i.test(value) && !/\b(paid|payment successful|debited)\b/i.test(value)) return 'due';
+    if (/\b(paid|payment successful|payment received|debited|spent|purchase|receipt|order confirmed|booking confirmed|transaction successful|charged)\b/i.test(value)) return 'expense';
+    return 'notice';
   }
 
   function normalizeMessageDate(value) {
@@ -1070,7 +1230,7 @@
 
   function classifyIntegrationText(text, allowedCategories = integrationCategories) {
     const rules = [
-      ['bills', /\b(bill|invoice|payment due|due date|electricity|broadband|postpaid|recharge|premium|renewal|debited|credited|upi|transaction)\b/i],
+      ['bills', /\b(bill|invoice|receipt|payment|paid|purchase|due date|electricity|broadband|postpaid|recharge|premium|renewal|debited|credited|upi|transaction|autopay|statement|refund)\b/i],
       ['travel', /\b(pnr|flight|train|bus|boarding|departure|arrival|booking|trip|journey|hotel|cab)\b/i],
       ['school', /\b(school|class|exam|test|assignment|homework|fee|parent meeting|ptm|student|teacher)\b/i],
       ['health', /\b(doctor|hospital|clinic|appointment|lab|pharmacy|medicine|vaccin|health|consultation)\b/i],
@@ -1104,7 +1264,7 @@
       const summary = safeMessageSummary(item.summary || item.snippet || '');
       const receivedAt = normalizeMessageDate(item.receivedAt || item.startAt || item.date);
       const decision = integrationDecision(category, `${title} ${summary}`, receivedAt);
-      const suggestion = { id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), status: 'pending', trusted: autoApplyTrusted, ...decision, processedAt: new Date().toISOString() };
+      const suggestion = { id: D.uid('sg'), source, sourceRef, personId: String(item.personId || ''), category, title, summary, sender: safeMessageSummary(item.sender || item.account || '').slice(0, 100), receivedAt, amount: Math.max(0, +item.amount || 0), transactionType: ['expense','credit','due','notice'].includes(item.transactionType) ? item.transactionType : 'notice', status: 'pending', trusted: autoApplyTrusted, ...decision, processedAt: new Date().toISOString() };
       D.state.syncSuggestions.push(suggestion);
       result.added += 1;
       if (autoApplyTrusted && materializeIntegrationSuggestion(suggestion)) result.applied += 1;
@@ -1137,7 +1297,14 @@
     if (!item || item.status !== 'pending') return false;
     const date = String(item.actionDate || item.receivedAt || new Date().toISOString()).slice(0, 10);
     const eventTime = item.actionDate ? `${date}T09:00` : String(item.receivedAt || '').includes('T') ? String(item.receivedAt).slice(0, 16) : `${date}T09:00`;
-    if (item.source === 'calendar' || item.category === 'school') {
+    if (item.source === 'gmail' && item.transactionType === 'expense' && item.amount > 0) {
+      const expenseDomain = { bills: 'housing', travel: 'family', school: 'learning', health: 'health', deliveries: 'food', home: 'housing', government: 'family' }[item.category] || 'family';
+      D.state.expenses.push({ id: D.uid('x'), title: item.title, category: categoryLabels[item.category], domain: expenseDomain, amount: item.amount, date: String(item.receivedAt || date).slice(0, 10), source: 'Gmail', sourceRef: item.sourceRef, notes: item.summary });
+    } else if (item.category === 'school' && /\b(assignment|homework|project|worksheet|submission|submit)\b/i.test(`${item.title} ${item.summary}`)) {
+      const profile = D.state.academicProfiles.find(entry => entry.personId === item.personId) || D.state.academicProfiles[0];
+      const subject = profile?.subjects.find(value => new RegExp(`\\b${value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(`${item.title} ${item.summary}`)) || profile?.subjects[0] || 'General';
+      D.state.academicDeliverables.push({ id: D.uid('ad'), studentId: profile?.personId || item.personId, title: item.title, subject, type: 'Assignment', dueDate: date, teacher: item.sender || 'School', status: 'todo', weight: 0, notes: item.summary, sourceRef: item.sourceRef });
+    } else if (item.source === 'calendar' || item.category === 'school') {
       D.state.events.push({ id: D.uid('e'), context: item.category === 'school' ? 'study' : 'home', title: item.title, category: item.category === 'school' ? 'School' : categoryLabels[item.category], startAt: eventTime, venue: item.sender || '', notes: item.summary });
     } else if (['bills', 'travel', 'health', 'government'].includes(item.category)) {
       const domain = { bills: 'bills', travel: 'travel', health: 'appointments', government: 'documents' }[item.category];
@@ -1246,14 +1413,21 @@
       let account = (sync.accounts || []).find(item => item.slotId === slotId);
       if (!account) { account = { slotId }; sync.accounts ||= []; sync.accounts.push(account); }
       Object.assign(account, { personId, email, consent: true, status: 'connected', lastSync: account.lastSync || '' });
-      save(`${email} connected for this browser session`);
+      const suggestions = [...await readGoogleCalendar(account, googleSessions.get(slotId), sync), ...await readGoogleGmail(account, googleSessions.get(slotId), sync)];
+      const result = mergeSuggestions(suggestions, 'gmail', true);
+      account.lastSync = new Date().toISOString();
+      save(`${email} synced; ${result.applied} household updates added`);
       render();
     } catch (error) { toast(`Google connection failed: ${error.message}`); }
     finally { if (button?.isConnected) button.disabled = false; }
   }
 
   function amountFromText(text) {
-    const match = String(text || '').match(/(?:rs\.?|inr|\u20b9)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const value = String(text || '');
+    const priority = value.match(/(?:paid|debited|spent|charged|purchase|total|amount|invoice|receipt)[^\d₹]{0,35}(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const prefix = priority || value.match(/(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i);
+    const suffix = value.match(/([\d,]+(?:\.\d{1,2})?)\s*(?:inr|rupees?)\b/i);
+    const match = prefix || suffix;
     return match ? +match[1].replace(/,/g, '') || 0 : 0;
   }
 
@@ -1272,27 +1446,27 @@
 
   async function readGoogleGmail(account, session, sync) {
     if (!sync.emailAnalysis) return [];
-    const query = `newer_than:${+sync.lookbackDays || 30}d {bill invoice payment receipt renewal premium insurance booking travel ticket itinerary school exam assignment fee result attendance appointment hospital pharmacy medicine delivery order shipment government aadhaar passport tax property service maintenance subscription}`;
+    const query = `newer_than:${+sync.lookbackDays || 30}d -in:spam -in:trash`;
     const references = [];
     let pageToken = '';
     do {
-      const listParams = new URLSearchParams({ q: query, maxResults: '50' });
+      const listParams = new URLSearchParams({ q: query, maxResults: '100' });
       if (pageToken) listParams.set('pageToken', pageToken);
       const page = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
       references.push(...(page.messages || []));
       pageToken = page.nextPageToken || '';
-    } while (pageToken && references.length < 100);
-    const messages = await mapWithConcurrency(references.slice(0, 100), 3, async reference => {
-      const params = new URLSearchParams({ format: 'metadata' });
-      ['Subject', 'From', 'Date'].forEach(name => params.append('metadataHeaders', name));
+    } while (pageToken && references.length < 500);
+    const messages = await mapWithConcurrency(references.slice(0, 500), 3, async reference => {
+      const params = new URLSearchParams({ format: 'full' });
       return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
     });
     return messages.map(message => {
       const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name).toLowerCase(), header.value]));
-      const text = `${headers.subject || ''} ${message.snippet || ''}`;
+      const body = gmailMessageText(message.payload);
+      const text = `${headers.subject || ''} ${message.snippet || ''} ${body}`.slice(0, 24000);
       const category = classifyIntegrationText(text, sync.categories || integrationCategories);
       if (!category || /\b(otp|one[ -]?time password|verification code)\b/i.test(text)) return null;
-      return { source: 'gmail', sourceRef: `${account.email}:${message.id}`, personId: account.personId, category, title: headers.subject || categoryLabels[category], summary: message.snippet || '', sender: headers.from || account.email, receivedAt: message.internalDate ? new Date(+message.internalDate).toISOString() : headers.date || '', amount: amountFromText(text) };
+      return { source: 'gmail', sourceRef: `${account.email}:${message.id}`, personId: account.personId, category, title: headers.subject || categoryLabels[category], summary: essentialMessageSummary(body || message.snippet || '', category), sender: headers.from || account.email, receivedAt: message.internalDate ? new Date(+message.internalDate).toISOString() : headers.date || '', amount: amountFromText(text), transactionType: messageTransactionType(text) };
     }).filter(Boolean);
   }
 
@@ -1615,25 +1789,29 @@
     $('#notificationPanel').setAttribute('aria-hidden', String(!next));
   }
 
-  function refreshChapterWorkspace(lessonId, section = 'understand') {
+  function refreshChapterWorkspace(lessonId, section = 'summary') {
     const workspace = $('#chapterWorkspace');
+    const lesson = V.lessonById(lessonId);
     activeChapterWorkspace = { lessonId, section };
     $('#chapterWorkspaceBody').innerHTML = V.chapterWorkspace(lessonId, section);
     $('#nav').classList.add('chapter-nav-mode');
     $('#nav').innerHTML = V.chapterWorkspaceNavigation(lessonId, section);
-    $('#workspaceMenuLabel').innerHTML = '<span><small>Education</small><b>Chapter journey</b></span><i data-lucide="route"></i>';
+    $('#workspaceMenuLabel').innerHTML = `<span><small>Education</small><b>${D.esc(lesson?.subject || 'Subject')} chapters</b></span><i data-lucide="list-tree"></i>`;
     workspace.hidden = false;
     document.body.classList.add('chapter-workspace-open');
     refreshIcons();
+    syncChapterSupportRail();
   }
 
-  function openChapterWorkspace(lessonId, section = 'understand') {
+  function openChapterWorkspace(lessonId, section = 'summary') {
     refreshChapterWorkspace(lessonId, section);
     $('#nav .chapter-workspace-close')?.focus();
   }
 
   function closeChapterWorkspace() {
     const workspace = $('#chapterWorkspace');
+    chapterSupportCleanup?.();
+    chapterSupportCleanup = null;
     workspace.hidden = true;
     $('#chapterWorkspaceBody').innerHTML = '';
     activeChapterWorkspace = null;
@@ -1644,6 +1822,26 @@
   }
 
   document.addEventListener('click', event => {
+    const personaTrigger = event.target.closest('#personaSwitcher');
+    if (personaTrigger) {
+      $('#personaMenu').hidden ? openPersonaMenu() : closePersonaMenu();
+      return;
+    }
+    const personaOption = event.target.closest('[data-persona]');
+    if (personaOption) {
+      const chapterWasOpen = document.body.classList.contains('chapter-workspace-open');
+      const persona = HM.persona.set(personaOption.dataset.persona);
+      const profile = HM.persona.academic(persona);
+      if (profile) D.state.settings.activeLearnerId = persona.id;
+      D.save();
+      closePersonaMenu();
+      document.body.classList.remove('menu-open');
+      if (chapterWasOpen) closeChapterWorkspace();
+      else render();
+      toast(`Now viewing ${persona.name}`);
+      return;
+    }
+    if (!event.target.closest('#personaMenu') && !$('#personaMenu').hidden) closePersonaMenu();
     if (event.target.closest('[data-close-chapter-workspace]')) {
       closeChapterWorkspace();
       return;
@@ -1673,12 +1871,17 @@
     }
     const chapterWorkspace = event.target.closest('[data-chapter-workspace]');
     if (chapterWorkspace) {
-      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'understand');
+      openChapterWorkspace(chapterWorkspace.dataset.chapterWorkspace, 'summary');
       return;
     }
     const chapterCard = event.target.closest('[data-chapter-card]');
     if (chapterCard && !event.target.closest('select, option, input, label, button, a')) {
-      openChapterWorkspace(chapterCard.dataset.chapterCard, 'understand');
+      openChapterWorkspace(chapterCard.dataset.chapterCard, 'summary');
+      return;
+    }
+    const chapterSwitch = event.target.closest('[data-chapter-switch]');
+    if (chapterSwitch) {
+      refreshChapterWorkspace(chapterSwitch.dataset.chapterSwitch, activeChapterWorkspace?.section || 'summary');
       return;
     }
     const chapterTab = event.target.closest('[data-chapter-workspace-tab]');
@@ -1694,10 +1897,14 @@
       D.state.settings.chapterJourney ||= {};
       D.state.settings.chapterJourney[learnerId] ||= {};
       D.state.settings.chapterJourney[learnerId][lessonId] ||= {};
-      D.state.settings.chapterJourney[learnerId][lessonId][stage] = !D.state.settings.chapterJourney[learnerId][lessonId][stage];
+      const journey = D.state.settings.chapterJourney[learnerId][lessonId];
+      if (stage === 'summary') {
+        journey.summary = !(journey.summary || journey.exam);
+        journey.exam = false;
+      } else journey[stage] = !journey[stage];
       D.save();
       refreshChapterWorkspace(lessonId, stage);
-      toast(D.state.settings.chapterJourney[learnerId][lessonId][stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
+      toast(journey[stage] ? 'Chapter stage completed' : 'Chapter stage reopened');
       return;
     }
     const chapterMastery = event.target.closest('[data-chapter-mastery]');
@@ -1784,6 +1991,7 @@
         D.save();
       }
       render();
+      requestAnimationFrame(() => document.querySelector(`[data-mcq-question-card="${questionIndex}"]`)?.scrollIntoView({ block: 'center' }));
       return;
     }
     const mcqNext = event.target.closest('[data-mcq-next]');
@@ -2097,11 +2305,27 @@
     toast('Family database updated');
   });
   document.addEventListener('keydown', event => {
+    if (event.target.closest?.('#personaSwitcher') && ['Enter', ' ', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      openPersonaMenu();
+      return;
+    }
+    const personaOption = event.target.closest?.('.persona-option');
+    if (personaOption && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const options = [...$('#personaMenu').querySelectorAll('.persona-option')];
+      let index = options.indexOf(personaOption);
+      if (event.key === 'Home') index = 0;
+      else if (event.key === 'End') index = options.length - 1;
+      else index = (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+      options[index]?.focus();
+      return;
+    }
     const chapterCard = event.target.closest?.('[data-chapter-card]');
-    if (chapterCard && event.target === chapterCard && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openChapterWorkspace(chapterCard.dataset.chapterCard, 'understand'); return; }
+    if (chapterCard && event.target === chapterCard && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openChapterWorkspace(chapterCard.dataset.chapterCard, 'summary'); return; }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }
-    if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }
+    if (event.key === 'Escape') { closePersonaMenu(!$('#personaMenu').hidden); document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }
   });
 
   applyTheme();
