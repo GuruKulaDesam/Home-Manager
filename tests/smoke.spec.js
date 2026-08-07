@@ -80,6 +80,8 @@ test('global persona persists and scopes owned content while preserving shared r
   await expect(page.locator('#personaMenu')).toBeVisible();
   await expect(page.locator('.persona-option')).toHaveCount(5);
   await expect(page.locator('#personaMenu [data-persona="family"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#personaMenu [data-persona="p3"] small')).toHaveText('Daughter');
+  await expect(page.locator('#personaMenu [data-persona="p4"] small')).toHaveText('Son');
   await page.keyboard.press('Escape');
   await expect(page.locator('#personaMenu')).toBeHidden();
   await page.locator('#personaSwitcher').press('ArrowDown');
