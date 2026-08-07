@@ -17,7 +17,7 @@
   <aside id="sidebar" aria-label="Primary navigation">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"><i data-lucide="flower-2"></i></span>
-      <div>
+      <div class="brand-copy">
         <b id="brandName">Lotus Naga Home</b>
         <a id="brandAddress" href="https://www.google.com/maps/search/?api=1&amp;query=32%20SSS%20Jaya%20Enclave%2C%20Kovaipudur%2C%20Coimbatore%2C%20641042" target="_blank" rel="noopener noreferrer">32 SSS Jaya Enclave, Kovaipudur, Coimbatore, 641042</a>
       </div>
@@ -38,6 +38,7 @@
       <div class="topbar">
         <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
         <div class="page-identity">
+          <div class="persona-crumb"><button type="button" id="personaSwitcher" class="persona-switcher" aria-haspopup="listbox" aria-expanded="false" aria-controls="personaMenu"><span id="personaInitials">FN</span><strong id="personaName">Family</strong><i data-lucide="chevrons-up-down"></i></button><div id="personaMenu" class="persona-menu" role="listbox" aria-label="View the app as" hidden></div></div>
           <small id="breadcrumb">Lotus Naga Home</small>
           <h1 id="pageTitle">Today</h1>
         </div>
@@ -56,7 +57,7 @@
     <button type="button" id="emergency" class="emergency-button" title="Emergency help" aria-label="Open emergency help"><i data-lucide="siren"></i></button>
     <span class="utility-spacer"></span>
     <button type="button" id="theme" class="icon-button" title="Next mountain background" aria-label="Choose next mountain background"><i data-lucide="palette"></i></button>
-    <span class="avatar" title="Local profile" aria-label="Local profile">S</span>
+    <span id="utilityPersonaAvatar" class="avatar" title="Family view" aria-label="Current persona: Family">FN</span>
   </aside>
 
   <aside id="notificationPanel" class="notification-panel" aria-label="Notifications" aria-hidden="true">
@@ -135,6 +136,7 @@
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/data.js"></script>
+  <script src="js/persona.js"></script>
   <script src="js/life.js"></script>
   <script src="js/questions.js"></script>
   <script src="js/genius.js"></script>

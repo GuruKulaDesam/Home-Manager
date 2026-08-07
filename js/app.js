@@ -84,6 +84,55 @@
     return name;
   }
 
+  function closePersonaMenu(restoreFocus = false) {
+    const menu = $('#personaMenu');
+    const trigger = $('#personaSwitcher');
+    if (!menu || !trigger) return;
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('persona-menu-open');
+    if (restoreFocus) trigger.focus();
+  }
+
+  function openPersonaMenu() {
+    const menu = $('#personaMenu');
+    const trigger = $('#personaSwitcher');
+    if (!menu || !trigger) return;
+    menu.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('persona-menu-open');
+    menu.querySelector('[aria-selected="true"]')?.focus();
+  }
+
+  function renderPersonaIdentity() {
+    const persona = HM.persona.current();
+    const profile = HM.persona.academic(persona);
+    if (profile) D.state.settings.activeLearnerId = persona.id;
+    document.body.dataset.activePersona = persona.id;
+    document.body.dataset.personaRole = HM.persona.roleGroup(persona);
+    const trigger = $('#personaSwitcher');
+    const initials = HM.persona.initials(persona);
+    $('#personaInitials').textContent = initials;
+    $('#personaName').textContent = persona.name;
+    trigger.setAttribute('aria-label', `Switch persona. Current view: ${persona.name}`);
+    const utilityAvatar = $('#utilityPersonaAvatar');
+    if (utilityAvatar) {
+      utilityAvatar.textContent = initials;
+      utilityAvatar.title = `${persona.name} view`;
+      utilityAvatar.setAttribute('aria-label', `Current persona: ${persona.name}`);
+    }
+    const options = [
+      { id: HM.persona.FAMILY_ID, name: 'Family', householdRole: 'Shared household', isFamily: true },
+      ...HM.persona.people()
+    ];
+    $('#personaMenu').innerHTML = options.map(option => {
+      const selected = option.id === persona.id;
+      const optionInitials = option.isFamily ? 'FN' : HM.persona.initials({ ...option, isFamily: false });
+      return `<button type="button" class="persona-option" role="option" data-persona="${D.esc(option.id)}" aria-selected="${selected}" tabindex="${selected ? '0' : '-1'}"><span>${D.esc(optionInitials)}</span><span><b>${D.esc(option.name)}</b><small>${D.esc(option.householdRole || 'Family member')}</small></span><i data-lucide="check"></i></button>`;
+    }).join('');
+    return persona;
+  }
+
   function save(message = 'Saved') {
     try {
       D.save();
@@ -348,14 +397,14 @@
 
   function notificationItems() {
     const today = new Date().toISOString().slice(0, 10);
-    const overdue = D.state.tasks.filter(x => D.status(x.status) !== 'done' && x.dueAt && String(x.dueAt).slice(0, 10) < today);
+    const overdue = HM.persona.scope(D.state.tasks).filter(x => D.status(x.status) !== 'done' && x.dueAt && String(x.dueAt).slice(0, 10) < today);
     const low = D.state.inventoryItems.filter(x => (+x.quantity || 0) <= 2);
     const issues = D.state.issues.filter(x => D.status(x.status) !== 'done' && x.priority === 'high');
     const inThirtyDays = new Date();
     inThirtyDays.setDate(inThirtyDays.getDate() + 30);
     const horizon = inThirtyDays.toISOString().slice(0, 10);
-    const lifeRecords = (D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
-    const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.status === 'pending').sort((a, b) => ({ high: 0, medium: 1, normal: 2 }[a.urgency] ?? 2) - ({ high: 0, medium: 1, normal: 2 }[b.urgency] ?? 2));
+    const lifeRecords = HM.persona.scope(D.state.lifeRecords || []).filter(x => x.dueDate && x.dueDate <= horizon && !['done', 'paid'].includes(x.status));
+    const gmail = HM.persona.scope(D.state.syncSuggestions || []).filter(item => item.source === 'gmail' && item.status === 'pending').sort((a, b) => ({ high: 0, medium: 1, normal: 2 }[a.urgency] ?? 2) - ({ high: 0, medium: 1, normal: 2 }[b.urgency] ?? 2));
     return [
       ...gmail.map(item => ({ title: item.title, detail: `${item.decision || 'Review'}${item.actionDate ? ` by ${D.date(item.actionDate)}` : ''}`, route: 'global/intelligence' })),
       ...overdue.map(x => ({ title: x.title, detail: `Overdue since ${D.date(x.dueAt)}`, route: x.context === 'study' ? 'study/tasks' : 'home/tasks' })),
@@ -382,14 +431,14 @@
     const month = day.slice(0, 7);
     const nextWeek = new Date(); nextWeek.setDate(nextWeek.getDate() + 7);
     const weekEnd = nextWeek.toISOString().slice(0, 10);
-    const openTasks = D.state.tasks.filter(item => D.status(item.status) !== 'done');
+    const openTasks = HM.persona.scope(D.state.tasks).filter(item => D.status(item.status) !== 'done');
     const upcoming = D.state.events.filter(item => item.startAt && item.startAt.slice(0, 10) >= day && item.startAt.slice(0, 10) <= weekEnd);
     const lowStock = D.state.inventoryItems.filter(item => (+item.quantity || 0) <= 2);
     const routeDomain = route.match(/(?:home|settings)\/life\/([^/]+)/)?.[1];
     const records = routeDomain ? (D.state.lifeRecords || []).filter(item => item.domain === routeDomain) : [];
     let items;
     if (route === 'global/intelligence') {
-      const gmail = (D.state.syncSuggestions || []).filter(item => item.source === 'gmail');
+      const gmail = HM.persona.scope(D.state.syncSuggestions || []).filter(item => item.source === 'gmail');
       items = [['Signals', gmail.length, route, 'mail-search'], ['Needs review', gmail.filter(item => item.status === 'pending').length, route, 'list-checks'], ['Detected', D.money(gmail.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
     } else if (routeDomain) {
       items = [['Records', records.length, route, 'database'], ['Need attention', records.filter(item => item.dueDate && item.dueDate <= weekEnd && !['done', 'paid'].includes(item.status)).length, route, 'bell-ring'], ['Tracked', D.money(records.reduce((sum, item) => sum + (+item.amount || 0), 0)), route, 'indian-rupee']];
@@ -462,6 +511,7 @@
       D.state.settings.activeWorkspace = workspace;
       D.save();
     }
+    const persona = renderPersonaIdentity();
     renderNav();
     const homeName = renderHomeIdentity();
     const title = V.titles[route] || ['Today', homeName];
@@ -469,6 +519,7 @@
     $('#pageTitle').textContent = title[0];
     document.title = title[0] + ' - ' + homeName;
     $('#content').dataset.view = route;
+    $('#content').dataset.activePersona = persona.id;
     $('#content').innerHTML = V.render(route);
     placeEducationMasterControls();
     bindView();
@@ -566,6 +617,12 @@
     else {
       Object.entries(source).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = value ?? ''; });
       if (form.elements.context) form.elements.context.value = source.context || workspace;
+      const persona = HM.persona.current();
+      if (!persona.isFamily) {
+        if (form.elements.assignee && !form.elements.assignee.value) form.elements.assignee.value = persona.name;
+        if (form.elements.owner && !form.elements.owner.value) form.elements.owner.value = persona.name;
+        if (form.elements.author && !form.elements.author.value) form.elements.author.value = persona.name;
+      }
     }
     $('#formDialog').showModal();
     refreshIcons();
@@ -596,13 +653,13 @@
       return;
     }
     switch (kind) {
-      case 'task': state.tasks.push({ id: id('t'), context: values.context, type: values.type, title: values.title, category: values.category, assignee: values.assignee, dueAt: values.dueAt, frequency: values.frequency || 'Once', priority: values.priority, status: 'todo' }); break;
+      case 'task': { const owner = state.people.find(person => person.name === values.assignee); state.tasks.push({ id: id('t'), context: values.context, type: values.type, title: values.title, category: values.category, assignee: values.assignee, personId: owner?.id || '', dueAt: values.dueAt, frequency: values.frequency || 'Once', priority: values.priority, status: 'todo' }); break; }
       case 'event': state.events.push({ id: id('e'), context: values.context, title: values.title, category: values.category, startAt: values.startAt, venue: values.venue }); break;
       case 'person': state.people.push({ id: id('p'), name: values.name, householdRole: values.householdRole, wellbeing: Math.min(100, Math.max(0, +values.wellbeing || 0)) }); break;
       case 'points': state.pointTransactions.push({ id: id('pt'), personId: meta.person, context: 'home', reason: values.reason, points: +values.points || 0, createdAt: new Date().toISOString().slice(0, 10) }); break;
       case 'expense': state.expenses.push({ id: id('x'), domain: meta.domain || 'family', title: values.title, category: values.category, amount: +values.amount || 0, date: values.date }); break;
       case 'budget': state.budgets.push({ id: id('b'), domain: meta.domain || 'family', category: values.category, amount: +values.amount || 0, bucket: values.bucket }); break;
-      case 'income': state.incomes.push({ id: id('in'), domain: meta.domain || 'family', source: values.source, owner: values.owner, amount: +values.amount || 0, frequency: values.frequency, date: values.date }); break;
+      case 'income': { const owner = state.people.find(person => person.name === values.owner); state.incomes.push({ id: id('in'), domain: meta.domain || 'family', source: values.source, owner: values.owner, ownerId: owner?.id || '', amount: +values.amount || 0, frequency: values.frequency, date: values.date }); break; }
       case 'liability': state.liabilities.push({ id: id('db'), domain: meta.domain || 'family', title: values.title, type: values.type, balance: +values.balance || 0, payment: +values.payment || 0, interestRate: +values.interestRate || 0 }); break;
       case 'moneyGoal': state.moneyGoals.push({ id: id('mg'), domain: meta.domain || 'family', title: values.title, target: Math.max(1, +values.target || 1), saved: +values.saved || 0, contribution: +values.contribution || 0, dueDate: values.dueDate }); break;
       case 'inventory': state.inventoryItems.push({ id: id('n'), name: values.name, category: values.category, quantity: +values.quantity || 0, unit: values.unit }); break;
@@ -628,7 +685,7 @@
       case 'reflection': state.learningReflections.push({ id: id('rf'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, confidence: Math.min(5, Math.max(1, +values.confidence || 3)), effort: Math.min(5, Math.max(1, +values.effort || 3)), clarity: Math.min(5, Math.max(1, +values.clarity || 3)), strength: values.strength, question: values.question, nextStep: values.nextStep }); break;
       case 'tutorFeedback': state.tutorFeedback.push({ id: id('tf'), studentId: meta.student || state.settings.activeLearnerId, date: values.date, subject: values.subject, type: values.type, tutor: values.tutor, strength: values.strength, challenge: values.challenge, action: values.action, dueDate: values.dueDate, status: values.status }); break;
       case 'coCurricular': state.coCurricularRecords.push({ id: id('cc'), studentId: meta.student || state.settings.activeLearnerId, activity: values.activity, category: values.category, tutor: values.tutor, schedule: values.schedule, goal: values.goal, status: values.status, achievement: values.achievement }); break;
-      case 'life': state.lifeRecords.push({ id: id('lr'), domain: meta.domain || 'documents', title: values.title, category: values.category, owner: values.owner, provider: values.provider, reference: values.reference, amount: Math.max(0, +values.amount || 0), dueDate: values.dueDate, frequency: values.frequency, status: values.status, phone: values.phone, notes: values.notes, createdAt: new Date().toISOString() }); break;
+      case 'life': { const owner = state.people.find(person => person.name === values.owner); state.lifeRecords.push({ id: id('lr'), domain: meta.domain || 'documents', title: values.title, category: values.category, owner: values.owner, ownerId: owner?.id || '', provider: values.provider, reference: values.reference, amount: Math.max(0, +values.amount || 0), dueDate: values.dueDate, frequency: values.frequency, status: values.status, phone: values.phone, notes: values.notes, createdAt: new Date().toISOString() }); break; }
     }
     save('Added to Home Manager');
     render();
@@ -949,6 +1006,8 @@
 
   function offlineAiContextData() {
     const familyRoute = /^home\/(family|calendar|directory|life\/(travel|festivals|documents|insurance|legacy))/.test(route);
+    const persona = HM.persona.current();
+    const viewer = { id: persona.id, name: persona.name, role: persona.householdRole, sharedView: persona.isFamily };
     const compact = items => (items || []).slice(0, 7).map(item => {
       const allowed = ['title', 'name', 'label', 'date', 'due', 'status', 'owner', 'subject', 'category', 'amount', 'priority'];
       return Object.fromEntries(allowed.filter(key => item[key] !== undefined && item[key] !== '').map(key => [key, item[key]]));
@@ -957,6 +1016,7 @@
       const expenses = D.state.expenses || [];
       const incomes = D.state.incomes || [];
       return JSON.stringify({
+        viewer,
         currency: 'INR',
         recordedIncome: incomes.reduce((sum, item) => sum + (+item.amount || 0), 0),
         recordedExpenses: expenses.reduce((sum, item) => sum + (+item.amount || 0), 0),
@@ -969,15 +1029,15 @@
       const activeId = D.state.settings.activeLearnerId || profiles[0]?.personId;
       const profile = profiles.find(item => item.personId === activeId) || profiles[0];
       const forLearner = items => (items || []).filter(item => !item.studentId || item.studentId === activeId);
-      return JSON.stringify({ learner: profile?.name, grade: profile?.grade, subjects: profile?.subjects?.slice(0, 7), plans: compact(forLearner(D.state.studyPlans)), assignments: compact(forLearner(D.state.academicDeliverables)), assessments: compact(forLearner(D.state.academicAssessments)) });
+      return JSON.stringify({ viewer, learner: profile?.name, grade: profile?.grade, subjects: profile?.subjects?.slice(0, 7), plans: compact(forLearner(D.state.studyPlans)), assignments: compact(forLearner(D.state.academicDeliverables)), assessments: compact(forLearner(D.state.academicAssessments)) });
     }
     if (route.startsWith('home/care') || route.startsWith('home/health') || route.startsWith('home/life/medicines') || route.startsWith('home/life/appointments') || route.startsWith('home/life/elders')) {
       const careDomains = ['health', 'medicines', 'appointments', 'elders', 'emergency', 'pets'];
-      return JSON.stringify({ careRecords: compact((D.state.lifeRecords || []).filter(item => careDomains.includes(item.domain))) });
+      return JSON.stringify({ viewer, careRecords: compact(HM.persona.scope(D.state.lifeRecords || []).filter(item => careDomains.includes(item.domain))) });
     }
-    if (familyRoute) return JSON.stringify({ tasks: compact(D.state.tasks), events: compact(D.state.events), goals: compact(D.state.goals), discussions: compact(D.state.discussions) });
-    if (route.startsWith('home/')) return JSON.stringify({ tasks: compact(D.state.tasks), inventory: compact(D.state.inventoryItems), issues: compact(D.state.issues), recurringRecords: compact(D.state.lifeRecords) });
-    return JSON.stringify({ tasks: compact(D.state.tasks), events: compact(D.state.events), goals: compact(D.state.goals), notifications: compact(notificationItems()) });
+    if (familyRoute) return JSON.stringify({ viewer, tasks: compact(HM.persona.scope(D.state.tasks)), events: compact(D.state.events), goals: compact(D.state.goals), discussions: compact(D.state.discussions) });
+    if (route.startsWith('home/')) return JSON.stringify({ viewer, tasks: compact(HM.persona.scope(D.state.tasks)), inventory: compact(D.state.inventoryItems), issues: compact(D.state.issues), recurringRecords: compact(HM.persona.scope(D.state.lifeRecords)) });
+    return JSON.stringify({ viewer, tasks: compact(HM.persona.scope(D.state.tasks)), events: compact(D.state.events), goals: compact(D.state.goals), notifications: compact(notificationItems()) });
   }
 
   function showOfflineAssistant() {
@@ -1762,6 +1822,26 @@
   }
 
   document.addEventListener('click', event => {
+    const personaTrigger = event.target.closest('#personaSwitcher');
+    if (personaTrigger) {
+      $('#personaMenu').hidden ? openPersonaMenu() : closePersonaMenu();
+      return;
+    }
+    const personaOption = event.target.closest('[data-persona]');
+    if (personaOption) {
+      const chapterWasOpen = document.body.classList.contains('chapter-workspace-open');
+      const persona = HM.persona.set(personaOption.dataset.persona);
+      const profile = HM.persona.academic(persona);
+      if (profile) D.state.settings.activeLearnerId = persona.id;
+      D.save();
+      closePersonaMenu();
+      document.body.classList.remove('menu-open');
+      if (chapterWasOpen) closeChapterWorkspace();
+      else render();
+      toast(`Now viewing ${persona.name}`);
+      return;
+    }
+    if (!event.target.closest('#personaMenu') && !$('#personaMenu').hidden) closePersonaMenu();
     if (event.target.closest('[data-close-chapter-workspace]')) {
       closeChapterWorkspace();
       return;
@@ -2225,11 +2305,27 @@
     toast('Family database updated');
   });
   document.addEventListener('keydown', event => {
+    if (event.target.closest?.('#personaSwitcher') && ['Enter', ' ', 'ArrowDown'].includes(event.key)) {
+      event.preventDefault();
+      openPersonaMenu();
+      return;
+    }
+    const personaOption = event.target.closest?.('.persona-option');
+    if (personaOption && ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+      event.preventDefault();
+      const options = [...$('#personaMenu').querySelectorAll('.persona-option')];
+      let index = options.indexOf(personaOption);
+      if (event.key === 'Home') index = 0;
+      else if (event.key === 'End') index = options.length - 1;
+      else index = (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+      options[index]?.focus();
+      return;
+    }
     const chapterCard = event.target.closest?.('[data-chapter-card]');
     if (chapterCard && event.target === chapterCard && ['Enter', ' '].includes(event.key)) { event.preventDefault(); openChapterWorkspace(chapterCard.dataset.chapterCard, 'summary'); return; }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); showSearch(); }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && lastDeleted) { event.preventDefault(); undoDelete(); }
-    if (event.key === 'Escape') { document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }
+    if (event.key === 'Escape') { closePersonaMenu(!$('#personaMenu').hidden); document.body.classList.remove('menu-open'); toggleNotifications(false); if (document.body.classList.contains('chapter-workspace-open')) closeChapterWorkspace(); }
   });
 
   applyTheme();
