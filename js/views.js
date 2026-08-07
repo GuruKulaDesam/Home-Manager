@@ -10,6 +10,9 @@
     household: { label: 'Household', icon: 'house', note: 'Run the home', route: 'home/overview', items: [
       ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
     ]},
+    kitchen: { label: 'Kitchen', icon: 'cooking-pot', note: 'Cook, plan and replenish', route: 'kitchen/overview', items: [
+      ['Kitchen home', 'cooking-pot', 'kitchen/overview'], ['100 Tamil recipes', 'book-open', 'kitchen/recipes'], ['Weekly menus', 'calendar-range', 'kitchen/menus'], ['Pantry & refills', 'package-open', 'kitchen/pantry'], ['Shopping list', 'shopping-cart', 'kitchen/shopping']
+    ]},
     family: { label: 'Family', icon: 'users-round', note: 'Plans and togetherness', route: 'home/family', items: [
       ['Overview', 'users-round', 'home/family'], ['Calendar', 'calendar-days', 'home/calendar'], ['Celebrations', 'party-popper', 'home/life/festivals'], ['Documents', 'folders', 'home/life/documents'], ['Contacts', 'contact-round', 'home/directory'], ['Protection & legacy', 'shield-check', 'home/family/protection']
     ]},
@@ -131,6 +134,11 @@
     'home/money/networth': ['Net Worth', 'Household assets, liabilities and goals'],
     'home/money/reports': ['Money Reports', 'Trends, watchlists and exceptions'],
     'home/inventory': ['Supplies & Meals', 'Inventory and meal planning'],
+    'kitchen/overview': ['Kitchen', 'Tamil food, weekly planning and pantry readiness'],
+    'kitchen/recipes': ['Tamil Recipe Library', '100 traditional dishes with a clear everyday purpose'],
+    'kitchen/menus': ['Weekly Menus', 'Seven Tamil home menus, from heritage to modern'],
+    'kitchen/pantry': ['Pantry & Refills', 'What is available and what needs replenishment'],
+    'kitchen/shopping': ['Shopping List', 'A practical refill list generated from pantry levels'],
     'home/assets': ['Property & Assets', 'Repairs, property records and household assets'],
     'home/wisdom': ['Wisdom & Recognition', 'Family knowledge and points'],
     'home/directory': ['Home Directory', 'Family and service contacts'],
@@ -933,13 +941,59 @@
   ];
   const chapterSections = chapterStages;
 
+  const chapterTitleCase = value => {
+    const minor = new Set(['a', 'an', 'and', 'as', 'at', 'by', 'for', 'from', 'in', 'of', 'on', 'or', 'the', 'to', 'with']);
+    return String(value || '').split(/\s+/).map((word, index) => index && minor.has(word.toLowerCase()) ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+  };
+
+  function chapterSubchapters(lesson) {
+    const notes = HM.genius.teacherNotes(lesson);
+    const richConcepts = (notes.rich?.concepts || []).map(concept => ({
+      title: concept.title,
+      explanation: concept.explain,
+      connection: concept.visual || ''
+    }));
+    const supportingIdeas = [...(notes.concepts || []), ...(notes.must || [])].map((value, index) => {
+      const text = String(value || '').trim();
+      const lead = text.split(/[:.;]|\s+[—–-]\s+/)[0].trim();
+      const words = lead.split(/\s+/).slice(0, 7).join(' ');
+      return { title: words || `Chapter Idea ${index + 1}`, explanation: text, connection: '' };
+    });
+    const candidates = (richConcepts.length >= 3 ? richConcepts : [...richConcepts, ...supportingIdeas]).filter(item => item.title && item.explanation);
+    const unique = [];
+    const seen = new Set();
+    candidates.forEach(item => {
+      const key = String(item.title).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+      if (!key || seen.has(key) || unique.length >= 6) return;
+      seen.add(key);
+      unique.push({
+        id: `${lesson.id}--topic-${unique.length + 1}`,
+        title: chapterTitleCase(item.title),
+        explanation: item.explanation,
+        connection: item.connection
+      });
+    });
+    return unique;
+  }
+
+  function chapterSubchapterTracking(context, lesson) {
+    const subchapters = chapterSubchapters(lesson);
+    const saved = D.state.settings.subchapterProgress?.[context.activeId]?.[lesson.id] || {};
+    const states = Object.fromEntries(subchapters.map(item => [item.id, saved[item.id] || 'not-started']));
+    const mastered = Object.values(states).filter(value => value === 'mastered').length;
+    const learning = Object.values(states).filter(value => value === 'learning').length;
+    const points = Object.values(states).reduce((total, value) => total + (value === 'mastered' ? 100 : value === 'learning' ? 50 : 0), 0);
+    return { subchapters, states, mastered, learning, total: subchapters.length, percent: subchapters.length ? Math.round(points / subchapters.length) : 0 };
+  }
+
   function chapterTracking(context, lesson) {
     const manual = D.state.settings.chapterJourney?.[context.activeId]?.[lesson.id] || {};
     const mastery = D.state.settings.chapterMastery?.[context.activeId]?.[lesson.id]?.mastery ?? (+lesson.mastery || 0);
     const note = D.state.settings.geniusNotes?.[context.activeId]?.[lesson.id] || '';
     const sectionNotes = D.state.settings.chapterSectionNotes?.[context.activeId]?.[lesson.id] || [];
+    const topicTracking = chapterSubchapterTracking(context, lesson);
     const status = {
-      summary: Boolean(manual.summary || manual.exam),
+      summary: Boolean(manual.summary || manual.exam || (topicTracking.total && topicTracking.mastered === topicTracking.total)),
       understand: Boolean(manual.understand),
       book: Boolean(manual.book),
       notes: Boolean(note.trim() || sectionNotes.some(item => item.text?.trim())),
@@ -948,7 +1002,7 @@
       progress: mastery >= 80
     };
     const complete = chapterStages.filter(([key]) => status[key]).length;
-    return { status, complete, percent: Math.round(complete / chapterStages.length * 100), mastery };
+    return { status, complete, percent: Math.round(complete / chapterStages.length * 100), mastery, topics: topicTracking };
   }
 
   function curriculumJourney() {
@@ -973,7 +1027,12 @@
       const nextStage = chapterStages.find(([key]) => !tracking.status[key])?.[1] || 'Revision';
       const masteryLevels = [...new Set([0, 20, 40, 60, 80, 100, mastery])].sort((a, b) => a - b);
       const tracker = `<div class="chapter-seven-track" aria-label="${tracking.complete} of 7 chapter stages complete">${chapterStages.map(([key, label]) => `<i class="${tracking.status[key] ? 'complete' : ''}" title="${e(label)}" aria-label="${e(label)} ${tracking.status[key] ? 'complete' : 'not complete'}"></i>`).join('')}</div>`;
-      return `<article class="curriculum-journey-row curriculum-chapter-card ${tracking.complete === 7 ? 'is-complete' : ''}" data-filter-row data-chapter-card="${e(lesson.id)}" role="button" tabindex="0" aria-label="Open chapter ${e(lesson.title)}"><header class="curriculum-card-head"><span class="chapter-sequence">${String(index + 1).padStart(2, '0')}</span><span class="chapter-card-state ${tracking.complete === 7 ? 'complete' : ''}">${tracking.complete === 7 ? icon('circle-check-big') : icon('circle-dashed')} ${tracking.complete === 7 ? 'Complete' : `${tracking.complete}/7 stages`}</span></header><div class="chapter-journey-copy"><span class="section-kicker">${e(lesson.term)} · ${e(lesson.competency)}</span><div class="chapter-card-title"><span class="chapter-card-visual" data-chapter-icon="${e(chapterVisual)}">${icon(chapterVisual)}</span><h2>${e(lesson.title)}</h2></div><div class="chapter-card-metrics"><span><b>${tracking.percent}%</b><small>Journey</small></span><label class="chapter-card-mastery"><small>Mastery</small><select data-card-mastery="${e(lesson.id)}" aria-label="Update ${e(lesson.title)} mastery">${masteryLevels.map(value => `<option value="${value}" ${value === mastery ? 'selected' : ''}>${value}%</option>`).join('')}</select></label></div><div class="chapter-progress-line"><span><i style="width:${tracking.percent}%"></i></span></div>${tracker}</div><footer class="chapter-card-footer"><span><small>${tracking.complete === 7 ? 'Status' : 'Next step'}</small><b>${tracking.complete === 7 ? 'Ready to revise' : e(nextStage)}</b></span><span class="chapter-card-open-hint">Open ${icon('arrow-up-right')}</span></footer></article>`;
+      const topicRows = tracking.topics.subchapters.map((topic, topicIndex) => {
+        const topicState = tracking.topics.states[topic.id];
+        const stateLabel = topicState === 'mastered' ? 'Mastered' : topicState === 'learning' ? 'Learning' : 'Not Started';
+        return `<div class="chapter-subchapter-row state-${e(topicState)}"><button type="button" class="chapter-subchapter-open" data-chapter-subchapter="${e(topic.id)}" data-lesson="${e(lesson.id)}"><span>${index + 1}.${topicIndex + 1}</span><b>${e(topic.title)}</b>${icon('chevron-right')}</button><button type="button" class="chapter-subchapter-state" data-subchapter-progress="${e(topic.id)}" data-lesson="${e(lesson.id)}" data-state="${e(topicState)}" aria-label="${e(topic.title)}: ${e(stateLabel)}">${icon(topicState === 'mastered' ? 'circle-check-big' : topicState === 'learning' ? 'circle-dot' : 'circle')}<span>${e(stateLabel)}</span></button></div>`;
+      }).join('');
+      return `<article class="curriculum-journey-row curriculum-chapter-card ${tracking.complete === 7 ? 'is-complete' : ''}" data-filter-row data-chapter-card="${e(lesson.id)}" role="button" tabindex="0" aria-label="Open chapter ${e(lesson.title)}"><header class="curriculum-card-head"><span class="chapter-sequence">${String(index + 1).padStart(2, '0')}</span><span class="chapter-card-state ${tracking.complete === 7 ? 'complete' : ''}">${tracking.complete === 7 ? icon('circle-check-big') : icon('circle-dashed')} ${tracking.complete === 7 ? 'Complete' : `${tracking.complete}/7 stages`}</span></header><div class="chapter-journey-copy"><span class="section-kicker">${e(lesson.term)} · ${e(lesson.competency)}</span><div class="chapter-card-title"><span class="chapter-card-visual" data-chapter-icon="${e(chapterVisual)}">${icon(chapterVisual)}</span><h2>${e(lesson.title)}</h2></div><div class="chapter-card-metrics"><span><b>${tracking.topics.percent}%</b><small>Topics</small></span><label class="chapter-card-mastery"><small>Mastery</small><select data-card-mastery="${e(lesson.id)}" aria-label="Update ${e(lesson.title)} mastery">${masteryLevels.map(value => `<option value="${value}" ${value === mastery ? 'selected' : ''}>${value}%</option>`).join('')}</select></label><span class="chapter-topic-total"><b>${tracking.topics.mastered}/${tracking.topics.total}</b><small>Mastered</small></span></div><div class="chapter-progress-line"><span><i style="width:${tracking.topics.percent}%"></i></span></div>${tracker}</div><section class="chapter-subchapter-list" aria-label="${e(lesson.title)} subchapters">${topicRows}</section><footer class="chapter-card-footer"><span><small>${tracking.complete === 7 ? 'Status' : 'Next step'}</small><b>${tracking.complete === 7 ? 'Ready to revise' : e(nextStage)}</b></span><span class="chapter-card-open-hint">Open ${icon('arrow-up-right')}</span></footer></article>`;
     }).join('');
     const metrics = [[lessons.length, 'Chapters'], [`${completedStages}/${lessons.length * chapterStages.length}`, 'Stages complete'], [summaryReady, 'Summaries reviewed'], [mastered, 'Mastered']];
     return `${learnerBar(c)}<div class="curriculum-subject-theme ${subjectTheme}"><section class="curriculum-progress-strip" aria-label="${e(c.selectedSubject)} chapter progress"><header><span class="section-kicker">${jeeMode ? 'JEE MAIN' : `CBSE · CLASS ${e(c.profile.grade)}`} · ${e(c.selectedSubject)}</span><b>${nextLesson ? `Next: ${e(nextLesson.title)}` : 'All chapter stages complete'}</b><small>${nextLesson ? `${chapterStages.length - chapterTracking(c, nextLesson).complete} stages remain in this chapter` : 'Choose a chapter to revise mastery'}</small></header><div class="curriculum-strip-metrics">${metrics.map(([value, label]) => `<article><strong>${value}</strong><span>${label}</span></article>`).join('')}</div></section><section class="curriculum-journey-list">${rows || '<p class="empty">Choose a curriculum subject to see its chapters.</p>'}</section></div>`;
@@ -987,7 +1046,7 @@
     const lessons = curriculumLessons(c, jeeMode);
     const tracking = chapterTracking(c, lesson);
     const mastery = tracking.mastery;
-    const chapterButtons = lessons.map((item, index) => { const itemTracking = chapterTracking(c, item); return `<button type="button" data-chapter-switch="${e(item.id)}" class="chapter-browser-item ${item.id === lesson.id ? 'active' : ''}" ${item.id === lesson.id ? 'aria-current="page"' : ''}><span>${String(index + 1).padStart(2, '0')}</span><span><b>${e(item.title)}</b></span>${icon(itemTracking.complete === 7 ? 'circle-check-big' : 'chevron-right')}</button>`; }).join('');
+    const chapterButtons = lessons.map((item, index) => { const itemTracking = chapterTracking(c, item); const children = item.id === lesson.id ? `<div class="chapter-browser-subchapters">${itemTracking.topics.subchapters.map((topic, topicIndex) => `<button type="button" data-chapter-subchapter="${e(topic.id)}" data-lesson="${e(item.id)}"><span>${index + 1}.${topicIndex + 1}</span><b>${e(topic.title)}</b><i class="state-${e(itemTracking.topics.states[topic.id])}"></i></button>`).join('')}</div>` : ''; return `<div class="chapter-browser-branch"><button type="button" data-chapter-switch="${e(item.id)}" class="chapter-browser-item ${item.id === lesson.id ? 'active' : ''}" ${item.id === lesson.id ? 'aria-current="page"' : ''}><span>${String(index + 1).padStart(2, '0')}</span><span><b>${e(item.title)}</b></span>${icon(itemTracking.complete === 7 ? 'circle-check-big' : 'chevron-right')}</button>${children}</div>`; }).join('');
     return `<div class="chapter-shell-nav"><nav class="chapter-browser" aria-label="${e(jeeMode ? 'JEE Main' : 'CBSE')} ${e(lesson.subject)} chapters">${chapterButtons}</nav><div class="chapter-workspace-status"><span><small>Current journey</small><b>${tracking.complete}/7</b></span><span><small>Mastery</small><b>${mastery}%</b></span></div><button type="button" class="chapter-workspace-close" data-close-chapter-workspace aria-label="Back to Curriculum">${icon('arrow-left')}<span>Back to Curriculum</span></button></div>`;
   }
 
@@ -1084,7 +1143,7 @@
       ...questions.slice(0, 2).map(question => ({ prompt: question.stem, steps: [...(summary.problemFlow || []).slice(0, 2), question.why], answer: question.options?.[question.answer] || question.why }))
     ].slice(0, 3);
     const walkthroughExamplesSection = `<section class="chapter-first-example chapter-lesson-section"><div class="chapter-lesson-heading"><small>THREE GUIDED EXAMPLES</small><h2>See the Idea Work, Step by Step</h2><p>Each example shows the question, the reasoning moves and the final conclusion.</p></div><div class="chapter-worked-examples">${walkthroughExamples.map((item, index) => `<article><header><span>Example ${index + 1}</span><h3>${e(item.prompt)}</h3></header><ol>${(item.steps || []).slice(0, 4).map(step => `<li>${teachingText(step)}</li>`).join('')}</ol><footer><b>Answer</b><p>${teachingText(item.answer)}</p></footer></article>`).join('')}</div></section>`;
-    const summaryConceptMap = notes.rich?.concepts?.length ? `<section class="chapter-summary-map chapter-lesson-section"><div class="chapter-lesson-heading"><small>BUILD THE CHAPTER</small><h2>Connect the Ideas</h2><p>Each idea answers one part of the chapter’s main question. The picture underneath shows how they belong together.</p></div><div class="chapter-concept-lessons">${notes.rich.concepts.map(concept => `<article><div><h3>${e(titleCase(concept.title))}</h3><p>${teachingText(concept.explain)}</p>${concept.visual ? `<aside>${icon('eye')}<span>${teachingText(concept.visual)}</span></aside>` : ''}<button type="button" class="topic-deep-dive" data-deep-dive data-lesson="${e(lesson.id)}" data-topic="${e(concept.title)}" data-explanation="${e(concept.explain)}" data-connection="${e(concept.visual || summary.bigIdea)}">${icon('scan-search')}<span>Deep Dive</span></button></div></article>`).join('')}</div></section>` : '';
+    const summaryConceptMap = tracking.topics.subchapters.length ? `<section class="chapter-summary-map chapter-subchapter-summary chapter-lesson-section"><div class="chapter-lesson-heading"><small>CHAPTER ROADMAP</small><h2>Subchapters</h2><p>These are the ideas that make up this chapter. Progress is saved for each one.</p></div><div class="chapter-concept-lessons">${tracking.topics.subchapters.map((topic, index) => { const topicState = tracking.topics.states[topic.id]; const stateLabel = topicState === 'mastered' ? 'Mastered' : topicState === 'learning' ? 'Learning' : 'Not Started'; return `<article id="${e(topic.id)}" data-summary-subchapter="${e(topic.id)}" class="summary-subchapter state-${e(topicState)}" tabindex="-1"><header><span>Subchapter ${index + 1} of ${tracking.topics.total}</span><button type="button" class="chapter-subchapter-state" data-subchapter-progress="${e(topic.id)}" data-lesson="${e(lesson.id)}" data-state="${e(topicState)}">${icon(topicState === 'mastered' ? 'circle-check-big' : topicState === 'learning' ? 'circle-dot' : 'circle')}<span>${e(stateLabel)}</span></button></header><div><h3>${e(topic.title)}</h3><p>${teachingText(topic.explanation)}</p>${topic.connection ? `<aside>${icon('git-branch')}<span>${teachingText(topic.connection)}</span></aside>` : ''}<button type="button" class="topic-deep-dive" data-deep-dive data-lesson="${e(lesson.id)}" data-topic="${e(topic.title)}" data-explanation="${e(topic.explanation)}" data-connection="${e(topic.connection || summary.bigIdea)}">${icon('scan-search')}<span>Deep Dive</span></button></div></article>`; }).join('')}</div></section>` : '';
     const summaryPanel = `<article class="chapter-summary"><section class="chapter-foundation chapter-lesson-section"><span class="chapter-lesson-number">1</span><div class="chapter-lesson-heading"><small>WHAT THIS CHAPTER BUILDS ON</small><h2>Bring these ideas with you</h2><p>These familiar ideas are enough to begin this chapter.</p></div>${teachingSteps(foundation.remember || [])}</section><section class="chapter-vocabulary chapter-lesson-section"><span class="chapter-lesson-number">2</span><div class="chapter-lesson-heading"><small>MEET THE NEW LANGUAGE</small><h2>New words, in plain words</h2><p>Knowing these words makes the explanation and formulas easier to follow.</p></div><div class="chapter-word-cards">${wordCards}</div></section><header class="chapter-summary-opening chapter-lesson-section"><span class="chapter-lesson-number">3</span><div class="chapter-opening-copy"><span class="chapter-summary-icon">${icon('scroll-text')}</span><div><small>${e(lesson.subject)}</small><h1>${e(lesson.title)}</h1><h2>The chapter’s central idea</h2><p class="chapter-summary-bigidea">${e(summary.bigIdea)}</p><p class="chapter-summary-story">${e(summary.story)}</p></div></div></header><section class="chapter-picture-section chapter-lesson-section"><span class="chapter-lesson-number">4</span><div class="chapter-lesson-heading"><small>SEE THE RELATIONSHIP</small><h2>How the pieces connect</h2><p>Follow the arrows and explain what changes from one box to the next.</p></div>${relationshipVisual}</section>${summaryConceptMap}<section class="chapter-summary-results chapter-lesson-section"><span class="chapter-lesson-number">6</span><div class="chapter-lesson-heading"><small>KEEP THESE RELATIONSHIPS</small><h2>Facts and formulas that carry the chapter</h2><p>Each box holds one useful relationship. Name the quantities and units before using a formula.</p></div>${teachingSteps(summary.essentialResults || [], 1, true)}</section><section class="chapter-first-example chapter-lesson-section"><span class="chapter-lesson-number">7</span><div class="chapter-lesson-heading"><small>YOUR FIRST COMPLETE EXAMPLE</small><h2>Watch one idea become an answer</h2><p>${e(example.prompt || notes.example?.[0] || '')}</p></div>${teachingSteps(example.steps || summary.problemFlow || [])}${example.answer ? `<div class="chapter-example-answer"><span>${icon('badge-check')}</span><div><small>ANSWER AND MEANING</small><p>${e(example.answer)}</p></div></div>` : ''}</section><section class="chapter-summary-reasoning chapter-lesson-section"><span class="chapter-lesson-number">8</span><div class="chapter-lesson-heading"><small>USE THE METHOD AGAIN</small><h2>How to work through a question</h2><p>This is the thinking path to reuse when the numbers, diagram or wording changes.</p></div>${teachingSteps(summary.problemFlow || [])}</section><section class="chapter-summary-traps chapter-lesson-section"><span class="chapter-lesson-number">9</span><div class="chapter-lesson-heading"><small>STOP AND CHECK</small><h2>Mistakes to watch for</h2><p>These mistakes often look reasonable at first. The check beside each idea helps you catch them.</p></div>${teachingSteps(summary.examTraps || [])}</section><section class="chapter-summary-exam chapter-lesson-section"><span class="chapter-lesson-number">10</span><div class="chapter-lesson-heading"><small>SHOW WHAT YOU KNOW</small><h2>How to write a strong exam answer</h2><p>A clear answer shows the idea, the working and the conclusion in that order.</p></div><div class="chapter-exam-teaching"><div><h3>What earns marks</h3>${teachingSteps(notes.exam)}</div><div><h3>What proves you understand</h3><p>${e(guide.proof)}</p></div></div></section><section class="chapter-summary-recall chapter-lesson-section"><span class="chapter-lesson-number">11</span><div class="chapter-lesson-heading"><small>REBUILD IT FROM MEMORY</small><h2>What can you explain without looking?</h2><p>Use these prompts to find the one part that needs another look.</p></div>${teachingSteps(summary.rapidRecall || [])}</section></article>`;
     const workedSteps = notes.rich ? `<ol>${notes.rich.worked.steps.map(step => `<li>${e(step)}</li>`).join('')}</ol><p><b>Answer:</b> ${e(notes.rich.worked.answer)}</p><p class="worked-check"><b>Check:</b> ${e(notes.rich.worked.check)}</p>` : `<p><b>Reason:</b> ${e(notes.example[1])}</p>`;
     const learn = `<section class="chapter-learning-grid"><article class="chapter-big-idea"><span class="section-kicker">THE IDEA THAT UNLOCKS THIS CHAPTER</span><h2>${e(notes.bigIdea)}</h2><div class="chapter-concept-flow">${notes.visual.map((value, index) => `${index ? icon('arrow-right') : ''}<span>${e(value)}</span>`).join('')}</div><div class="chapter-guru"><span>${icon('sparkles')}</span><div><b>Guru’s insight</b><p>${e(notes.wisdom)}</p></div></div>${deepConcepts}</article><article><span class="section-kicker">CHAPTER CORE</span><h3>The Relationships That Matter</h3>${list(notes.must)}</article><article><span class="section-kicker">WORKED REASONING</span><h3>See How the Thinking Moves</h3><p><b>Problem:</b> ${e(notes.example[0])}</p>${workedSteps}</article><article><span class="section-kicker">COMMON TRAPS</span><h3>Where Marks Disappear</h3>${list(notes.rich?.traps || guide.traps)}</article></section>`;
@@ -1447,6 +1506,7 @@
 
   function render(route) {
     activeRenderRoute = route;
+    if (route.startsWith('kitchen/')) return HM.kitchen.render(route, D.state, { e, icon, date: D.date });
     if (route === 'global/overview') return unified();
     if (route === 'global/intelligence') return inboxIntelligence();
     if (route === 'global/questions') return questionHub();
@@ -1519,6 +1579,7 @@
     textbookAsset,
     chapterWorkspace,
     chapterWorkspaceNavigation,
+    chapterSubchapters,
     lessonById: lessonId => curriculumLessonById(academicContext(), lessonId),
     defaultLessonId: () => { const c = academicContext(); const jeeMode = +c.profile.grade === 12 && D.state.settings.activeLearningTrack?.[c.activeId] === 'jee'; return curriculumLessons(c, jeeMode)[0]?.id || ''; },
     titles,

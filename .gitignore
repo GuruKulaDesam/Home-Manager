@@ -1,6 +1,10 @@
 node_modules/
 playwright-report/
 test-results/
+.firebase/
+firebase-debug.log
+*.idsig
+assets/textbooks/class-12/*dd/
 assets/textbooks/class-7/tamil/tamil7-term-*.pdf
 inputs/*.pdf
 private-data/

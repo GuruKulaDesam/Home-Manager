@@ -474,7 +474,8 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   await expect(cards.first().locator('.curriculum-card-head')).toBeVisible();
   await expect(cards.first().locator('.chapter-card-visual svg')).toHaveCount(1);
   await expect(cards.first().locator('.chapter-card-title h2')).toBeVisible();
-  await expect(cards.first().locator('.chapter-card-metrics > *')).toHaveCount(2);
+  await expect(cards.first().locator('.chapter-card-metrics > *')).toHaveCount(3);
+  await expect(cards.first().locator('.chapter-subchapter-row')).toHaveCount(3);
   await expect(cards.first().locator('.chapter-card-footer')).toContainText('Next step');
   await expect(page.getByPlaceholder('Find a chapter')).toHaveCount(0);
   await expect(page.locator('.curriculum-journey-tools')).toHaveCount(0);
@@ -515,7 +516,7 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   expect(cardPalette.titleTransform).toBe('uppercase');
   expect(cardPalette.titleSize).toBeLessThanOrEqual(13);
   expect(cardPalette.titleWeight).toBeGreaterThanOrEqual(800);
-  expect(cardPalette.height).toBeLessThanOrEqual(160);
+  expect(cardPalette.height).toBeGreaterThan(190);
   expect(cardPalette.overflow).toBeLessThanOrEqual(1);
   const chapterIcons = await cards.evaluateAll(items => items.map(item => item.querySelector('[data-chapter-icon]')?.dataset.chapterIcon));
   expect(chapterIcons.every(Boolean)).toBeTruthy();
@@ -542,7 +543,9 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   await page.reload();
   await expect(cards.first().locator('[data-card-mastery]')).toHaveValue('80');
   const desktopColumns = await page.locator('.curriculum-journey-list').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
-  expect(desktopColumns).toBeGreaterThan(1);
+  expect(desktopColumns).toBe(2);
+  const bandColors = await cards.first().locator('.chapter-subchapter-row').evaluateAll(rows => rows.slice(0, 2).map(row => getComputedStyle(row).backgroundColor));
+  expect(new Set(bandColors).size).toBe(2);
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(cards.first()).toBeVisible();
@@ -754,6 +757,31 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('.curriculum-journey-list')).toBeVisible();
 });
 
+test('every configured chapter has the same trackable subchapters in Curriculum and Summary', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  const coverage = await page.evaluate(() => {
+    const lessons = [...(HM.data.state.syllabusItems || []), ...(HM.genius.jeeSyllabus || [])];
+    return lessons.map(lesson => ({ id: lesson.id, topics: HM.views.chapterSubchapters(lesson) }));
+  });
+  expect(coverage.length).toBeGreaterThan(100);
+  expect(coverage.every(item => item.topics.length >= 3)).toBe(true);
+  expect(coverage.every(item => new Set(item.topics.map(topic => topic.title)).size === item.topics.length)).toBe(true);
+
+  const firstCard = page.locator('.curriculum-chapter-card').first();
+  const curriculumTopics = await firstCard.locator('.chapter-subchapter-open b').allTextContents();
+  await firstCard.locator('.chapter-subchapter-open').first().click();
+  await expect(page.locator('#chapterWorkspace')).toBeVisible();
+  const summaryTopics = await page.locator('[data-summary-subchapter] h3').allTextContents();
+  expect(summaryTopics).toEqual(curriculumTopics);
+
+  const firstTopic = page.locator('[data-summary-subchapter]').first();
+  await firstTopic.locator('[data-subchapter-progress]').click();
+  await expect(firstTopic.locator('[data-subchapter-progress]')).toHaveAttribute('data-state', 'learning');
+  await page.locator('[data-close-chapter-workspace]').click();
+  await page.reload();
+  await expect(page.locator('.curriculum-chapter-card').first().locator('[data-subchapter-progress]').first()).toHaveAttribute('data-state', 'learning');
+});
+
 test('chapter margin notes create editable cards beside the current teaching section', async ({ page }) => {
   await page.goto(`${app}#/study/curriculum`);
   await page.getByRole('button', { name: 'Physics', exact: true }).click();
@@ -797,7 +825,7 @@ test('chapter reference tab adapts formulae to the language of each subject', as
   await page.locator('.curriculum-chapter-card').first().click({ position: { x: 18, y: 90 } });
   await expect(page.locator('[data-chapter-workspace-tab="resource"]')).toContainText('Syntax & Patterns');
   await page.locator('[data-chapter-workspace-tab="resource"]').click();
-  await expect(page.locator('.chapter-resource-panel.conceptual')).toContainText('Syntax and Patterns You Must Be Able to Use');
+  await expect(page.locator('.chapter-resource-panel.conceptual')).toContainText('Syntax and Patterns in This Chapter');
 });
 
 test('every real CBSE and JEE chapter has a substantive authored summary', async ({ page }) => {

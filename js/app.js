@@ -595,6 +595,7 @@
     liability: () => [field('Loan or liability', 'title'), field('Type', 'type'), field('Outstanding balance', 'balance', 'number'), field('Monthly payment', 'payment', 'number'), field('Interest rate %', 'interestRate', 'number')],
     moneyGoal: () => [field('Savings goal', 'title'), field('Target amount', 'target', 'number'), field('Already saved', 'saved', 'number'), field('Monthly contribution', 'contribution', 'number'), field('Target date', 'dueDate', 'date')],
     inventory: () => [field('Item', 'name'), field('Category', 'category'), field('Quantity', 'quantity', 'number'), field('Unit', 'unit')],
+    kitchenRecipe: () => [field('Dish name', 'name'), field('Tamil name', 'tamil'), field('Category', 'category'), area('Definite purpose / when to serve', 'purpose'), area('Ingredients', 'ingredients'), area('Method', 'method'), field('Time', 'time'), field('Difficulty', 'difficulty', 'text', ['Easy', 'Everyday', 'Weekend'])],
     meal: () => [field('Meal', 'name'), field('Meal type', 'mealType', 'text', ['Breakfast', 'Lunch', 'Dinner', 'Snack']), field('Cook', 'cook'), field('Date', 'date', 'date')],
     issue: () => [field('Issue', 'title'), field('Category', 'category'), field('Location', 'location'), field('Priority', 'priority', 'text', ['low', 'medium', 'high'])],
     asset: () => [field('Asset', 'name'), field('Category', 'category'), field('Value', 'value', 'number'), field('Status', 'status', 'text', ['active', 'secured', 'maintenance'])],
@@ -629,7 +630,7 @@
     }
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
+  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', inventory: 'inventoryItems', kitchenRecipe: 'kitchenRecipeEdits', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
@@ -752,7 +753,7 @@
     const subject = $('#subjectFilter')?.value || '';
     document.querySelectorAll('[data-filter-row]').forEach(row => {
       const matchesText = !query || row.textContent.toLowerCase().includes(query);
-      const matchesStatus = !status || row.dataset.status === status;
+      const matchesStatus = !status || row.dataset.status === status || row.dataset.category === status;
       const matchesCategory = !category || row.dataset.category === category;
       const matchesSubject = !subject || row.dataset.subject === subject;
       row.hidden = !(matchesText && matchesStatus && matchesCategory && matchesSubject);
@@ -762,6 +763,45 @@
   function bindView() {
     document.querySelectorAll('[data-filter], [data-status-filter], [data-category-filter], #subjectFilter').forEach(control => {
       control.addEventListener(control.tagName === 'INPUT' ? 'input' : 'change', applyFilters);
+    });
+    const showKitchenWeek = index => {
+      document.querySelectorAll('[data-menu-tab]').forEach(button => button.classList.toggle('active', +button.dataset.menuTab === +index));
+      document.querySelectorAll('[data-menu-panel]').forEach(panel => panel.classList.toggle('active', +panel.dataset.menuPanel === +index));
+    };
+    document.querySelectorAll('[data-menu-tab]').forEach(button => button.onclick = () => showKitchenWeek(button.dataset.menuTab));
+    document.querySelectorAll('[data-kitchen-month]').forEach(input => input.onchange = () => {
+      D.state.settings.kitchenMonth = input.value;
+      save('Kitchen month changed'); render();
+    });
+    document.querySelectorAll('[data-edit-menu]').forEach(button => button.onclick = () => {
+      const [week, day, meal] = button.dataset.editMenu.split(':');
+      const personaId = button.dataset.persona || HM.persona.current().id;
+      const month = button.dataset.month || D.state.settings.kitchenMonth || new Date().toISOString().slice(0, 7);
+      const saved = D.state.kitchenMenus.find(item => +item.week === +week && item.personaId === personaId && item.month === month);
+      const days = saved?.days || HM.kitchen.defaultMenu(+week).map(item => ({ ...item }));
+      const next = prompt(`Edit ${days[day].day} ${meal}`, days[day][meal]);
+      if (next === null || !next.trim()) return;
+      days[day][meal] = next.trim();
+      if (saved) saved.days = days; else D.state.kitchenMenus.push({ id: D.uid('km'), week: +week, personaId, month, days });
+      save('Weekly menu updated'); render();
+      requestAnimationFrame(() => showKitchenWeek(week));
+    });
+    document.querySelectorAll('[data-reset-kitchen-week]').forEach(button => button.onclick = () => {
+      const week = +button.dataset.resetKitchenWeek;
+      if (!confirm('Restore this week to its original menu?')) return;
+      D.state.kitchenMenus = D.state.kitchenMenus.filter(item => !(+item.week === week && item.personaId === button.dataset.persona && item.month === button.dataset.month));
+      save('Weekly menu restored'); render();
+      requestAnimationFrame(() => showKitchenWeek(week));
+    });
+    document.querySelectorAll('[data-finalize-menu]').forEach(button => button.onclick = () => {
+      const week = +button.dataset.finalizeMenu, persona = HM.persona.current(), month = button.dataset.month;
+      if (!/home manager|mother|wife/i.test(persona.householdRole || '')) { toast('Only the Home Manager can finalize a monthly menu.'); return; }
+      const days = (D.state.kitchenMenus.find(item => +item.week === week && item.personaId === persona.id && item.month === month)?.days || HM.kitchen.defaultMenu(week)).map(day => ({ ...day }));
+      const existing = D.state.kitchenFinalMenus.find(item => item.month === month && +item.week === week);
+      const final = { id: existing?.id || D.uid('kf'), month, week, days, approvedBy: persona.name, approvedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, final); else D.state.kitchenFinalMenus.push(final);
+      save(`Menu finalized by ${persona.name}`); render();
+      requestAnimationFrame(() => showKitchenWeek(week));
     });
     document.querySelectorAll('[data-topic]').forEach(card => card.ondragstart = event => event.dataTransfer.setData('topic', card.dataset.topic));
     document.querySelectorAll('[data-drop]').forEach(column => {
@@ -1967,6 +2007,35 @@
       showDeepDive(deepDive);
       return;
     }
+    const subchapterProgress = event.target.closest('[data-subchapter-progress]');
+    if (subchapterProgress) {
+      const learnerId = D.state.settings.activeLearnerId;
+      const lessonId = subchapterProgress.dataset.lesson;
+      const topicId = subchapterProgress.dataset.subchapterProgress;
+      const states = ['not-started', 'learning', 'mastered'];
+      const current = subchapterProgress.dataset.state || 'not-started';
+      const next = states[(states.indexOf(current) + 1) % states.length];
+      D.state.settings.subchapterProgress ||= {};
+      D.state.settings.subchapterProgress[learnerId] ||= {};
+      D.state.settings.subchapterProgress[learnerId][lessonId] ||= {};
+      D.state.settings.subchapterProgress[learnerId][lessonId][topicId] = next;
+      D.save();
+      if (document.body.classList.contains('chapter-workspace-open')) {
+        refreshChapterWorkspace(lessonId, activeChapterWorkspace?.section || 'summary');
+        requestAnimationFrame(() => document.querySelector(`[data-summary-subchapter="${CSS.escape(topicId)}"]`)?.scrollIntoView({ block: 'start' }));
+      } else render();
+      toast(next === 'mastered' ? 'Subchapter mastered' : next === 'learning' ? 'Subchapter marked learning' : 'Subchapter reset');
+      return;
+    }
+    const chapterSubchapter = event.target.closest('[data-chapter-subchapter]');
+    if (chapterSubchapter) {
+      const lessonId = chapterSubchapter.dataset.lesson;
+      const topicId = chapterSubchapter.dataset.chapterSubchapter;
+      if (!document.body.classList.contains('chapter-workspace-open') || activeChapterWorkspace?.lessonId !== lessonId) openChapterWorkspace(lessonId, 'summary');
+      else refreshChapterWorkspace(lessonId, 'summary');
+      requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(`[data-summary-subchapter="${CSS.escape(topicId)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })));
+      return;
+    }
     const chapterCard = event.target.closest('[data-chapter-card]');
     if (chapterCard && !event.target.closest('select, option, input, label, button, a')) {
       openChapterWorkspace(chapterCard.dataset.chapterCard, 'summary');
@@ -2277,7 +2346,13 @@
     const create = event.target.closest('[data-create]');
     if (create) { openForm(create.dataset.create, create.dataset); return; }
     const edit = event.target.closest('[data-edit]');
-    if (edit) { openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context, domain: edit.dataset.domain }); return; }
+    if (edit) {
+      if (edit.dataset.edit === 'kitchenRecipe' && !D.state.kitchenRecipeEdits.some(item => item.id === edit.dataset.id)) {
+        const base = HM.kitchen.recipes.find(item => item.id === edit.dataset.id);
+        if (base) D.state.kitchenRecipeEdits.push({ ...base });
+      }
+      openForm(edit.dataset.edit, { editId: edit.dataset.id, context: edit.dataset.context, domain: edit.dataset.domain }); return;
+    }
     const deletion = event.target.closest('[data-delete]');
     if (deletion) { const [collection, id] = deletion.dataset.delete.split(':'); if (confirm('Remove this item? You can undo with Ctrl+Z.')) remove(collection, id); return; }
     const complete = event.target.closest('[data-complete]');

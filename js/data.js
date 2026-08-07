@@ -143,7 +143,10 @@ seed.coCurricularRecords=[];
 seed.readingProgress=[];
 seed.syncSuggestions=[];
 seed.quickNotes=[];
-const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','quickNotes','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','readingProgress','syncSuggestions','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
+seed.kitchenRecipeEdits=[];
+seed.kitchenMenus=[];
+seed.kitchenFinalMenus=[];
+const collections=['people','tasks','events','issues','contacts','pointTransactions','expenses','budgets','incomes','liabilities','moneyGoals','inventoryItems','meals','assets','wisdomEntries','quickNotes','kitchenRecipeEdits','kitchenMenus','kitchenFinalMenus','learningTopics','goals','focusSessions','academicProfiles','syllabusItems','studyPlans','academicDeliverables','academicAssessments','practiceLogs','academicResources','schoolTimetable','schoolEvents','attendanceRecords','learningReflections','tutorFeedback','coCurricularRecords','readingProgress','syncSuggestions','newsItems','discussions','polls','volunteerOpportunities','guides','lifeRecords'];
 function normalizeGoogleSync(value){
   const input=value&&typeof value==='object'?value:{};
   const categories=['bills','travel','school','health','deliveries','home','government'];
