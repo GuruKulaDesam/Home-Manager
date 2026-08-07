@@ -38,7 +38,8 @@
       <div class="topbar">
         <button type="button" id="menu" class="icon-button" title="Open navigation" aria-label="Open navigation" aria-expanded="false"><i data-lucide="menu"></i></button>
         <div class="page-identity">
-          <div class="persona-crumb"><button type="button" id="personaSwitcher" class="persona-switcher" aria-haspopup="listbox" aria-expanded="false" aria-controls="personaMenu"><span id="personaInitials">FN</span><strong id="personaName">Family</strong><i data-lucide="chevrons-up-down"></i></button><div id="personaMenu" class="persona-menu" role="listbox" aria-label="View the app as" hidden></div></div>
+          <div class="persona-crumb" data-no-translate><button type="button" id="personaSwitcher" class="persona-switcher" aria-haspopup="listbox" aria-expanded="false" aria-controls="personaMenu"><span id="personaInitials">FN</span><strong id="personaName">Family</strong><i data-lucide="chevrons-up-down"></i></button><div id="personaMenu" class="persona-menu" role="listbox" aria-label="View the app as" hidden></div></div>
+          <div id="languageSwitcher" class="language-switcher" role="group" aria-label="Language"><button type="button" data-language="ta">தமிழ்</button><button type="button" data-language="en">EN</button></div>
           <small id="breadcrumb">Lotus Naga Home</small>
           <h1 id="pageTitle">Today</h1>
         </div>
@@ -164,6 +165,7 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="js/data.js"></script>
   <script src="js/persona.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/life.js"></script>
   <script src="js/questions.js"></script>
   <script src="js/genius.js"></script>
