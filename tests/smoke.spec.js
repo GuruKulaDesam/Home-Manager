@@ -603,7 +603,26 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('.chapter-word-cards h3').first()).toHaveCSS('text-decoration-line', 'none');
   await expect(page.locator('.chapter-lesson-heading h2').first()).toHaveCSS('text-decoration-line', 'none');
   await expect(page.locator('.chapter-word-cards h3').first()).toHaveText(/^[A-Z]/);
-  await expect(page.locator('.chapter-word-cards .chapter-critical-term').first()).toBeVisible();
+  await expect(page.locator('.chapter-word-cards .chapter-critical-term')).toHaveCount(0);
+  await expect(page.locator('.chapter-summary-icon')).toHaveCount(0);
+  await expect(page.locator('.chapter-critical-term').first()).toHaveJSProperty('tagName', 'STRONG');
+  await expect(page.locator('.chapter-critical-term').first()).toHaveText(/only when/i);
+  const openingAlignment = await page.locator('.chapter-summary').evaluate(summary => {
+    const opening = summary.querySelector('.chapter-summary-opening h2').getBoundingClientRect();
+    const following = summary.querySelector('.chapter-picture-section h2').getBoundingClientRect();
+    return Math.abs(opening.left - following.left);
+  });
+  expect(openingAlignment).toBeLessThan(1);
+  const tocNumbering = await page.locator('.chapter-summary').evaluate(summary => ({
+    sections: summary.querySelectorAll(':scope > .chapter-lesson-section').length,
+    sectionMarker: getComputedStyle(summary.querySelector('.chapter-foundation h2'), '::before').content,
+    vocabularyMarker: getComputedStyle(summary.querySelector('.chapter-word-cards h3'), '::before').content,
+    conceptMarker: getComputedStyle(summary.querySelector('.chapter-concept-lessons h3'), '::before').content
+  }));
+  expect(tocNumbering.sections).toBe(11);
+  expect(tocNumbering.sectionMarker).not.toBe('none');
+  expect(tocNumbering.vocabularyMarker).not.toBe('none');
+  expect(tocNumbering.conceptMarker).not.toBe('none');
   await expect(page.locator('.chapter-word-cards article')).not.toHaveCount(0);
   await expect(page.locator('.chapter-relationship-visual')).toBeVisible();
   await expect(page.locator('.chapter-relationship-visual figcaption')).not.toBeEmpty();
