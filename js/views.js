@@ -10,8 +10,8 @@
     household: { label: 'Household', icon: 'house', note: 'Run the home', route: 'home/overview', items: [
       ['Overview', 'layout-dashboard', 'home/overview'], ['Tasks & routines', 'list-checks', 'home/tasks'], ['Food & supplies', 'shopping-basket', 'home/inventory'], ['Property & assets', 'wrench', 'home/property'], ['Domestic help', 'hand-helping', 'home/life/help'], ['Sustainability', 'leaf', 'home/life/sustainability']
     ]},
-    kitchen: { label: 'Kitchen', icon: 'cooking-pot', note: 'Cook, plan and replenish', route: 'kitchen/overview', items: [
-      ['Kitchen home', 'cooking-pot', 'kitchen/overview'], ['100 Tamil recipes', 'book-open', 'kitchen/recipes'], ['Weekly menus', 'calendar-range', 'kitchen/menus'], ['Pantry & refills', 'package-open', 'kitchen/pantry'], ['Shopping list', 'shopping-cart', 'kitchen/shopping']
+    kitchen: { label: 'சமையலறை', icon: 'cooking-pot', note: 'சமைக்க · திட்டமிட · நிரப்ப', route: 'kitchen/overview', items: [
+      ['முகப்பு', 'cooking-pot', 'kitchen/overview'], ['௧௦௦ பாரம்பரிய உணவுகள்', 'book-open', 'kitchen/recipes'], ['வார உணவுத் திட்டம்', 'calendar-range', 'kitchen/menus'], ['சரக்கறையும் இருப்பும்', 'package-open', 'kitchen/pantry'], ['வாங்க வேண்டியவை', 'shopping-cart', 'kitchen/shopping']
     ]},
     family: { label: 'Family', icon: 'users-round', note: 'Plans and togetherness', route: 'home/family', items: [
       ['Overview', 'users-round', 'home/family'], ['Calendar', 'calendar-days', 'home/calendar'], ['Celebrations', 'party-popper', 'home/life/festivals'], ['Documents', 'folders', 'home/life/documents'], ['Contacts', 'contact-round', 'home/directory'], ['Protection & legacy', 'shield-check', 'home/family/protection']
@@ -134,11 +134,11 @@
     'home/money/networth': ['Net Worth', 'Household assets, liabilities and goals'],
     'home/money/reports': ['Money Reports', 'Trends, watchlists and exceptions'],
     'home/inventory': ['Supplies & Meals', 'Inventory and meal planning'],
-    'kitchen/overview': ['Kitchen', 'Tamil food, weekly planning and pantry readiness'],
-    'kitchen/recipes': ['Tamil Recipe Library', '100 traditional dishes with a clear everyday purpose'],
-    'kitchen/menus': ['Weekly Menus', 'Seven Tamil home menus, from heritage to modern'],
-    'kitchen/pantry': ['Pantry & Refills', 'What is available and what needs replenishment'],
-    'kitchen/shopping': ['Shopping List', 'A practical refill list generated from pantry levels'],
+    'kitchen/overview': ['சமையலறை', 'தமிழ் உணவு · வாரத் திட்டம் · சரக்கறை இருப்பு'],
+    'kitchen/recipes': ['தமிழ் உணவுக் களஞ்சியம்', 'தெளிவான பயனுடன் நூறு பாரம்பரிய உணவுகள்'],
+    'kitchen/menus': ['வார உணவுத் திட்டம்', 'பாரம்பரியத்திலிருந்து புதுமை வரை ஏழு திட்டங்கள்'],
+    'kitchen/pantry': ['சரக்கறையும் இருப்பும்', 'கைவசம் உள்ளவையும் மீண்டும் வாங்க வேண்டியவையும்'],
+    'kitchen/shopping': ['வாங்க வேண்டியவை', 'இருப்பின் அடிப்படையில் உருவாகும் பட்டியல்'],
     'home/assets': ['Property & Assets', 'Repairs, property records and household assets'],
     'home/wisdom': ['Wisdom & Recognition', 'Family knowledge and points'],
     'home/directory': ['Home Directory', 'Family and service contacts'],

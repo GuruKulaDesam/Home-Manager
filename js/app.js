@@ -190,6 +190,15 @@
     return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
   }
 
+  function personaCanSeeGroup(groupKey, persona = HM.persona.current()) {
+    return !(HM.persona.roleGroup(persona) === 'children' && groupKey === 'money');
+  }
+
+  function personaCanOpenRoute(currentRoute, persona = HM.persona.current()) {
+    if (HM.persona.roleGroup(persona) !== 'children') return true;
+    return currentRoute !== 'home/finance' && !currentRoute.startsWith('home/money/') && currentRoute !== 'settings/money';
+  }
+
   function openBookDatabase() {
     return new Promise((resolve, reject) => {
       if (!window.indexedDB) { reject(new Error('IndexedDB is unavailable')); return; }
@@ -405,7 +414,7 @@
       'home/life/education': 'study/overview', 'community/events': 'community/participate', 'community/polls': 'community/participate'
     })[route] || route;
     $('#workspaceMenuLabel').innerHTML = `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
-    $('#nav').innerHTML = Object.entries(V.groups).map(([key, item]) => {
+    $('#nav').innerHTML = Object.entries(V.groups).filter(([key]) => personaCanSeeGroup(key)).map(([key, item]) => {
       const active = key === activeGroup;
       const expanded = expandedGroup === key && key !== 'today';
       const children = expanded ? `<div id="sectionNav" class="section-nav" role="group" aria-label="${D.esc(item.label)} pages">${item.items.map((child, index) => { const childActive = !activeSettings && topRoute === child[2]; return `<button type="button" data-route="${child[2]}" aria-label="Open ${D.esc(child[0])}" title="${D.esc(child[0])}" class="tab-tone-${index + 1} ${childActive ? 'active' : ''}" ${childActive ? 'aria-current="page"' : ''}><i data-lucide="${child[1]}"></i><span>${D.esc(child[0])}</span></button>`; }).join('')}</div>` : '';
@@ -547,6 +556,10 @@
       D.save();
     }
     const persona = renderPersonaIdentity();
+    if (!personaCanOpenRoute(route, persona)) {
+      go('global/overview');
+      return;
+    }
     renderNav();
     const homeName = renderHomeIdentity();
     const title = V.titles[route] || ['Today', homeName];
