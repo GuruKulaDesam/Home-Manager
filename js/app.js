@@ -55,7 +55,7 @@
       : [['foundation', '.chapter-foundation'], ['vocabulary', '.chapter-vocabulary'], ['opening', '.chapter-summary-opening'], ['picture', '.chapter-picture-section'], ['concepts', '.chapter-summary-map'], ['results', '.chapter-summary-results'], ['example', '.chapter-first-example'], ['reasoning', '.chapter-summary-reasoning'], ['traps', '.chapter-summary-traps'], ['exam', '.chapter-summary-exam'], ['recall', '.chapter-summary-recall']];
     const sections = definitions.map(([key, selector]) => ({ key, element: layout.querySelector(selector) })).filter(item => item.element && getComputedStyle(item.element).display !== 'none');
     const cards = [...rail.querySelectorAll('[data-support-for]')];
-    const sectionLabels = { foundation: 'Bring These Ideas with You', vocabulary: 'New Words, in Plain Words', opening: 'The Chapter’s Central Idea', picture: 'How the Pieces Connect', concepts: 'Connect the Ideas', results: 'Facts and Formulas', example: 'Guided Examples', reasoning: 'How to Work Through a Question', traps: 'Mistakes to Watch For', exam: 'Writing an Exam Answer', recall: 'Recall and Revision' };
+    const sectionLabels = { foundation: 'Foundation Bridge', vocabulary: 'New Words, in Plain Words', opening: 'The Chapter’s Central Idea', picture: 'How the Pieces Connect', concepts: 'Connect the Ideas', results: 'Facts and Formulas', example: 'Guided Examples', reasoning: 'How to Work Through a Question', traps: 'Mistakes to Watch For', exam: 'Writing an Exam Answer', recall: 'Recall and Revision' };
     const update = () => {
       const anchor = scroller.getBoundingClientRect().top + Math.min(190, scroller.clientHeight * .28);
       let current = sections[0];
@@ -1119,9 +1119,9 @@
     $('#deepDiveContext').textContent = `${activeDeepDive.subject.toUpperCase()} · DEEP DIVE`;
     $('#deepDiveTitle').textContent = activeDeepDive.topic;
     $('#deepDiveChapter').textContent = activeDeepDive.chapter;
-    $('#deepDiveTopic').textContent = 'First, Hold Onto This Meaning';
+    $('#deepDiveTopic').textContent = 'The Essential Meaning';
     $('#deepDiveExplanation').textContent = activeDeepDive.explanation;
-    $('#deepDiveConnections').innerHTML = `<article><small>CONNECTION</small><p>${D.esc(activeDeepDive.connection || `This idea supports the central reasoning in ${activeDeepDive.chapter}.`)}</p></article><article><small>YOUR NEXT MOVE</small><p>Choose a question on the right. The local tutor will stay inside this exact chapter and topic.</p></article>`;
+    $('#deepDiveConnections').innerHTML = `<article><small>CONNECTION</small><p>${D.esc(activeDeepDive.connection || `This idea supports the central reasoning in ${activeDeepDive.chapter}.`)}</p></article><article><small>FOCUS</small><p>Every explanation here stays anchored to this topic and its role in the chapter.</p></article>`;
     $('#deepDivePrompt').value = '';
     $('#deepDiveAnswer').hidden = true;
     $('#deepDiveEngineStatus').textContent = 'Local SLM · ready on demand';

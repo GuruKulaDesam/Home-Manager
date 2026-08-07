@@ -599,7 +599,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   const shellWidths = await page.evaluate(() => ({ configured: parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sidebar')), shell: document.querySelector('#sidebar').getBoundingClientRect().width, workspaceLeft: document.querySelector('#chapterWorkspace').getBoundingClientRect().left }));
   expect(shellWidths.shell).toBe(shellWidths.configured);
   expect(shellWidths.workspaceLeft).toBe(shellWidths.shell);
-  await expect(page.locator('.chapter-summary')).toContainText('Bring These Ideas with You');
+  await expect(page.locator('.chapter-summary')).toContainText('Foundation Bridge');
   await expect(page.locator('.chapter-summary')).toContainText('New Words, in Plain Words');
   await expect(page.locator('.chapter-summary')).toContainText('The Chapter’s Central Idea');
   await expect(page.locator('.chapter-summary')).toContainText('How the Pieces Connect');
@@ -608,7 +608,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await expect(page.locator('.chapter-summary')).toContainText('How to Work Through a Question');
   await expect(page.locator('.chapter-summary')).toContainText('Mistakes to Watch for');
   await expect(page.locator('.chapter-summary')).toContainText('How to Write a Strong Exam Answer');
-  await expect(page.locator('.chapter-summary')).toContainText('What Can You Explain Without Looking?');
+  await expect(page.locator('.chapter-summary')).toContainText('The Chapter in a Few Questions');
   await expect(page.locator('.chapter-summary h1')).toHaveText('Electric Charges and Fields');
   await expect(page.locator('.chapter-summary > :first-child')).toHaveClass(/chapter-summary-masthead/);
   await expect(page.locator('.chapter-summary-opening h1')).toHaveCount(0);
@@ -679,7 +679,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   await page.locator('.chapter-summary-results').scrollIntoViewIfNeeded();
   await expect(page.locator('.chapter-support-card.is-active')).toHaveCount(2);
   await expect(page.locator('.chapter-support-card.memory.is-active')).toContainText('Memorization Techniques');
-  await expect(page.locator('.chapter-support-card.remember.is-active')).toContainText('Do Not Forget This');
+  await expect(page.locator('.chapter-support-card.remember.is-active')).toContainText('High-Value Recall');
   await page.locator('.chapter-summary-traps').scrollIntoViewIfNeeded();
   await expect(page.locator('.chapter-support-card.is-active')).toHaveCount(1);
   await expect(page.locator('.chapter-support-card.is-active')).toContainText('How to Catch Errors');
