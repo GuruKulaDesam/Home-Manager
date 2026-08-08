@@ -11,6 +11,8 @@ test('Kitchen provides 100 recipes and seven editable weekly menus', async ({ pa
   await page.locator('#languageSwitcher [data-language="ta"]').click();
   await page.goto(`${app}#/kitchen/recipes`);
   await expect(page.locator('.kitchen-recipe-card')).toHaveCount(100);
+  await expect(page.locator('.kitchen-recipe-card .recipe-photo')).toHaveCount(100);
+  await expect.poll(() => page.locator('.recipe-photo').first().evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
   await page.locator('[data-filter]').fill('காய்ச்சல்');
   await expect(page.locator('.kitchen-recipe-card:visible').first()).toContainText(/காய்ச்சல்/);
   await expect(page.locator('#content')).not.toContainText(/[௦-௯]/);

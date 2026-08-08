@@ -2581,6 +2581,15 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 @media(max-width:700px){[data-view^="kitchen/"] .kitchen-hero{min-height:0;padding:26px}[data-view^="kitchen/"] .kitchen-stats{display:grid;grid-template-columns:1fr 1fr}[data-view^="kitchen/"] .kitchen-stats button:nth-child(2){border-right:0!important}[data-view^="kitchen/"] .kitchen-stats button:nth-child(-n+2){border-bottom:1px solid var(--aurora-line)!important}[data-view^="kitchen/"] .kitchen-path>div{display:block}[data-view^="kitchen/"] .kitchen-path>div p{margin-top:8px}}
 @media(max-width:430px){[data-view^="kitchen/"]{min-width:0;overflow:hidden}[data-view^="kitchen/"] .kitchen-hero h2{font-size:32px}[data-view^="kitchen/"] .kitchen-path{grid-template-columns:1fr 1fr}[data-view^="kitchen/"] .kitchen-path button{min-width:0;min-height:118px}[data-view^="kitchen/"] .kitchen-purpose-strip{grid-template-columns:1fr}}
 
+/* Generated food photography gives every recipe a useful visual cue. */
+[data-view="kitchen/recipes"] .kitchen-recipe-card summary{grid-template-columns:104px auto minmax(0,1fr) auto auto;padding:10px}
+[data-view="kitchen/recipes"] .recipe-photo{width:104px;height:76px;border-radius:13px;object-fit:cover;background:#eef4f2;box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+[data-view^="kitchen/"] .kitchen-hero>div{position:relative;z-index:1;flex:1;min-width:0}
+[data-view^="kitchen/"] .kitchen-hero-photo{position:relative;z-index:1;width:220px;aspect-ratio:16/10;border:3px solid rgba(255,255,255,.72);border-radius:18px;object-fit:cover;box-shadow:0 14px 32px rgba(33,47,73,.18)}
+@media(max-width:900px){[data-view="kitchen/recipes"] .recipe-grid{grid-template-columns:1fr}}
+@media(max-width:700px){[data-view^="kitchen/"] .kitchen-hero-photo{width:100%;max-height:190px;aspect-ratio:16/9}}
+@media(max-width:520px){[data-view="kitchen/recipes"] .kitchen-recipe-card summary{grid-template-columns:82px auto minmax(0,1fr) auto;gap:9px}[data-view="kitchen/recipes"] .recipe-photo{width:82px;height:68px}[data-view="kitchen/recipes"] .purpose-dot{display:none}[data-view="kitchen/recipes"] .recipe-title em{max-width:42vw}}
+
 /* Verified local services directory */
 .services-hero{display:flex;justify-content:space-between;align-items:center;gap:24px;padding:28px 32px;margin-bottom:14px;border:1px solid rgba(69,128,142,.2);border-radius:22px;background:radial-gradient(circle at 85% 15%,rgba(92,214,173,.28),transparent 30%),linear-gradient(125deg,rgba(247,255,254,.96),rgba(238,248,255,.94));box-shadow:0 12px 34px rgba(38,78,91,.08)}
 .services-hero h2{margin:5px 0;color:#17323b;font-size:32px}.services-hero p{max-width:730px;margin:0;color:#58717a;line-height:1.6}.verified-block{display:flex;align-items:center;gap:11px;min-width:max-content;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.72);color:#287761}.verified-block>svg{color:#22a777}.verified-block span{display:flex;flex-direction:column}.verified-block small{color:#6d837d}
