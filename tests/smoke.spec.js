@@ -42,7 +42,7 @@ test('household identity drives the shell, map link and browser title', async ({
     },
     title: getComputedStyle(document.querySelector('#pageTitle')).color
   }));
-  expect(shellSurface.body).toContain('teal-circuit-shell.png');
+  expect(shellSurface.body).toContain('rgb(37, 43, 75)');
   expect(shellSurface.sidebar).toBe('none');
   expect(shellSurface.header).toBe(shellSurface.body);
   expect(shellSurface.headerBlur).toBe('none');
@@ -297,18 +297,23 @@ test('Munnar sunrise and Midnight Indigo are defaults while other choices persis
   await expect(page.locator('body')).toHaveAttribute('data-shell', 'teal');
 });
 
-test('Settings content scrolls beneath the teal top bar', async ({ page }) => {
-  await page.goto(`${app}#/settings/app`);
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
-  const headerLayer = await page.evaluate(() => {
-    const header = document.querySelector('.app-header');
-    const rect = header.getBoundingClientRect();
-    const topElement = document.elementFromPoint(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2));
-    return { top: Math.round(rect.top), ownsTopPoint: header.contains(topElement) };
-  });
-  expect(headerLayer.top).toBe(0);
-  expect(headerLayer.ownsTopPoint).toBeTruthy();
+test('all long pages scroll beneath the persistent top bar', async ({ page }) => {
+  for (const route of ['settings/app', 'kitchen/recipes', 'study/curriculum']) {
+    await page.goto(`${app}#/${route}`);
+    await expect(page.locator('#content')).toHaveAttribute('data-view', route);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    const headerLayer = await page.evaluate(() => {
+      const header = document.querySelector('.app-header');
+      const rect = header.getBoundingClientRect();
+      const topElement = document.elementFromPoint(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2));
+      const content = document.querySelector('#content').getBoundingClientRect();
+      return { top: Math.round(rect.top), ownsTopPoint: header.contains(topElement), contentTop: Math.round(content.top), headerBottom: Math.round(rect.bottom) };
+    });
+    expect(headerLayer.top, route).toBe(0);
+    expect(headerLayer.ownsTopPoint, route).toBeTruthy();
+    expect(headerLayer.contentTop, route).toBeLessThanOrEqual(headerLayer.headerBottom);
+  }
 });
 
 test('Home organizes Household and Family into tabs with focused submenus', async ({ page }) => {
@@ -596,9 +601,8 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   const shellTheme = await page.locator('#sidebar').evaluate(element => ({ background: getComputedStyle(element).backgroundImage, canvas: getComputedStyle(document.body).backgroundImage, color: getComputedStyle(element).color }));
   expect(shellTheme.background).toBe('none');
   expect(shellTheme.canvas).toContain('linear-gradient');
-  expect(shellTheme.canvas).toContain('rgb(16, 61, 59)');
-  expect(shellTheme.canvas).toContain('rgb(32, 61, 50)');
-  expect(shellTheme.canvas).toContain('teal-circuit-shell.png');
+  expect(shellTheme.canvas).toContain('rgb(37, 43, 75)');
+  expect(shellTheme.canvas).toContain('rgb(33, 29, 56)');
   expect(shellTheme.color).toBe('rgb(248, 250, 252)');
   const menuIconColors = await page.locator('#nav > .nav-tree-item > .nav-parent .nav-icon').evaluateAll(items => items.slice(0, 6).map(item => getComputedStyle(item).color));
   expect(new Set(menuIconColors).size).toBeGreaterThan(3);
@@ -699,7 +703,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
     header: getComputedStyle(document.querySelector('.app-header')).backgroundImage,
     headerBlur: getComputedStyle(document.querySelector('.app-header')).backdropFilter
   }));
-  expect(chapterShellSurface.body).toContain('teal-circuit-shell.png');
+  expect(chapterShellSurface.body).toContain('rgb(37, 43, 75)');
   expect(chapterShellSurface.chapterContent).toBe(chapterShellSurface.primaryContent);
   expect(chapterShellSurface.sidebar).toBe('none');
   expect(chapterShellSurface.header).toBe(chapterShellSurface.body);
@@ -953,12 +957,20 @@ test('every real CBSE and JEE chapter has a substantive authored summary', async
     const chapters = [...school, ...jee];
     const missing = chapters.filter(item => !valid(resolve(item.id, item.subject, item.title, item.jee))).map(item => `${item.id}: ${item.subject} / ${item.title}`);
     const missingExampleInputs = chapters.filter(item => HM.genius.questions(item).length < 2).map(item => `${item.id}: ${item.subject} / ${item.title}`);
-    return { school: school.length, jee: jee.length, missing, missingExampleInputs };
+    const quantitative = new Set(['Mathematics', 'Physics', 'Chemistry', 'Science']);
+    const missingFormulaCoverage = chapters.filter(item => quantitative.has(item.subject)).filter(item => {
+      const summary = resolve(item.id, item.subject, item.title, item.jee);
+      const notes = HM.genius.teacherNotes(item);
+      const references = [...(summary?.essentialResults || []), ...(notes.rich?.mustKnow || []), ...(notes.must || []), ...(notes.revision || []), ...(summary?.rapidRecall || [])].map(value => String(value || '').trim().toLowerCase()).filter(Boolean);
+      return new Set(references).size < 4;
+    }).map(item => `${item.id}: ${item.subject} / ${item.title}`);
+    return { school: school.length, jee: jee.length, missing, missingExampleInputs, missingFormulaCoverage };
   });
   expect(audit.school).toBe(147);
   expect(audit.jee).toBe(54);
   expect(audit.missing).toEqual([]);
   expect(audit.missingExampleInputs).toEqual([]);
+  expect(audit.missingFormulaCoverage).toEqual([]);
 });
 
 test('chapter foundations and relationship pictures remain readable on a phone', async ({ page }) => {

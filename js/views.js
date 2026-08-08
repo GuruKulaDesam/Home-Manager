@@ -1158,9 +1158,10 @@
     const criticalSignalPattern = /\b(if and only if|only if|only when|must not|do not|not guaranteed|except(?: when)?|unless|cannot|never|always|at least|at most)\b/gi;
     const teachingText = value => e(value).replace(criticalSignalPattern, '<strong class="chapter-critical-term">$1</strong>');
     const teachingSteps = (values, start = 1, formulaAware = false) => { const ordered = values === summary.problemFlow || values === example?.steps; const tag = ordered ? 'ol' : 'ul'; return `<${tag} class="chapter-slow-steps ${ordered ? 'chapter-sequence-list' : 'chapter-teaching-list'}" ${ordered ? `start="${start}"` : ''}>${(values || []).map(value => { const isFormula = formulaAware && formulaPattern.test(String(value)); return `<li class="${isFormula ? 'chapter-formula-card' : ''}"><article>${isFormula ? `<span aria-hidden="true">${icon('sigma')}</span>` : ''}<div><p>${teachingText(value)}</p>${isFormula ? '<small>The symbols, units and conditions are part of the relationship—not decoration.</small>' : ''}</div></article></li>`; }).join('')}</${tag}>`; };
-    const referenceSource = [...(summary.essentialResults || []), ...(notes.must || []), ...(notes.revision || [])].map(value => String(value || '').trim()).filter(Boolean);
+    const referenceSource = [...(summary.essentialResults || []), ...(notes.rich?.mustKnow || []), ...(notes.must || []), ...(notes.revision || []), ...(summary.rapidRecall || [])].map(value => String(value || '').trim()).filter(Boolean);
     const uniqueReferenceSource = [...new Map(referenceSource.map(value => [value.toLowerCase(), value])).values()];
     const languageSubject = ['English', 'English Core', 'Tamil', 'Hindi'].includes(lesson.subject);
+    const quantitativeSubject = ['Mathematics', 'Physics', 'Chemistry', 'Science'].includes(lesson.subject);
     const resourceConfig = lesson.subject === 'Computer Science'
       ? { label: 'Syntax & Patterns', title: 'Syntax and Patterns in This Chapter', item: 'Pattern', icon: 'code-2', formula: false }
       : languageSubject
@@ -1169,12 +1170,10 @@
           ? { label: 'Evidence & Timelines', title: 'Evidence, Dates and Relationships That Build the Chapter', item: 'Evidence', icon: 'landmark', formula: false }
           : lesson.subject === 'Kaushal Bodh'
             ? { label: 'Methods & Measures', title: 'Methods and Measures to Use Correctly', item: 'Method', icon: 'ruler', formula: false }
-            : uniqueReferenceSource.some(value => formulaPattern.test(value))
-              ? { label: 'Formulae', title: 'Formulae Explained, Not Merely Listed', item: 'Formula', icon: 'sigma', formula: true }
+            : quantitativeSubject
+              ? { label: 'Formulae', title: 'Complete Formulae and Relationships for This Chapter', item: 'Formula', icon: 'sigma', formula: true }
               : { label: 'Key Relationships', title: 'Key Relationships That Organise the Chapter', item: 'Relationship', icon: 'git-branch', formula: false };
-    const resourceItems = (resourceConfig.formula ? uniqueReferenceSource.filter(value => formulaPattern.test(value)) : uniqueReferenceSource).length
-      ? (resourceConfig.formula ? uniqueReferenceSource.filter(value => formulaPattern.test(value)) : uniqueReferenceSource)
-      : uniqueReferenceSource;
+    const resourceItems = uniqueReferenceSource;
     const resourceCards = resourceItems.map((value, index) => {
       const concept = notes.rich?.concepts?.[index % Math.max(notes.rich?.concepts?.length || 1, 1)];
       const meaning = concept?.explain || summary.story || summary.bigIdea;
