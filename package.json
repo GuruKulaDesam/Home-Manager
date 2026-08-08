@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "test": "playwright test tests/smoke.spec.js --reporter=line --workers=1",
+    "hooks:install": "git config core.hooksPath .githooks",
+    "prepare": "npm run hooks:install",
     "deploy": "firebase deploy --only hosting"
   },
   "devDependencies": {
