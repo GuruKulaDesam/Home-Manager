@@ -991,6 +991,12 @@
     return true;
   }
 
+  function isInstructionalApparatusTitle(value) {
+    const title = String(value || '').toLocaleLowerCase('en').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    return /^(?:understanding|talking|thinking|working) (?:about|with) (?:the )?(?:text|language|words)$/.test(title)
+      || /^(?:noticing transitions|writing|things to do|comprehension check|comprehension questions|questions|exercises?|activities?|projects?|grammar|before you read|after you read)$/.test(title);
+  }
+
   function chapterSubchapters(lesson) {
     const notes = HM.genius.teacherNotes(lesson);
     const richConcepts = (notes.rich?.concepts || []).map(concept => ({
@@ -1010,36 +1016,29 @@
     const textbook = !String(lesson.id).includes('jee')
       ? Object.values(HM.textbookSections || {}).find(record => record.subject === lesson.subject && normalize(record.title) === normalize(lesson.title))
       : null;
-    const textbookSections = (textbook?.sections || []).filter(section => validSubchapterTitle(section.title));
-    if (textbookSections.length >= 2) {
-      return textbookSections.map((section, index) => {
-        const sectionWords = new Set(normalize(section.title).split(' ').filter(word => word.length > 3));
-        const related = candidates.map(item => ({ item, score: normalize(item.title).split(' ').filter(word => sectionWords.has(word)).length })).sort((a, b) => b.score - a.score)[0];
-        return {
-          id: `${lesson.id}--section-${slug(section.number || section.title) || index + 1}`,
-          number: section.number || '',
-          title: chapterTitleCase(section.title),
-          explanation: related?.score ? related.item.explanation : `This textbook section develops ${section.title} as part of ${lesson.title}.`,
-          connection: related?.score ? related.item.connection : '',
-          page: section.page,
-          official: true
-        };
-      });
-    }
+    const textbookSections = (textbook?.sections || []).filter(section => validSubchapterTitle(section.title) && !isInstructionalApparatusTitle(section.title));
+    const validRichConcepts = richConcepts.filter(item => validSubchapterTitle(item.title));
+    const semanticCandidates = validRichConcepts.length ? validRichConcepts : candidates;
     const unique = [];
     const seen = new Set();
-    candidates.forEach(item => {
+    semanticCandidates.forEach(item => {
       const key = String(item.title).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
       if (!key || seen.has(key)) return;
       seen.add(key);
+      const itemWords = new Set(normalize(item.title).split(' ').filter(word => word.length > 3));
+      const sectionMatch = textbookSections.map(section => ({ section, score: normalize(section.title).split(' ').filter(word => itemWords.has(word)).length })).sort((a, b) => b.score - a.score)[0];
       unique.push({
-        id: `${lesson.id}--topic-${unique.length + 1}`,
+        id: `${lesson.id}--topic-${slug(item.title) || unique.length + 1}`,
+        number: sectionMatch?.score ? sectionMatch.section.number || '' : '',
         title: chapterTitleCase(item.title),
         explanation: item.explanation,
-        connection: item.connection
+        connection: item.connection,
+        page: sectionMatch?.score ? sectionMatch.section.page : undefined,
+        official: Boolean(sectionMatch?.score),
+        source: validRichConcepts.length ? 'authored' : 'derived'
       });
     });
-    return unique.length ? unique : [{ id: `${lesson.id}--topic-1`, title: chapterTitleCase(lesson.title), explanation: notes.bigIdea || `This chapter develops the central ideas of ${lesson.title}.`, connection: '' }];
+    return unique.length ? unique : [{ id: `${lesson.id}--topic-1`, title: chapterTitleCase(lesson.title), explanation: notes.bigIdea, connection: notes.wisdom || '', source: 'derived' }];
   }
 
   function chapterSubchapterTracking(context, lesson) {
@@ -1208,7 +1207,7 @@
       ...questions.slice(0, 2).map(question => ({ prompt: question.stem, steps: [...(summary.problemFlow || []).slice(0, 2), question.why], answer: question.options?.[question.answer] || question.why }))
     ].slice(0, 3);
     const walkthroughExamplesSection = `<section class="chapter-first-example chapter-lesson-section"><div class="chapter-lesson-heading"><small>THREE GUIDED EXAMPLES</small><h2>See the Idea Work, Step by Step</h2><p>Each example shows the question, the reasoning moves and the final conclusion.</p></div><div class="chapter-worked-examples">${walkthroughExamples.map((item, index) => `<article><header><span>Example ${index + 1}</span><h3>${e(item.prompt)}</h3></header><ol>${(item.steps || []).slice(0, 4).map(step => `<li>${teachingText(step)}</li>`).join('')}</ol><footer><b>Answer</b><p>${teachingText(item.answer)}</p></footer></article>`).join('')}</div></section>`;
-    const summaryConceptMap = tracking.topics.subchapters.length ? `<section class="chapter-summary-map chapter-subchapter-summary chapter-lesson-section"><div class="chapter-lesson-heading"><small>CHAPTER ROADMAP</small><h2>Subchapters</h2><p>These are the ideas that make up this chapter. Progress is saved for each one.</p></div><div class="chapter-concept-lessons">${tracking.topics.subchapters.map((topic, index) => { const topicState = tracking.topics.states[topic.id]; const stateLabel = topicState === 'mastered' ? 'Mastered' : topicState === 'learning' ? 'Learning' : 'Not Started'; return `<article id="${e(topic.id)}" data-summary-subchapter="${e(topic.id)}" class="summary-subchapter state-${e(topicState)}" tabindex="-1"><header><span>${topic.number ? `Section ${e(topic.number)}` : `Subchapter ${index + 1}`} · ${index + 1} of ${tracking.topics.total}</span><button type="button" class="chapter-subchapter-state" data-subchapter-progress="${e(topic.id)}" data-lesson="${e(lesson.id)}" data-state="${e(topicState)}">${icon(topicState === 'mastered' ? 'circle-check-big' : topicState === 'learning' ? 'circle-dot' : 'circle')}<span>${e(stateLabel)}</span></button></header><div><h3>${e(topic.title)}</h3><p>${teachingText(topic.explanation)}</p>${topic.connection ? `<aside>${icon('git-branch')}<span>${teachingText(topic.connection)}</span></aside>` : ''}<button type="button" class="topic-deep-dive" data-deep-dive data-lesson="${e(lesson.id)}" data-topic="${e(topic.title)}" data-explanation="${e(topic.explanation)}" data-connection="${e(topic.connection || summary.bigIdea)}">${icon('scan-search')}<span>Deep Dive</span></button></div></article>`; }).join('')}</div></section>` : '';
+    const summaryConceptMap = tracking.topics.subchapters.length ? `<section class="chapter-summary-map chapter-subchapter-summary chapter-lesson-section"><div class="chapter-lesson-heading"><small>CHAPTER ROADMAP</small><h2>Chapter ideas</h2><p>${tracking.topics.total} meaningful topics · progress is saved automatically.</p></div><div class="chapter-concept-lessons">${tracking.topics.subchapters.map((topic, index) => { const topicState = tracking.topics.states[topic.id]; const stateLabel = topicState === 'mastered' ? 'Mastered' : topicState === 'learning' ? 'Learning' : 'Not Started'; return `<article id="${e(topic.id)}" data-summary-subchapter="${e(topic.id)}" class="summary-subchapter state-${e(topicState)}" tabindex="-1"><header><span>Topic ${index + 1} of ${tracking.topics.total}${topic.number ? ` · Textbook ${e(topic.number)}` : ''}</span><button type="button" class="chapter-subchapter-state" data-subchapter-progress="${e(topic.id)}" data-lesson="${e(lesson.id)}" data-state="${e(topicState)}">${icon(topicState === 'mastered' ? 'circle-check-big' : topicState === 'learning' ? 'circle-dot' : 'circle')}<span>${e(stateLabel)}</span></button></header><div><h3>${e(topic.title)}</h3><section class="summary-topic-core"><small>CORE IDEA</small><p>${teachingText(topic.explanation)}</p></section>${topic.connection ? `<aside><span>${icon('git-branch')}<small>HOW IT CONNECTS</small></span><p>${teachingText(topic.connection)}</p></aside>` : ''}<footer><button type="button" class="topic-deep-dive" data-deep-dive data-lesson="${e(lesson.id)}" data-topic="${e(topic.title)}" data-explanation="${e(topic.explanation)}" data-connection="${e(topic.connection || summary.bigIdea)}">${icon('scan-search')}<span>Explore this idea</span></button></footer></div></article>`; }).join('')}</div></section>` : '';
     const summaryPanel = `<article class="chapter-summary"><section class="chapter-foundation chapter-lesson-section"><span class="chapter-lesson-number">1</span><div class="chapter-lesson-heading"><small>WHAT THIS CHAPTER BUILDS ON</small><h2>Bring these ideas with you</h2><p>These familiar ideas are enough to begin this chapter.</p></div>${teachingSteps(foundation.remember || [])}</section><section class="chapter-vocabulary chapter-lesson-section"><span class="chapter-lesson-number">2</span><div class="chapter-lesson-heading"><small>MEET THE NEW LANGUAGE</small><h2>New words, in plain words</h2><p>Knowing these words makes the explanation and formulas easier to follow.</p></div><div class="chapter-word-cards">${wordCards}</div></section><header class="chapter-summary-opening chapter-lesson-section"><span class="chapter-lesson-number">3</span><div class="chapter-opening-copy"><span class="chapter-summary-icon">${icon('scroll-text')}</span><div><small>${e(lesson.subject)}</small><h1>${e(lesson.title)}</h1><h2>The chapter’s central idea</h2><p class="chapter-summary-bigidea">${e(summary.bigIdea)}</p><p class="chapter-summary-story">${e(summary.story)}</p></div></div></header><section class="chapter-picture-section chapter-lesson-section"><span class="chapter-lesson-number">4</span><div class="chapter-lesson-heading"><small>SEE THE RELATIONSHIP</small><h2>How the pieces connect</h2><p>Follow the arrows and explain what changes from one box to the next.</p></div>${relationshipVisual}</section>${summaryConceptMap}<section class="chapter-summary-results chapter-lesson-section"><span class="chapter-lesson-number">6</span><div class="chapter-lesson-heading"><small>KEEP THESE RELATIONSHIPS</small><h2>Facts and formulas that carry the chapter</h2><p>Each box holds one useful relationship. Name the quantities and units before using a formula.</p></div>${teachingSteps(summary.essentialResults || [], 1, true)}</section><section class="chapter-first-example chapter-lesson-section"><span class="chapter-lesson-number">7</span><div class="chapter-lesson-heading"><small>YOUR FIRST COMPLETE EXAMPLE</small><h2>Watch one idea become an answer</h2><p>${e(example.prompt || notes.example?.[0] || '')}</p></div>${teachingSteps(example.steps || summary.problemFlow || [])}${example.answer ? `<div class="chapter-example-answer"><span>${icon('badge-check')}</span><div><small>ANSWER AND MEANING</small><p>${e(example.answer)}</p></div></div>` : ''}</section><section class="chapter-summary-reasoning chapter-lesson-section"><span class="chapter-lesson-number">8</span><div class="chapter-lesson-heading"><small>USE THE METHOD AGAIN</small><h2>How to work through a question</h2><p>This is the thinking path to reuse when the numbers, diagram or wording changes.</p></div>${teachingSteps(summary.problemFlow || [])}</section><section class="chapter-summary-traps chapter-lesson-section"><span class="chapter-lesson-number">9</span><div class="chapter-lesson-heading"><small>STOP AND CHECK</small><h2>Mistakes to watch for</h2><p>These mistakes often look reasonable at first. The check beside each idea helps you catch them.</p></div>${teachingSteps(summary.examTraps || [])}</section><section class="chapter-summary-exam chapter-lesson-section"><span class="chapter-lesson-number">10</span><div class="chapter-lesson-heading"><small>SHOW WHAT YOU KNOW</small><h2>How to write a strong exam answer</h2><p>A clear answer shows the idea, the working and the conclusion in that order.</p></div><div class="chapter-exam-teaching"><div><h3>What earns marks</h3>${teachingSteps(notes.exam)}</div><div><h3>What proves you understand</h3><p>${e(guide.proof)}</p></div></div></section><section class="chapter-summary-recall chapter-lesson-section"><span class="chapter-lesson-number">11</span><div class="chapter-lesson-heading"><small>REBUILD IT FROM MEMORY</small><h2>What can you explain without looking?</h2><p>Use these prompts to find the one part that needs another look.</p></div>${teachingSteps(summary.rapidRecall || [])}</section></article>`;
     const workedSteps = notes.rich ? `<ol>${notes.rich.worked.steps.map(step => `<li>${e(step)}</li>`).join('')}</ol><p><b>Answer:</b> ${e(notes.rich.worked.answer)}</p><p class="worked-check"><b>Check:</b> ${e(notes.rich.worked.check)}</p>` : `<p><b>Reason:</b> ${e(notes.example[1])}</p>`;
     const learn = `<section class="chapter-learning-grid"><article class="chapter-big-idea"><span class="section-kicker">THE IDEA THAT UNLOCKS THIS CHAPTER</span><h2>${e(notes.bigIdea)}</h2><div class="chapter-concept-flow">${notes.visual.map((value, index) => `${index ? icon('arrow-right') : ''}<span>${e(value)}</span>`).join('')}</div><div class="chapter-guru"><span>${icon('sparkles')}</span><div><b>Guru’s insight</b><p>${e(notes.wisdom)}</p></div></div>${deepConcepts}</article><article><span class="section-kicker">CHAPTER CORE</span><h3>The Relationships That Matter</h3>${list(notes.must)}</article><article><span class="section-kicker">WORKED REASONING</span><h3>See How the Thinking Moves</h3><p><b>Problem:</b> ${e(notes.example[0])}</p>${workedSteps}</article><article><span class="section-kicker">COMMON TRAPS</span><h3>Where Marks Disappear</h3>${list(notes.rich?.traps || guide.traps)}</article></section>`;
@@ -1655,6 +1654,7 @@
     chapterWorkspaceNavigation,
     chapterSubchapters,
     validSubchapterTitle,
+    isInstructionalApparatusTitle,
     lessonById: lessonId => curriculumLessonById(academicContext(), lessonId),
     defaultLessonId: () => { const c = academicContext(); const jeeMode = +c.profile.grade === 12 && D.state.settings.activeLearningTrack?.[c.activeId] === 'jee'; return curriculumLessons(c, jeeMode)[0]?.id || ''; },
     titles,

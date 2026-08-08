@@ -2242,6 +2242,15 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 .chapter-subchapter-summary .summary-subchapter > div { padding: 18px 20px 20px; }
 .chapter-subchapter-summary .summary-subchapter h3 { color: #312e81; font-size: 23px; }
 .chapter-subchapter-summary .summary-subchapter .chapter-subchapter-state { min-height: 30px; border: 1px solid rgba(15,23,42,.08); border-radius: 8px; background: #fff; font-size: 10px; }
+.chapter-subchapter-summary .summary-subchapter h3::before { content: none; }
+.summary-topic-core { margin-top: 15px; padding: 14px 16px; border-left: 3px solid #0f766e; border-radius: 0 10px 10px 0; background: rgba(240,253,250,.66); }
+.summary-topic-core small, .summary-subchapter aside small { display: block; margin-bottom: 5px; color: #0f766e; font-size: 9px; font-weight: 900; letter-spacing: .07em; }
+.summary-topic-core p, .summary-subchapter aside p { margin: 0; color: var(--ink-soft); font-size: 15px; line-height: 1.7; }
+.chapter-subchapter-summary .summary-subchapter aside { display: grid; grid-template-columns: 120px minmax(0,1fr); align-items: start; gap: 14px; margin-top: 12px; padding: 13px 16px; border: 1px solid rgba(124,58,237,.12); border-radius: 10px; background: rgba(245,243,255,.58); }
+.summary-subchapter aside > span { display: flex; align-items: center; gap: 7px; color: #7c3aed; }
+.summary-subchapter aside > span small { margin: 0; color: #6d28d9; }
+.summary-subchapter > div > footer { display: flex; justify-content: flex-end; margin-top: 14px; }
+.summary-subchapter .topic-deep-dive { min-height: 38px; margin: 0; padding-inline: 13px; }
 .chapter-slow-steps { display: grid; gap: 10px; margin: 0; padding-left: 26px; }
 .chapter-slow-steps > li { padding-left: 6px; color: var(--ink); }
 .chapter-teaching-list > li::marker { color: var(--ink); font-size: 1.05em; }
@@ -2429,6 +2438,15 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
   .curriculum-journey-row { min-height: 0; height: auto; }
   .chapter-subchapter-row { grid-template-columns: minmax(0, 1fr); }
   .chapter-subchapter-state { min-height: 30px; justify-content: flex-end; border-top: 1px solid rgba(15,23,42,.055); border-left: 0; }
+  .chapter-subchapter-summary { padding-top: 24px; }
+  .chapter-subchapter-summary .chapter-concept-lessons { gap: 12px; }
+  .chapter-subchapter-summary .summary-subchapter { scroll-margin-top: 104px; }
+  .chapter-subchapter-summary .summary-subchapter > header { align-items: center; flex-wrap: wrap; padding: 9px 11px; }
+  .chapter-subchapter-summary .summary-subchapter > div { padding: 15px; }
+  .chapter-subchapter-summary .summary-subchapter h3 { font-size: 20px; line-height: 1.35; }
+  .summary-topic-core { padding: 12px 13px; }
+  .chapter-subchapter-summary .summary-subchapter aside { grid-template-columns: 1fr; gap: 7px; padding: 12px 13px; }
+  .summary-subchapter > div > footer, .summary-subchapter .topic-deep-dive { width: 100%; }
   .chapter-workspace { left: 0; }
   body.chapter-workspace-open .app-header { left: 0; }
   body.chapter-workspace-open .page-identity { min-width: auto; display: flex; }

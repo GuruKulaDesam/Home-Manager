@@ -607,12 +607,11 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   await expect(cards.first().locator('.chapter-card-visual svg')).toHaveCount(1);
   await expect(cards.first().locator('.chapter-card-title h2')).toBeVisible();
   await expect(cards.first().locator('.chapter-card-metrics > *')).toHaveCount(3);
-  await expect(cards.first().locator('.chapter-subchapter-row')).toHaveCount(4);
+  await expect(cards.first().locator('.chapter-subchapter-row')).toHaveCount(3);
   await expect(cards.first().locator('.chapter-subchapter-open b')).toHaveText([
-    'Introduction',
-    'Types of Relations',
-    'Types of Functions',
-    'Composition of Functions and Invertible Function'
+    'Function Test',
+    'Composition',
+    'Invertibility'
   ]);
   await expect(cards.first().locator('.chapter-card-footer')).toContainText('Next step');
   await expect(page.getByPlaceholder('Find a chapter')).toHaveCount(0);
@@ -799,7 +798,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
   }));
   expect(tocNumbering.sections).toBe(9);
   expect(tocNumbering.sectionMarker).not.toBe('none');
-  expect(tocNumbering.conceptMarker).not.toBe('none');
+  expect(tocNumbering.conceptMarker).toBe('none');
   await expect(page.locator('.chapter-word-cards article')).not.toHaveCount(0);
   await expect(page.locator('.chapter-relationship-visual')).toBeVisible();
   await expect(page.locator('.chapter-relationship-visual figcaption')).not.toBeEmpty();
@@ -913,8 +912,8 @@ test('every configured chapter has the same trackable subchapters in Curriculum 
     const lesson = HM.data.state.syllabusItems.find(item => item.subject === 'Physics' && item.title === title);
     return [title, HM.views.chapterSubchapters(lesson).map(topic => topic.title)];
   })));
-  expect(physicsTopics['Electric Charges and Fields']).toContain('Additivity of Charges');
-  expect(physicsTopics['Electrostatic Potential and Capacitance']).toContain('Capacitors in Parallel');
+  expect(physicsTopics['Electric Charges and Fields']).toEqual(expect.arrayContaining(['Superposition', 'Electric Flux', 'Gauss Law']));
+  expect(physicsTopics['Electrostatic Potential and Capacitance']).toEqual(expect.arrayContaining(['Potential Difference', 'Field-potential Link', 'Capacitor Energy']));
   expect(physicsTopics['Current Electricity']).toEqual(expect.arrayContaining(['Drift Current', 'Resistance', 'Kirchhoff Laws']));
 
   const firstCard = page.locator('.curriculum-chapter-card').first();
@@ -1008,6 +1007,23 @@ test('every real CBSE and JEE chapter has a substantive authored summary', async
   expect(audit.missing).toEqual([]);
   expect(audit.missingExampleInputs).toEqual([]);
   expect(audit.missingFormulaCoverage).toEqual([]);
+});
+
+test('English chapter ideas use authored teaching content instead of textbook exercise labels', async ({ page }) => {
+  await page.goto(`${app}#/study/curriculum`);
+  await choosePersona(page, 'p3');
+  await page.locator('[data-learning-subject="English Core"]').first().click();
+  await page.locator('.curriculum-journey-row').filter({ hasText: 'POETS AND PANCAKES' }).click();
+
+  const summary = page.locator('.chapter-subchapter-summary');
+  await expect(summary).toContainText(/Pancake Make-up and Manufactured Glamour/i);
+  await expect(summary).toContainText('Gemini Studios');
+  await expect(summary).toContainText(/The Office Boy’s Resentment and Subbu/i);
+  await expect(summary).toContainText(/Stephen Spender and the Misread Visitor/i);
+  await expect(summary).toContainText(/Core idea/i);
+  await expect(summary).toContainText(/How it connects/i);
+  await expect(summary).not.toContainText(/This textbook section develops|Understanding the text|Talking about the text|Noticing transitions|Things to do/i);
+  await expect(summary.locator('[data-summary-subchapter]')).toHaveCount(3);
 });
 
 test('chapter foundations and relationship pictures remain readable on a phone', async ({ page }) => {
