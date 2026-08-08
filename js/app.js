@@ -2161,7 +2161,7 @@
   }
   function applyTheme() {
     const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'sunrise';
-    const shellStyle = V.shellStyles.some(item => item[0] === D.state.settings.shellStyle) ? D.state.settings.shellStyle : 'teal';
+    const shellStyle = V.shellStyles.some(item => item[0] === D.state.settings.shellStyle) ? D.state.settings.shellStyle : 'indigo';
     document.body.classList.remove('dark');
     document.body.dataset.nature = background;
     document.body.dataset.shell = shellStyle;

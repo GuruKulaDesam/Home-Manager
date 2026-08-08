@@ -49,8 +49,8 @@
     ['ember', 'Ember Plum', 'Warm, composed and balanced'],
     ['terracotta', 'Terracotta Dusk', 'Earthy and understated'],
     ['mulberry', 'Mulberry Violet', 'Rich and expressive'],
-    ['indigo', 'Midnight Indigo', 'Cool and focused'],
-    ['teal', 'Teal Green', 'Fresh and grounded', true]
+    ['indigo', 'Midnight Indigo', 'Cool and focused', true],
+    ['teal', 'Teal Green', 'Fresh and grounded']
   ];
 
   const textbookCatalog = [

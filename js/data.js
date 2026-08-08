@@ -6,8 +6,8 @@ function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random()
 seed.people.find(person=>person.id==='p3').householdRole='Daughter';
 seed.people.find(person=>person.id==='p4').householdRole='Son';
 seed.settings.appBackground='sunrise';
-seed.settings.shellStyle='teal';
-seed.settings.shellStyleDefaultVersion=2;
+seed.settings.shellStyle='indigo';
+seed.settings.shellStyleDefaultVersion=3;
 seed.settings.backgroundDefaultVersion=2;
 seed.settings.activeLearnerId='p3';
 seed.settings.googleSync={mode:'direct',clientId:'',autoSync:false,calendarSync:true,emailAnalysis:true,driveBackup:false,reviewPolicy:'trusted',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
@@ -177,15 +177,15 @@ function normalize(value){
   const inputSettings=value.settings&&typeof value.settings==='object'?value.settings:{};
   const validBackgrounds=['waterfall','river','fern','meadow','lotus','monsoon','sunrise','glacier','bamboo','sky','grove','wildflower'];
   const validShellStyles=['ember','terracotta','mulberry','indigo','teal'];
-  const migrateShellStyle=!inputSettings.shellStyleDefaultVersion&&(!inputSettings.shellStyle||inputSettings.shellStyle==='ember');
+  const migrateShellStyle=(+inputSettings.shellStyleDefaultVersion||0)<3&&(!inputSettings.shellStyle||inputSettings.shellStyle==='ember'||inputSettings.shellStyle==='teal');
   const migrateLegacyBackground=!inputSettings.backgroundDefaultVersion&&(!inputSettings.appBackground||inputSettings.appBackground==='waterfall');
   next.settings={
     ...next.settings,
     ...clone(inputSettings),
     theme:'light',
     appBackground:migrateLegacyBackground?'sunrise':validBackgrounds.includes(inputSettings.appBackground)?inputSettings.appBackground:'sunrise',
-    shellStyle:migrateShellStyle?'teal':validShellStyles.includes(inputSettings.shellStyle)?inputSettings.shellStyle:'teal',
-    shellStyleDefaultVersion:2,
+    shellStyle:migrateShellStyle?'indigo':validShellStyles.includes(inputSettings.shellStyle)?inputSettings.shellStyle:'indigo',
+    shellStyleDefaultVersion:3,
     backgroundDefaultVersion:2,
     locale:typeof inputSettings.locale==='string'?inputSettings.locale:'en',
     activeWorkspace:['home','community','study'].includes(inputSettings.activeWorkspace)?inputSettings.activeWorkspace:'home',

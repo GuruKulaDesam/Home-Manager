@@ -274,10 +274,10 @@ test('Today is the first page inside the Home menu', async ({ page }) => {
   expect(await page.evaluate(() => HM.views.groups.today)).toBeUndefined();
 });
 
-test('Munnar sunrise is the default and another background choice still persists', async ({ page }) => {
+test('Munnar sunrise and Midnight Indigo are defaults while other choices persist', async ({ page }) => {
   await page.goto(`${app}#/global/overview`);
   await expect(page.locator('body')).toHaveAttribute('data-nature', 'sunrise');
-  await expect(page.locator('body')).toHaveAttribute('data-shell', 'teal');
+  await expect(page.locator('body')).toHaveAttribute('data-shell', 'indigo');
   const surfaceTokens = await page.evaluate(() => ({
     glass: getComputedStyle(document.documentElement).getPropertyValue('--glass').trim(),
     shell: getComputedStyle(document.body).getPropertyValue('--shell-bg').trim()
@@ -287,7 +287,7 @@ test('Munnar sunrise is the default and another background choice still persists
 
   await page.goto(`${app}#/settings/app`);
   await expect(page.locator('[name="shellStyle"]')).toHaveCount(5);
-  await expect(page.locator('[name="shellStyle"][value="teal"]')).toBeChecked();
+  await expect(page.locator('[name="shellStyle"][value="indigo"]')).toBeChecked();
   await page.locator('.nature-waterfall').click();
   await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
   await page.locator('.shell-style-teal').click();
