@@ -1,0 +1,14 @@
+#!/bin/sh
+
+current_version=$(git show HEAD:VERSION 2>/dev/null || printf '0.0.0')
+
+if ! printf '%s' "$current_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  printf '%s\n' 'Automatic commit versioning failed: VERSION must contain MAJOR.MINOR.PATCH.' >&2
+  exit 1
+fi
+
+major=$(printf '%s' "$current_version" | cut -d. -f1)
+minor=$(printf '%s' "$current_version" | cut -d. -f2)
+patch=$(printf '%s' "$current_version" | cut -d. -f3)
+printf '%s\n' "$major.$minor.$((patch + 1))" > VERSION
+git add -- VERSION
