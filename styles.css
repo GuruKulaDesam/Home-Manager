@@ -2493,6 +2493,81 @@ body.chapter-workspace-open > #sidebar .sidebar-bottom { display: none; }
 @media(max-width:700px){.kitchen-hero{align-items:flex-start;padding:25px;flex-direction:column}.kitchen-stats,.recipe-grid,.kitchen-purpose-strip{grid-template-columns:1fr 1fr}.kitchen-path,.week-tabs{grid-template-columns:repeat(2,1fr)}.weekly-menu-grid,.pantry-grid{grid-template-columns:1fr}.kitchen-toolbar{align-items:stretch;flex-direction:column}.recipe-body{grid-template-columns:1fr}.recipe-body footer{flex-wrap:wrap}.kitchen-count{display:none}.menu-planning-bar{grid-template-columns:1fr}.menu-persona-chip{border:0}.weekly-menu>header{align-items:flex-start;flex-direction:column}.menu-head-actions{justify-content:flex-start;margin-top:12px}}
 @media(max-width:430px){.kitchen-stats,.recipe-grid,.kitchen-purpose-strip{grid-template-columns:1fr}.kitchen-path{grid-template-columns:1fr}.week-tabs{grid-template-columns:1fr 1fr}}
 
+/* Mobile shell: keep navigation opaque and give each header control one clear job. */
+@media (max-width: 700px) {
+  #sidebar {
+    z-index: 70;
+    width: min(300px, 88vw);
+    padding-top: max(14px, env(safe-area-inset-top));
+    background-color: var(--shell-navigation-base);
+    background-image: var(--shell-navigation-bg);
+    background-position: left top;
+    background-size: auto 100%;
+    background-attachment: scroll;
+    box-shadow: 18px 0 48px rgba(4, 12, 28, .34);
+    backdrop-filter: none;
+  }
+  #backdrop { z-index: 65; background: rgba(7, 15, 31, .58); backdrop-filter: blur(2px); }
+  body.menu-open { overflow: hidden; }
+  body.menu-open #bottomNav { visibility: hidden; }
+
+  .app-header,
+  .workspace-study .app-header,
+  body.settings-mode .app-header,
+  body.chapter-workspace-open .app-header {
+    height: calc(56px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+  .topbar,
+  body.chapter-workspace-open .topbar {
+    width: 100%;
+    height: 56px;
+    gap: 7px;
+    padding: 0 8px;
+  }
+  .app-header .page-identity {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .app-header .page-identity small { display: none; }
+  .app-header .page-identity h1 {
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+  }
+  .persona-crumb::after { display: none; }
+  .persona-switcher { height: 36px; padding: 4px; }
+  .persona-switcher > span { width: 26px; flex-basis: 26px; }
+  .header-actions { margin-left: 0; }
+  .language-switcher { flex: 0 0 auto; height: 34px; }
+  .language-switcher button { min-width: 32px; padding-inline: 6px; }
+  .utility-rail { display: none; }
+
+  body::after { top: calc(56px + env(safe-area-inset-top)); }
+  .workspace-study .app-shell,
+  body.settings-mode .app-shell { padding-top: calc(56px + env(safe-area-inset-top)); }
+  #content[data-view^="study/"] .learning-command-bar {
+    top: 0;
+    z-index: 12;
+    margin-inline: -2px;
+    border-color: rgba(15, 23, 42, .12);
+    background: rgba(250, 252, 255, .98);
+    box-shadow: 0 5px 16px rgba(15, 23, 42, .08);
+    backdrop-filter: none;
+  }
+  .education-command-row { min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .education-command-row::-webkit-scrollbar { display: none; }
+  .education-command-row .education-master-controls { width: max-content; flex: 0 0 auto; }
+}
+
+@media (max-width: 380px) {
+  .topbar, body.chapter-workspace-open .topbar { gap: 5px; padding-inline: 6px; }
+  .app-header .page-identity h1 { font-size: 15px; }
+  .language-switcher button { min-width: 29px; padding-inline: 4px; }
+}
+
 /* Kitchen — Aurora Light */
 [data-view^="kitchen/"]{--aurora-ink:#17203a;--aurora-muted:#64708a;--aurora-line:rgba(92,105,145,.16);--aurora-cyan:#17b8c7;--aurora-blue:#5574ef;--aurora-violet:#8b5cf6;--aurora-mint:#5cd6ad;font-family:"Noto Sans Tamil","Nirmala UI","Latha",sans-serif;color:var(--aurora-ink)}
 [data-view^="kitchen/"] .kitchen-hero{min-height:190px;padding:34px 40px;margin-bottom:16px;border:1px solid rgba(109,125,180,.18);border-radius:24px;background:radial-gradient(circle at 83% 20%,rgba(116,235,213,.42),transparent 24%),radial-gradient(circle at 70% 100%,rgba(149,126,255,.28),transparent 34%),linear-gradient(125deg,rgba(252,254,255,.98),rgba(239,248,255,.96) 55%,rgba(245,240,255,.96));box-shadow:0 16px 46px rgba(52,65,110,.1)}

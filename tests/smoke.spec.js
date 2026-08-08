@@ -393,6 +393,34 @@ test('mobile Health page has no horizontal page overflow', async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
+test('mobile shell stays contained with an opaque navigation drawer', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const routes = [
+    'global/overview', 'home/overview', 'home/calendar', 'home/care',
+    'kitchen/recipes', 'study/curriculum', 'community/overview', 'settings/app'
+  ];
+
+  for (const route of routes) {
+    await page.goto(`${app}#/${route}`);
+    await expect(page.locator('.app-header')).toBeVisible();
+    const layout = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      headerTop: document.querySelector('.app-header').getBoundingClientRect().top,
+      contentTop: document.querySelector('#content').getBoundingClientRect().top
+    }));
+    expect(layout.overflow, `${route} overflow`).toBeLessThanOrEqual(1);
+    expect(layout.headerTop, `${route} header position`).toBe(0);
+    expect(layout.contentTop, `${route} content below header`).toBeGreaterThanOrEqual(55);
+  }
+
+  await page.locator('#bottomMore').click();
+  await expect(page.locator('body')).toHaveClass(/menu-open/);
+  await expect(page.locator('#sidebar')).toHaveCSS('background-color', 'rgb(37, 43, 75)');
+  await expect(page.locator('#sidebar')).toHaveCSS('z-index', '70');
+  await expect(page.locator('#bottomNav')).toHaveCSS('visibility', 'hidden');
+  await expect(page.locator('#sidebar')).toBeInViewport();
+});
+
 test('Class 7 and Class 12 have separate official textbook libraries', async ({ page }) => {
   await page.goto(`${app}#/study/books`);
   await expect(page.locator('#pageTitle')).toHaveText('Books');
