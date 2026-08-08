@@ -19,6 +19,18 @@ service cloud.firestore {
         && request.resource.data.deviceId is string;
     }
 
+    match /familyVaults/{vaultId}/googleContacts/{contactId} {
+      allow get, list: if request.auth != null && validVault(vaultId);
+      allow delete: if false;
+      allow create, update: if request.auth != null
+        && validVault(vaultId)
+        && request.resource.data.keys().hasOnly(['id', 'scope', 'name', 'category', 'phone', 'email', 'hours', 'source', 'sourceRef', 'personId', 'importedAt'])
+        && request.resource.data.id == contactId
+        && request.resource.data.source == 'Google Contacts'
+        && request.resource.data.name is string
+        && request.resource.data.sourceRef is string;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

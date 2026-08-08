@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInAnonymously } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js';
-import { doc, getDoc, initializeFirestore, onSnapshot, persistentLocalCache, persistentMultipleTabManager, serverTimestamp, setDoc } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
+import { collection, doc, getDoc, getDocs, initializeFirestore, onSnapshot, persistentLocalCache, persistentMultipleTabManager, serverTimestamp, setDoc, writeBatch } from 'https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js';
 
 const config = {
   projectId: 'home-manager-2026',
@@ -27,6 +27,7 @@ let unsubscribe = null;
 let saveTimer = null;
 let applyingRemote = false;
 let lastRemoteRevision = 0;
+let storedGoogleContacts = [];
 let status = vaultPattern.test(vaultId) ? 'connecting' : 'local';
 let detail = status === 'local' ? 'Saved only in this browser' : 'Connecting to family database';
 
@@ -83,6 +84,7 @@ function persistRemoteState(payload) {
   try {
     applyingRemote = true;
     const normalized = HM.data.normalize(payload.state);
+    mergeContactsIntoState(normalized, storedGoogleContacts);
     HM.data.state = normalized;
     localStorage.setItem(HM.data.KEY, JSON.stringify(normalized));
     lastRemoteRevision = Math.max(lastRemoteRevision, revision);
@@ -136,11 +138,52 @@ function scheduleSave() {
   saveTimer = setTimeout(writeState, 500);
 }
 
+function mergeContactsIntoState(state, items) {
+  state.contacts ||= [];
+  const byId = new Map(state.contacts.map(contact => [contact.id, contact]));
+  items.forEach(contact => {
+    if (!contact?.id || contact.source !== 'Google Contacts') return;
+    const existing = byId.get(contact.id) || state.contacts.find(item => item.sourceRef && item.sourceRef === contact.sourceRef);
+    if (existing) Object.assign(existing, contact);
+    else { state.contacts.push(contact); byId.set(contact.id, contact); }
+  });
+}
+
+function mergeStoredGoogleContacts(items) {
+  storedGoogleContacts = items;
+  mergeContactsIntoState(HM.data.state, items);
+  localStorage.setItem(HM.data.KEY, JSON.stringify(HM.data.state));
+  if (items.length) emit('hm-cloud-state', { contactsRestored: items.length });
+}
+
+async function loadGoogleContacts() {
+  if (!vaultId) return 0;
+  const snapshot = await getDocs(collection(db, 'familyVaults', vaultId, 'googleContacts'));
+  const contacts = snapshot.docs.map(item => item.data());
+  mergeStoredGoogleContacts(contacts);
+  return contacts.length;
+}
+
+async function writeGoogleContacts(contacts) {
+  if (!stateDocument || status !== 'connected') throw new Error('Connect the Family Database before importing Google Contacts.');
+  const records = (contacts || []).filter(contact => contact?.id && contact.source === 'Google Contacts');
+  for (let offset = 0; offset < records.length; offset += 400) {
+    const batch = writeBatch(db);
+    records.slice(offset, offset + 400).forEach(contact => {
+      const stored = { id: contact.id, scope: contact.scope || 'home', name: contact.name || 'Unnamed contact', category: contact.category || 'Google contact', phone: contact.phone || '', email: contact.email || '', hours: contact.hours || '', source: 'Google Contacts', sourceRef: contact.sourceRef || '', personId: contact.personId || '', importedAt: serverTimestamp() };
+      batch.set(doc(db, 'familyVaults', vaultId, 'googleContacts', contact.id), stored);
+    });
+    await batch.commit();
+  }
+  return { stored: records.length, database: true };
+}
+
 async function startSync(user) {
   stateDocument = doc(db, 'familyVaults', vaultId, 'state', 'current');
   const snapshot = await getDoc(stateDocument);
   if (snapshot.exists()) persistRemoteState(snapshot.data());
   else await writeState();
+  const storedContacts = await loadGoogleContacts();
   unsubscribe?.();
   unsubscribe = onSnapshot(stateDocument, { includeMetadataChanges: true }, current => {
     if (current.exists() && !current.metadata.hasPendingWrites) persistRemoteState(current.data());
@@ -149,7 +192,7 @@ async function startSync(user) {
     console.error('Family database listener failed', error);
     setStatus('error', 'Family database connection failed');
   });
-  setStatus('connected', `Family database connected on device ${user.uid.slice(0, 6)}`);
+  setStatus('connected', `Family database connected on device ${user.uid.slice(0, 6)}${storedContacts ? ` · ${storedContacts} Google contacts restored` : ''}`);
 }
 
 const originalSave = HM.data.save.bind(HM.data);
@@ -159,7 +202,7 @@ HM.data.save = function saveWithCloud() {
   return result;
 };
 
-HM.cloud = { getStatus, createVault, connectVault, disconnectVault, scheduleSave, writeState };
+HM.cloud = { getStatus, createVault, connectVault, disconnectVault, scheduleSave, writeState, writeGoogleContacts };
 emit('hm-cloud-status', getStatus());
 
 if (vaultId) {

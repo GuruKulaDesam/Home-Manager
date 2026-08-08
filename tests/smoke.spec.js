@@ -1199,6 +1199,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
   expect(sidebarScrollbar.firefox).toBe('none');
   expect(sidebarScrollbar.canStillScroll).toBe(true);
   await page.evaluate(() => {
+    HM.cloud.writeGoogleContacts = async contacts => ({ stored: contacts.length, database: true });
     window.google = { accounts: { oauth2: {
       initTokenClient: config => ({ requestAccessToken: () => setTimeout(() => config.callback({ access_token: `token:${config.login_hint}`, expires_in: 3600 }), 0) }),
       revoke: () => {}
@@ -1228,7 +1229,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
   await expect(page.locator('#googleSyncProgress [data-sync-calendar]')).toHaveText('1');
   await expect(page.locator('#googleSyncProgress [data-sync-tasks]')).toHaveText('1');
   await expect(page.locator('.google-sync-recent')).toContainText('What synced recently');
-  expect(await page.evaluate(() => HM.data.state.settings.googleSync.lastRun)).toMatchObject({ status: 'complete', accounts: 4, found: 12, contacts: 1, calendar: 1, tasks: 1, gmail: 9 });
+  expect(await page.evaluate(() => HM.data.state.settings.googleSync.lastRun)).toMatchObject({ status: 'complete', accounts: 4, found: 12, contacts: 1, contactsStored: 1, calendar: 1, tasks: 1, gmail: 9 });
   expect(googleReadOrder.indexOf('father@example.com:contacts')).toBeLessThan(googleReadOrder.indexOf('father@example.com:calendar'));
   expect(googleReadOrder.indexOf('father@example.com:calendar')).toBeLessThan(googleReadOrder.indexOf('father@example.com:tasks'));
   expect(googleReadOrder.indexOf('father@example.com:tasks')).toBeLessThan(googleReadOrder.indexOf('father@example.com:gmail'));
@@ -1384,7 +1385,7 @@ test('Contacts auto-import while Tasks remain reviewable before import', async (
     HM.data.save();
   });
   await page.reload();
-  await page.evaluate(() => { window.google = { accounts: { oauth2: { initTokenClient: config => ({ requestAccessToken: () => config.callback({ access_token: 'workspace-token', expires_in: 3600 }) }), revoke: () => {} } } }; });
+  await page.evaluate(() => { HM.cloud.writeGoogleContacts = async contacts => ({ stored: contacts.length, database: true }); window.google = { accounts: { oauth2: { initTokenClient: config => ({ requestAccessToken: () => config.callback({ access_token: 'workspace-token', expires_in: 3600 }) }), revoke: () => {} } } }; });
 
   await page.goto(`${app}#/home/directory`);
   await page.locator('[data-google-action="contacts-list"]').click();
@@ -1392,6 +1393,7 @@ test('Contacts auto-import while Tasks remain reviewable before import', async (
   await expect(page.locator('[data-google-service="contacts"]')).toContainText('Imported');
   await expect(page.locator('#content')).toContainText('office@school.test');
   expect(await page.evaluate(() => HM.data.state.contacts.some(contact => contact.email === 'office@school.test'))).toBe(true);
+  expect(await page.evaluate(() => HM.data.state.settings.googleSync.lastRun.contactsStored)).toBe(1);
 
   await page.goto(`${app}#/home/tasks`);
   await page.locator('[data-google-action="tasks-list"]').click();

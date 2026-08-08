@@ -1616,6 +1616,8 @@
       updateGoogleSyncProgress({ status: 'running', phase: 'Account connected', title: email, detail: 'Starting with Google Contacts', percent: 3, processed: 0, contacts: 0, calendar: 0, gmail: 0, added: 0 });
       const contactItems = await readGoogleContacts(account, googleSessions.get(slotId), progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: 5 + Math.min(15, (progress.contacts || 0) / 20), processed: progress.contacts || 0, contacts: progress.contacts || 0, calendar: 0, gmail: 0, added: 0 }));
       const contactResult = mergeGoogleContacts(contactItems);
+      updateGoogleSyncProgress({ status: 'running', phase: 'Saving Contacts', title: email, detail: `Writing ${contactResult.records.length} contacts to the Family Database`, percent: 21, processed: contactItems.length, contacts: contactItems.length, calendar: 0, tasks: 0, gmail: 0, added: contactResult.added });
+      const contactStorage = await HM.cloud.writeGoogleContacts(contactResult.records);
       const calendarItems = await readGoogleCalendar(account, googleSessions.get(slotId), sync, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: progress.calendar === undefined ? 22 : 32, processed: contactItems.length + (progress.calendar || 0), contacts: contactItems.length, calendar: progress.calendar || 0, tasks: 0, gmail: 0, added: contactResult.added }));
       const taskItems = await readGoogleTasks(account, googleSessions.get(slotId), progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: progress.tasks === undefined ? 34 : 43, processed: contactItems.length + calendarItems.length + (progress.tasks || 0), contacts: contactItems.length, calendar: calendarItems.length, tasks: progress.tasks || 0, gmail: 0, added: contactResult.added }));
       const taskResult = mergeGoogleTasks(taskItems, account);
@@ -1623,8 +1625,8 @@
       const suggestions = [...calendarItems, ...gmailItems];
       const result = mergeSuggestions(suggestions, 'gmail', true);
       account.lastSync = new Date().toISOString();
-      sync.lastRun = { startedAt, completedAt: account.lastSync, status: 'complete', accounts: 1, found: contactItems.length + taskItems.length + suggestions.length, added: contactResult.added + taskResult.added + result.added, applied: result.applied, contacts: contactItems.length, calendar: calendarItems.length, tasks: taskItems.length, gmail: gmailItems.length, backups: 0, error: '' };
-      updateGoogleSyncProgress({ status: 'complete', phase: 'Sync complete', title: email, detail: `${contactItems.length} contacts · ${taskItems.length} tasks · ${suggestions.length} updates`, percent: 100, processed: contactItems.length + taskItems.length + suggestions.length, contacts: contactItems.length, calendar: calendarItems.length, tasks: taskItems.length, gmail: gmailItems.length, added: contactResult.added + taskResult.added + result.added });
+      sync.lastRun = { startedAt, completedAt: account.lastSync, status: 'complete', accounts: 1, found: contactItems.length + taskItems.length + suggestions.length, added: contactResult.added + taskResult.added + result.added, applied: result.applied, contacts: contactItems.length, contactsStored: contactStorage.stored, calendar: calendarItems.length, tasks: taskItems.length, gmail: gmailItems.length, backups: 0, error: '' };
+      updateGoogleSyncProgress({ status: 'complete', phase: 'Sync complete', title: email, detail: `${contactStorage.stored} contacts stored in database · ${taskItems.length} tasks · ${suggestions.length} updates`, percent: 100, processed: contactItems.length + taskItems.length + suggestions.length, contacts: contactItems.length, calendar: calendarItems.length, tasks: taskItems.length, gmail: gmailItems.length, added: contactResult.added + taskResult.added + result.added });
       save(`${email} synced; ${result.applied} household updates added`);
       render();
     } catch (error) { toast(`Google connection failed: ${error.message}`); }
@@ -1656,7 +1658,7 @@
   }
 
   function mergeGoogleContacts(items) {
-    const result = { added: 0, updated: 0 };
+    const result = { added: 0, updated: 0, records: [] };
     const clean = value => String(value || '').trim().toLowerCase();
     const phoneKey = value => String(value || '').replace(/\D/g, '').slice(-10);
     items.forEach(item => {
@@ -1664,6 +1666,7 @@
       const values = { scope: 'home', name: item.name, category: item.organization || 'Google contact', phone: item.phone, email: item.email, hours: item.email || 'Synced from Google Contacts', source: 'Google Contacts', sourceRef: item.sourceRef, personId: item.personId };
       if (existing) { Object.assign(existing, values); result.updated += 1; }
       else { D.state.contacts.push({ id: D.uid('c'), ...values }); result.added += 1; }
+      result.records.push(existing || D.state.contacts[D.state.contacts.length - 1]);
     });
     return result;
   }
@@ -1771,6 +1774,7 @@
       const startedAt = new Date().toISOString();
       let contactsCount = 0;
       let contactsAdded = 0;
+      let contactsStored = 0;
       let tasksCount = 0;
       let tasksAdded = 0;
       let calendarCount = 0;
@@ -1784,6 +1788,9 @@
         const contactResult = mergeGoogleContacts(contactItems);
         contactsCount += contactItems.length;
         contactsAdded += contactResult.added;
+        updateGoogleSyncProgress({ status: 'running', phase: 'Saving Contacts', title: account.email, detail: `Writing ${contactResult.records.length} contacts to the Family Database`, percent: overall(.19), processed: contactsCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded });
+        const contactStorage = await HM.cloud.writeGoogleContacts(contactResult.records);
+        contactsStored += contactStorage.stored;
         const calendarItems = await readGoogleCalendar(account, session, sync, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: account.email, percent: overall(progress.calendar === undefined ? .2 : .3), processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount + (progress.calendar || 0), tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded }));
         calendarCount += calendarItems.length;
         suggestions.push(...calendarItems);
@@ -1803,8 +1810,8 @@
         updateGoogleSyncProgress({ status: 'running', phase: 'Account complete', title: account.email, detail: `${index + 1} of ${active.length} accounts checked`, percent: overall(1), processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded });
       }
       const result = mergeSuggestions(suggestions, 'gmail', true);
-      sync.lastRun = { startedAt, completedAt: new Date().toISOString(), status: 'complete', accounts: active.length, found: contactsCount + tasksCount + suggestions.length, added: contactsAdded + tasksAdded + result.added, applied: result.applied, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, backups, error: '' };
-      updateGoogleSyncProgress({ status: 'complete', phase: 'Sync complete', title: `${active.length} account${active.length === 1 ? '' : 's'} checked`, detail: `${contactsCount} contacts · ${tasksCount} tasks · ${suggestions.length} updates`, percent: 100, processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded + result.added });
+      sync.lastRun = { startedAt, completedAt: new Date().toISOString(), status: 'complete', accounts: active.length, found: contactsCount + tasksCount + suggestions.length, added: contactsAdded + tasksAdded + result.added, applied: result.applied, contacts: contactsCount, contactsStored, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, backups, error: '' };
+      updateGoogleSyncProgress({ status: 'complete', phase: 'Sync complete', title: `${active.length} account${active.length === 1 ? '' : 's'} checked`, detail: `${contactsStored} contacts stored in database · ${tasksCount} tasks · ${suggestions.length} updates`, percent: 100, processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded + result.added });
       save(result.added ? `${result.applied} trusted Google updates synced automatically` : 'Google sync completed with no new updates');
       render();
     } catch (error) { const sync = D.state.settings.googleSync; sync.lastRun = { ...(sync.lastRun || {}), completedAt: new Date().toISOString(), status: 'failed', error: error.message }; D.save(); updateGoogleSyncProgress({ status: 'failed', phase: 'Sync failed', title: 'Google sync needs attention', detail: error.message, percent: 100 }); toast(`Google sync failed: ${error.message}`); }
@@ -1986,13 +1993,13 @@
           pageToken = payload.nextPageToken || '';
         } while (pageToken);
         HM.workspace.cache.contacts = contacts;
-        const imported = importGoogleContacts(HM.workspace.cache.contacts);
-        toast(`${HM.workspace.cache.contacts.length} contacts loaded and ${imported} added to the Home Directory`);
+        const imported = await importGoogleContacts(HM.workspace.cache.contacts, account);
+        toast(`${HM.workspace.cache.contacts.length} contacts loaded · ${imported.added} added · ${imported.stored} stored in database`);
       } else if (action === 'contact-import') {
         const item = (HM.workspace.cache.contacts || []).find(contact => contact.id === target.dataset.contactId);
         if (!item) throw new Error('Reload Google contacts and retry.');
-        if (!D.state.contacts.some(contact => contact.name === item.name && contact.phone === item.phone && contact.email === item.email)) D.state.contacts.push({ id: D.uid('c'), scope: 'home', name: item.name, category: item.organization || 'Google contact', phone: item.phone, email: item.email, hours: item.email || 'Imported from Google Contacts' });
-        save(`${item.name} imported to Home Directory`);
+        const imported = await importGoogleContacts([item], account);
+        toast(`${item.name} imported · ${imported.stored} stored in database`);
       } else if (action === 'calendar-list') {
         const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '30', timeMin: new Date().toISOString() });
         HM.workspace.cache.calendar = (await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, token)).items || [];
@@ -2124,16 +2131,24 @@
     return 'Google contact';
   }
 
-  function importGoogleContacts(items) {
+  async function importGoogleContacts(items, account) {
     let imported = 0;
+    const records = [];
     (items || []).forEach(item => {
-      if (!D.state.contacts.some(contact => contact.name === item.name && contact.phone === item.phone && contact.email === item.email)) {
-        D.state.contacts.push({ id: D.uid('c'), scope: 'home', name: item.name, category: categorizeGoogleContact(item), phone: item.phone, email: item.email, hours: item.email || item.phone || 'Imported from Google Contacts' });
+      let contact = D.state.contacts.find(existing => existing.sourceRef === `${account.email}:${item.id}` || (existing.name === item.name && existing.phone === item.phone && existing.email === item.email));
+      const values = { scope: 'home', name: item.name, category: categorizeGoogleContact(item), phone: item.phone, email: item.email, hours: item.email || item.phone || 'Imported from Google Contacts', source: 'Google Contacts', sourceRef: `${account.email}:${item.id}`, personId: account.personId };
+      if (!contact) {
+        contact = { id: D.uid('c'), ...values };
+        D.state.contacts.push(contact);
         imported += 1;
-      }
+      } else Object.assign(contact, values);
+      records.push(contact);
     });
-    if (imported) save(`Imported ${imported} Google contact${imported === 1 ? '' : 's'} to Home Directory`);
-    return imported;
+    D.save();
+    const storage = await HM.cloud.writeGoogleContacts(records);
+    D.state.settings.googleSync.lastRun = { ...(D.state.settings.googleSync.lastRun || {}), completedAt: new Date().toISOString(), status: 'complete', contacts: records.length, contactsStored: storage.stored, error: '' };
+    D.save();
+    return { added: imported, stored: storage.stored };
   }
 
   function toggleTheme() {
