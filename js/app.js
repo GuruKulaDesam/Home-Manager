@@ -4,8 +4,9 @@
   const $ = selector => document.querySelector(selector);
   let route = location.hash.slice(2) || 'global/overview';
   let workspace = route.split('/')[0];
-  let activeGroup = D.state.settings.activeGroup || 'today';
-  let expandedGroup = activeGroup === 'today' ? '' : activeGroup;
+  const migratedGroup = ({ today: 'household', family: 'household', travel: 'leisure', web: 'leisure', entertainment: 'leisure' })[D.state.settings.activeGroup];
+  let activeGroup = migratedGroup || D.state.settings.activeGroup || 'household';
+  let expandedGroup = activeGroup;
   let lastDeleted = null;
   let toastTimer = null;
   let activeTimerMinutes = 25;
@@ -179,21 +180,22 @@
   }
 
   function groupForRoute(currentRoute) {
-    if (V.groups[activeGroup]?.items.some(item => item[2] === currentRoute)) return activeGroup;
-    if (currentRoute === 'global/overview') return 'today';
+    const groupHasRoute = group => group?.items.some(item => item[2] === currentRoute || (item[3] || []).some(child => child[2] === currentRoute));
+    if (groupHasRoute(V.groups[activeGroup])) return activeGroup;
+    if (currentRoute === 'global/overview' || currentRoute === 'global/intelligence') return 'household';
     const lifeDomain = currentRoute.match(/^home\/life\/([^/]+)$/)?.[1];
     const lifeOwners = {
       property: 'household', bills: 'household', help: 'household', sustainability: 'household',
-      travel: 'travel', transport: 'travel', vehicles: 'travel', stays: 'travel', travelProtection: 'travel',
-      subscriptions: 'web', digital: 'web', webAccounts: 'web', aiServices: 'web', webHabits: 'web', games: 'web',
-      watch: 'entertainment', listen: 'entertainment', reading: 'entertainment', play: 'entertainment', outings: 'entertainment',
-      festivals: 'family', documents: 'family', tax: 'family', insurance: 'family', legacy: 'family',
+      travel: 'leisure', transport: 'leisure', vehicles: 'leisure', stays: 'leisure', travelProtection: 'leisure',
+      subscriptions: 'leisure', digital: 'leisure', webAccounts: 'leisure', aiServices: 'leisure', webHabits: 'leisure', games: 'leisure',
+      watch: 'leisure', listen: 'leisure', reading: 'leisure', play: 'leisure', outings: 'leisure',
+      festivals: 'household', documents: 'household', tax: 'household', insurance: 'household', legacy: 'household',
       health: 'care', emergency: 'care', pets: 'care', education: 'learning'
     };
     if (lifeOwners[lifeDomain]) return lifeOwners[lifeDomain];
     if (currentRoute.startsWith('study/')) return 'learning';
-    const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'community/events': 'community', 'community/polls': 'community' };
-    return routeOwners[currentRoute] || Object.keys(V.groups).find(key => key !== 'today' && V.groups[key].items.some(item => item[2] === currentRoute)) || 'today';
+    const routeOwners = { 'home/assets': 'household', 'home/life/property': 'household', 'home/travel/spending': 'leisure', 'home/entertainment/spending': 'leisure', 'community/events': 'community', 'community/polls': 'community' };
+    return routeOwners[currentRoute] || Object.keys(V.groups).find(key => groupHasRoute(V.groups[key])) || 'household';
   }
 
   function personaCanSeeGroup(groupKey, persona = HM.persona.current()) {
@@ -405,7 +407,7 @@
       const routeGroup = groupForRoute(route);
       if (routeGroup !== activeGroup) {
         activeGroup = routeGroup;
-        expandedGroup = activeGroup === 'today' ? '' : activeGroup;
+        expandedGroup = activeGroup;
       }
       D.state.settings.activeGroup = activeGroup;
     }
@@ -414,7 +416,15 @@
     document.body.classList.add('workspace-' + workspace);
     document.body.classList.add(`group-${activeGroup}`);
     document.body.classList.toggle('settings-mode', Boolean(activeSettings));
-    const topRoute = ({
+    const leisureDomain = route.match(/^home\/life\/([^/]+)$/)?.[1];
+    const leisureTopRoute = ['travel', 'transport', 'vehicles', 'stays', 'travelProtection'].includes(leisureDomain) || route === 'home/travel/spending'
+      ? 'home/travel'
+      : ['watch', 'listen', 'reading', 'play', 'outings'].includes(leisureDomain) || route === 'home/entertainment/spending'
+        ? 'home/entertainment'
+        : ['subscriptions', 'digital', 'webAccounts', 'aiServices', 'webHabits', 'games'].includes(leisureDomain)
+          ? 'home/web'
+          : '';
+    const topRoute = leisureTopRoute || ({
       'home/assets': 'home/property', 'home/life/property': 'home/property', 'home/life/bills': 'home/property',
       'home/life/insurance': 'home/family', 'home/life/tax': 'home/family', 'home/life/documents': 'home/family', 'home/life/legacy': 'home/family',
       'home/life/education': 'study/overview', 'community/events': 'community/participate', 'community/polls': 'community/participate'
@@ -422,12 +432,18 @@
     $('#workspaceMenuLabel').innerHTML = `<span><small>Daily & weekly</small><b>${D.esc(group.label)}</b></span><i data-lucide="${group.icon}"></i>`;
     $('#nav').innerHTML = Object.entries(V.groups).filter(([key]) => personaCanSeeGroup(key)).map(([key, item]) => {
       const active = key === activeGroup;
-      const expanded = expandedGroup === key && key !== 'today';
-      const children = expanded ? `<div id="sectionNav" class="section-nav" role="group" aria-label="${D.esc(item.label)} pages">${item.items.map((child, index) => { const childActive = !activeSettings && topRoute === child[2]; return `<button type="button" data-route="${child[2]}" aria-label="Open ${D.esc(child[0])}" title="${D.esc(child[0])}" class="tab-tone-${index + 1} ${childActive ? 'active' : ''}" ${childActive ? 'aria-current="page"' : ''}><i data-lucide="${child[1]}"></i><span>${D.esc(child[0])}</span></button>`; }).join('')}</div>` : '';
+      const expanded = expandedGroup === key;
+      const children = expanded ? `<div id="sectionNav" class="section-nav" role="group" aria-label="${D.esc(item.label)} pages">${item.items.map((child, index) => {
+        const nested = child[3] || [];
+        const nestedActive = nested.some(subitem => route === subitem[2] || topRoute === subitem[2]);
+        const childActive = !activeSettings && (topRoute === child[2] || nestedActive);
+        const submenu = childActive && nested.length ? `<div class="section-subnav" role="group" aria-label="${D.esc(child[0])} pages">${nested.map(subitem => { const subActive = !activeSettings && (route === subitem[2] || topRoute === subitem[2]); return `<button type="button" data-route="${subitem[2]}" aria-label="Open ${D.esc(subitem[0])}" title="${D.esc(subitem[0])}" class="section-subitem ${subActive ? 'active' : ''}" ${subActive ? 'aria-current="page"' : ''}><i data-lucide="${subitem[1]}"></i><span>${D.esc(subitem[0])}</span></button>`; }).join('')}</div>` : '';
+        return `<div class="section-tab-group"><button type="button" data-route="${child[2]}" aria-label="Open ${D.esc(child[0])}" title="${D.esc(child[0])}" class="section-tab tab-tone-${index + 1} ${childActive ? 'active' : ''}" ${childActive ? 'aria-current="page"' : ''}><i data-lucide="${child[1]}"></i><span>${D.esc(child[0])}</span></button>${submenu}</div>`;
+      }).join('')}</div>` : '';
       const direct = false;
-      const chevron = key === 'today' || direct ? '' : `<i class="nav-chevron" data-lucide="${expanded ? 'chevron-down' : 'chevron-right'}"></i>`;
-      const expansionState = key === 'today' || direct ? '' : ` aria-expanded="${expanded}"`;
-      const parentLabel = key === 'today' || direct ? `Open ${item.label}` : `${expanded ? 'Collapse' : 'Expand'} ${item.label} menu`;
+      const chevron = direct ? '' : `<i class="nav-chevron" data-lucide="${expanded ? 'chevron-down' : 'chevron-right'}"></i>`;
+      const expansionState = direct ? '' : ` aria-expanded="${expanded}"`;
+      const parentLabel = direct ? `Open ${item.label}` : `${expanded ? 'Collapse' : 'Expand'} ${item.label} menu`;
       const navigation = direct ? `data-route="${item.route}"` : `data-group="${key}"`;
       return `<div class="nav-tree-item"><button class="nav-parent ${active ? 'active' : ''} ${expanded && !direct ? 'expanded' : ''}" ${navigation} aria-label="${D.esc(parentLabel)}" title="${D.esc(parentLabel)}"${expansionState}><span class="nav-icon"><i data-lucide="${item.icon}"></i></span><span>${D.esc(item.label)}</span>${chevron}</button>${children}</div>`;
     }).join('');
@@ -579,6 +595,12 @@
     $('#content').innerHTML = V.render(route);
     placeEducationMasterControls();
     bindView();
+    if (route === 'home/directory' && !HM.workspace.cache.contacts?.length) {
+      requestAnimationFrame(() => {
+        const loader = document.querySelector('[data-google-action="contacts-list"]');
+        if (loader) runGoogleWorkspaceAction(loader);
+      });
+    }
     renderNotifications();
     renderHeaderKpis();
     document.body.classList.remove('menu-open');
@@ -653,7 +675,7 @@
     }
   };
 
-  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', inventory: 'inventoryItems', kitchenRecipe: 'kitchenRecipeEdits', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
+  const editCollections = { task: 'tasks', expense: 'expenses', budget: 'budgets', income: 'incomes', liability: 'liabilities', moneyGoal: 'moneyGoals', person: 'people', inventory: 'inventoryItems', kitchenRecipe: 'kitchenRecipeEdits', contact: 'contacts', asset: 'assets', academicProfile: 'academicProfiles', syllabus: 'syllabusItems', studyPlan: 'studyPlans', deliverable: 'academicDeliverables', assessment: 'academicAssessments', practiceLog: 'practiceLogs', schoolTimetable: 'schoolTimetable', schoolEvent: 'schoolEvents', attendance: 'attendanceRecords', reflection: 'learningReflections', tutorFeedback: 'tutorFeedback', coCurricular: 'coCurricularRecords', life: 'lifeRecords' };
 
   function openForm(kind, source = {}) {
     const schema = schemas[kind];
@@ -865,6 +887,11 @@
       applyTheme();
       renderHeaderKpis();
       refreshIcons();
+    });
+    document.querySelectorAll('[name="shellStyle"]').forEach(input => input.onchange = () => {
+      D.state.settings.shellStyle = input.value;
+      save('Navigation colour updated');
+      applyTheme();
     });
     document.querySelectorAll('[data-syllabus-status]').forEach(select => select.onchange = () => {
       const item = D.state.syllabusItems.find(record => record.id === select.dataset.syllabusStatus);
@@ -1505,7 +1532,7 @@
   }
 
   function googleScopes(form = $('#googleSyncSettings')) {
-    const scopes = ['openid', 'email'];
+    const scopes = ['openid', 'email', 'https://www.googleapis.com/auth/contacts.readonly', 'https://www.googleapis.com/auth/tasks.readonly'];
     if (form?.querySelector('[name="calendarSync"]')?.checked) scopes.push('https://www.googleapis.com/auth/calendar.readonly');
     if (form?.querySelector('[name="emailAnalysis"]')?.checked) scopes.push('https://www.googleapis.com/auth/gmail.readonly');
     if (form?.querySelector('[name="driveBackup"]')?.checked) scopes.push('https://www.googleapis.com/auth/drive.appdata');
@@ -1585,9 +1612,19 @@
       let account = (sync.accounts || []).find(item => item.slotId === slotId);
       if (!account) { account = { slotId }; sync.accounts ||= []; sync.accounts.push(account); }
       Object.assign(account, { personId, email, consent: true, status: 'connected', lastSync: account.lastSync || '' });
-      const suggestions = [...await readGoogleCalendar(account, googleSessions.get(slotId), sync), ...await readGoogleGmail(account, googleSessions.get(slotId), sync)];
+      const startedAt = new Date().toISOString();
+      updateGoogleSyncProgress({ status: 'running', phase: 'Account connected', title: email, detail: 'Starting with Google Contacts', percent: 3, processed: 0, contacts: 0, calendar: 0, gmail: 0, added: 0 });
+      const contactItems = await readGoogleContacts(account, googleSessions.get(slotId), progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: 5 + Math.min(15, (progress.contacts || 0) / 20), processed: progress.contacts || 0, contacts: progress.contacts || 0, calendar: 0, gmail: 0, added: 0 }));
+      const contactResult = mergeGoogleContacts(contactItems);
+      const calendarItems = await readGoogleCalendar(account, googleSessions.get(slotId), sync, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: progress.calendar === undefined ? 22 : 32, processed: contactItems.length + (progress.calendar || 0), contacts: contactItems.length, calendar: progress.calendar || 0, tasks: 0, gmail: 0, added: contactResult.added }));
+      const taskItems = await readGoogleTasks(account, googleSessions.get(slotId), progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: progress.tasks === undefined ? 34 : 43, processed: contactItems.length + calendarItems.length + (progress.tasks || 0), contacts: contactItems.length, calendar: calendarItems.length, tasks: progress.tasks || 0, gmail: 0, added: contactResult.added }));
+      const taskResult = mergeGoogleTasks(taskItems, account);
+      const gmailItems = await readGoogleGmail(account, googleSessions.get(slotId), sync, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: email, percent: 46 + (progress.gmailFound ? progress.gmailProcessed / progress.gmailFound * 44 : 0), processed: contactItems.length + calendarItems.length + taskItems.length + (progress.gmailProcessed || 0), contacts: contactItems.length, calendar: calendarItems.length, tasks: taskItems.length, gmail: progress.gmailProcessed || 0, added: contactResult.added + taskResult.added }));
+      const suggestions = [...calendarItems, ...gmailItems];
       const result = mergeSuggestions(suggestions, 'gmail', true);
       account.lastSync = new Date().toISOString();
+      sync.lastRun = { startedAt, completedAt: account.lastSync, status: 'complete', accounts: 1, found: contactItems.length + taskItems.length + suggestions.length, added: contactResult.added + taskResult.added + result.added, applied: result.applied, contacts: contactItems.length, calendar: calendarItems.length, tasks: taskItems.length, gmail: gmailItems.length, backups: 0, error: '' };
+      updateGoogleSyncProgress({ status: 'complete', phase: 'Sync complete', title: email, detail: `${contactItems.length} contacts · ${taskItems.length} tasks · ${suggestions.length} updates`, percent: 100, processed: contactItems.length + taskItems.length + suggestions.length, contacts: contactItems.length, calendar: calendarItems.length, tasks: taskItems.length, gmail: gmailItems.length, added: contactResult.added + taskResult.added + result.added });
       save(`${email} synced; ${result.applied} household updates added`);
       render();
     } catch (error) { toast(`Google connection failed: ${error.message}`); }
@@ -1603,20 +1640,69 @@
     return match ? +match[1].replace(/,/g, '') || 0 : 0;
   }
 
-  async function readGoogleCalendar(account, session, sync) {
+  async function readGoogleContacts(account, session, report = () => {}) {
+    const contacts = [];
+    let pageToken = '';
+    report({ phase: 'Syncing Contacts', detail: `Checking Google Contacts for ${account.email}`, contacts: 0 });
+    do {
+      const params = new URLSearchParams({ personFields: 'names,emailAddresses,phoneNumbers,organizations', pageSize: '1000', sortOrder: 'LAST_MODIFIED_DESCENDING' });
+      if (pageToken) params.set('pageToken', pageToken);
+      const payload = await googleApi(`https://people.googleapis.com/v1/people/me/connections?${params}`, session.accessToken);
+      contacts.push(...(payload.connections || []).map(person => ({ sourceRef: `${account.email}:${person.resourceName}`, personId: account.personId, name: person.names?.[0]?.displayName || 'Unnamed contact', email: person.emailAddresses?.[0]?.value || '', phone: person.phoneNumbers?.[0]?.value || '', organization: person.organizations?.[0]?.name || '' })));
+      pageToken = payload.nextPageToken || '';
+      report({ phase: 'Syncing Contacts', detail: `${contacts.length} contacts found for ${account.email}`, contacts: contacts.length });
+    } while (pageToken && contacts.length < 2000);
+    return contacts.slice(0, 2000);
+  }
+
+  function mergeGoogleContacts(items) {
+    const result = { added: 0, updated: 0 };
+    const clean = value => String(value || '').trim().toLowerCase();
+    const phoneKey = value => String(value || '').replace(/\D/g, '').slice(-10);
+    items.forEach(item => {
+      const existing = D.state.contacts.find(contact => contact.sourceRef === item.sourceRef || (item.email && clean(contact.email) === clean(item.email)) || (phoneKey(item.phone) && phoneKey(contact.phone) === phoneKey(item.phone)));
+      const values = { scope: 'home', name: item.name, category: item.organization || 'Google contact', phone: item.phone, email: item.email, hours: item.email || 'Synced from Google Contacts', source: 'Google Contacts', sourceRef: item.sourceRef, personId: item.personId };
+      if (existing) { Object.assign(existing, values); result.updated += 1; }
+      else { D.state.contacts.push({ id: D.uid('c'), ...values }); result.added += 1; }
+    });
+    return result;
+  }
+
+  async function readGoogleTasks(account, session, report = () => {}) {
+    report({ phase: 'Syncing Tasks', detail: `Checking Google Tasks for ${account.email}`, tasks: 0 });
+    const result = await listGoogleTasks(session.accessToken);
+    report({ phase: 'Tasks checked', detail: `${result.tasks.length} tasks found for ${account.email}`, tasks: result.tasks.length });
+    return result.tasks;
+  }
+
+  function mergeGoogleTasks(items, account) {
+    const result = { added: 0, updated: 0 };
+    items.forEach(item => {
+      const existing = D.state.tasks.find(task => task.googleTaskId === item.id && task.googleAccount === account.email);
+      const values = { context: 'home', type: 'task', title: item.title || 'Google task', category: item.listTitle || 'Google Tasks', assignee: D.state.people.find(person => person.id === account.personId)?.name || 'Family', dueAt: String(item.due || '').slice(0, 10), frequency: 'Once', priority: 'medium', status: item.status === 'completed' ? 'done' : 'todo', googleTaskId: item.id, googleTaskListId: item.taskListId, googleAccount: account.email, source: 'Google Tasks' };
+      if (existing) { Object.assign(existing, values); result.updated += 1; }
+      else { D.state.tasks.push({ id: D.uid('t'), ...values }); result.added += 1; }
+    });
+    return result;
+  }
+
+  async function readGoogleCalendar(account, session, sync, report = () => {}) {
     if (!sync.calendarSync) return [];
+    report({ phase: 'Reading Calendar', detail: `Checking events for ${account.email}` });
     const from = new Date(); from.setDate(from.getDate() - (+sync.lookbackDays || 30));
     const until = new Date(); until.setDate(until.getDate() + 90);
     const params = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', maxResults: '100', timeMin: from.toISOString(), timeMax: until.toISOString() });
     const payload = await googleApi(`https://www.googleapis.com/calendar/v3/calendars/primary/events?${params}`, session.accessToken);
-    return (payload.items || []).filter(item => item.status !== 'cancelled').map(item => {
+    const items = (payload.items || []).filter(item => item.status !== 'cancelled').map(item => {
       const text = `${item.summary || ''} ${item.description || ''} ${item.location || ''}`;
       const category = classifyIntegrationText(text, sync.categories || integrationCategories) || 'home';
       return { source: 'calendar', sourceRef: `${account.email}:${item.id}:${item.updated || ''}`, personId: account.personId, category, title: item.summary || 'Google Calendar event', summary: [item.description, item.location].filter(Boolean).join(' - '), sender: account.email, receivedAt: item.start?.dateTime || item.start?.date || '', amount: amountFromText(text) };
     });
+    report({ phase: 'Calendar checked', detail: `${items.length} calendar items found for ${account.email}`, calendar: items.length });
+    return items;
   }
 
-  async function readGoogleGmail(account, session, sync) {
+  async function readGoogleGmail(account, session, sync, report = () => {}) {
     if (!sync.emailAnalysis) return [];
     const query = `newer_than:${+sync.lookbackDays || 30}d -in:spam -in:trash`;
     const references = [];
@@ -1626,11 +1712,16 @@
       if (pageToken) listParams.set('pageToken', pageToken);
       const page = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages?${listParams}`, session.accessToken);
       references.push(...(page.messages || []));
+      report({ phase: 'Scanning Gmail', detail: `${references.length} messages found for ${account.email}`, gmailFound: references.length, gmailProcessed: 0 });
       pageToken = page.nextPageToken || '';
     } while (pageToken && references.length < 500);
+    let processed = 0;
     const messages = await mapWithConcurrency(references.slice(0, 500), 3, async reference => {
       const params = new URLSearchParams({ format: 'full' });
-      return googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
+      const message = await googleApi(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(reference.id)}?${params}`, session.accessToken);
+      processed += 1;
+      report({ phase: 'Reading Gmail', detail: `${processed} of ${references.length} messages checked for ${account.email}`, gmailFound: references.length, gmailProcessed: processed });
+      return message;
     });
     return messages.map(message => {
       const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name).toLowerCase(), header.value]));
@@ -1640,6 +1731,24 @@
       if (!category || /\b(otp|one[ -]?time password|verification code)\b/i.test(text)) return null;
       return { source: 'gmail', sourceRef: `${account.email}:${message.id}`, personId: account.personId, category, title: headers.subject || categoryLabels[category], summary: essentialMessageSummary(body || message.snippet || '', category), sender: headers.from || account.email, receivedAt: message.internalDate ? new Date(+message.internalDate).toISOString() : headers.date || '', amount: amountFromText(text), transactionType: messageTransactionType(text) };
     }).filter(Boolean);
+  }
+
+  function updateGoogleSyncProgress(state) {
+    const panel = $('#googleSyncProgress');
+    if (!panel) return;
+    const percent = Math.max(0, Math.min(100, Math.round(state.percent || 0)));
+    panel.className = `google-sync-progress ${state.status || 'running'}`;
+    panel.querySelector('[data-sync-phase]').textContent = String(state.phase || 'SYNCING').toUpperCase();
+    panel.querySelector('[data-sync-title]').textContent = state.title || state.account || 'Google sync';
+    panel.querySelector('[data-sync-detail]').textContent = state.detail || 'Working…';
+    panel.querySelector('[data-sync-percent]').textContent = `${percent}%`;
+    panel.querySelector('[data-sync-bar]').style.width = `${percent}%`;
+    if (state.processed !== undefined) panel.querySelector('[data-sync-processed]').textContent = state.processed;
+    if (state.contacts !== undefined) panel.querySelector('[data-sync-contacts]').textContent = state.contacts;
+    if (state.calendar !== undefined) panel.querySelector('[data-sync-calendar]').textContent = state.calendar;
+    if (state.tasks !== undefined) panel.querySelector('[data-sync-tasks]').textContent = state.tasks;
+    if (state.gmail !== undefined) panel.querySelector('[data-sync-gmail]').textContent = state.gmail;
+    if (state.added !== undefined) panel.querySelector('[data-sync-added]').textContent = state.added;
   }
 
   async function backupToGoogleDrive(account, session) {
@@ -1659,17 +1768,46 @@
       const active = (sync.accounts || []).map(account => ({ account, session: googleSessions.get(account.slotId) })).filter(item => item.session && item.session.expiresAt > Date.now());
       if (!active.length) throw new Error('Connect at least one Google account for this session.');
       const suggestions = [];
-      for (const { account, session } of active) {
-        suggestions.push(...await readGoogleCalendar(account, session, sync));
-        suggestions.push(...await readGoogleGmail(account, session, sync));
-        if (sync.driveBackup) await backupToGoogleDrive(account, session);
+      const startedAt = new Date().toISOString();
+      let contactsCount = 0;
+      let contactsAdded = 0;
+      let tasksCount = 0;
+      let tasksAdded = 0;
+      let calendarCount = 0;
+      let gmailCount = 0;
+      let backups = 0;
+      updateGoogleSyncProgress({ status: 'running', phase: 'Starting sync', title: `${active.length} connected account${active.length === 1 ? '' : 's'}`, detail: 'Order: Contacts, Calendar, Tasks, then Gmail', percent: 2, processed: 0, contacts: 0, calendar: 0, tasks: 0, gmail: 0, added: 0 });
+      for (let index = 0; index < active.length; index += 1) {
+        const { account, session } = active[index];
+        const overall = fraction => ((index + fraction) / active.length) * 100;
+        const contactItems = await readGoogleContacts(account, session, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: account.email, percent: overall(.03 + Math.min(.15, (progress.contacts || 0) / 2000)), processed: contactsCount + (progress.contacts || 0) + suggestions.length, contacts: contactsCount + (progress.contacts || 0), calendar: calendarCount, gmail: gmailCount, added: contactsAdded }));
+        const contactResult = mergeGoogleContacts(contactItems);
+        contactsCount += contactItems.length;
+        contactsAdded += contactResult.added;
+        const calendarItems = await readGoogleCalendar(account, session, sync, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: account.email, percent: overall(progress.calendar === undefined ? .2 : .3), processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount + (progress.calendar || 0), tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded }));
+        calendarCount += calendarItems.length;
+        suggestions.push(...calendarItems);
+        const taskItems = await readGoogleTasks(account, session, progress => updateGoogleSyncProgress({ status: 'running', ...progress, title: account.email, percent: overall(progress.tasks === undefined ? .32 : .42), processed: contactsCount + tasksCount + suggestions.length + (progress.tasks || 0), contacts: contactsCount, calendar: calendarCount, tasks: tasksCount + (progress.tasks || 0), gmail: gmailCount, added: contactsAdded + tasksAdded }));
+        const taskResult = mergeGoogleTasks(taskItems, account);
+        tasksCount += taskItems.length;
+        tasksAdded += taskResult.added;
+        const gmailItems = await readGoogleGmail(account, session, sync, progress => {
+          const gmailFraction = progress.gmailFound ? progress.gmailProcessed / progress.gmailFound : 0;
+          updateGoogleSyncProgress({ status: 'running', ...progress, title: account.email, percent: overall(.44 + gmailFraction * .4), processed: contactsCount + tasksCount + suggestions.length + (progress.gmailProcessed || 0), contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount + (progress.gmailProcessed || 0), added: contactsAdded + tasksAdded });
+        });
+        gmailCount += gmailItems.length;
+        suggestions.push(...gmailItems);
+        if (sync.driveBackup) { updateGoogleSyncProgress({ status: 'running', phase: 'Saving backup', title: account.email, detail: 'Writing a private app-data backup to Drive', percent: overall(.9), processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded }); await backupToGoogleDrive(account, session); backups += 1; }
         account.lastSync = new Date().toISOString();
         account.status = 'connected';
+        updateGoogleSyncProgress({ status: 'running', phase: 'Account complete', title: account.email, detail: `${index + 1} of ${active.length} accounts checked`, percent: overall(1), processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded });
       }
       const result = mergeSuggestions(suggestions, 'gmail', true);
+      sync.lastRun = { startedAt, completedAt: new Date().toISOString(), status: 'complete', accounts: active.length, found: contactsCount + tasksCount + suggestions.length, added: contactsAdded + tasksAdded + result.added, applied: result.applied, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, backups, error: '' };
+      updateGoogleSyncProgress({ status: 'complete', phase: 'Sync complete', title: `${active.length} account${active.length === 1 ? '' : 's'} checked`, detail: `${contactsCount} contacts · ${tasksCount} tasks · ${suggestions.length} updates`, percent: 100, processed: contactsCount + tasksCount + suggestions.length, contacts: contactsCount, calendar: calendarCount, tasks: tasksCount, gmail: gmailCount, added: contactsAdded + tasksAdded + result.added });
       save(result.added ? `${result.applied} trusted Google updates synced automatically` : 'Google sync completed with no new updates');
       render();
-    } catch (error) { toast(`Google sync failed: ${error.message}`); }
+    } catch (error) { const sync = D.state.settings.googleSync; sync.lastRun = { ...(sync.lastRun || {}), completedAt: new Date().toISOString(), status: 'failed', error: error.message }; D.save(); updateGoogleSyncProgress({ status: 'failed', phase: 'Sync failed', title: 'Google sync needs attention', detail: error.message, percent: 100 }); toast(`Google sync failed: ${error.message}`); }
     finally { if (button?.isConnected) { button.disabled = false; button.classList.remove('is-syncing'); } }
   }
 
@@ -1678,6 +1816,7 @@
     contacts: ['https://www.googleapis.com/auth/contacts.readonly'],
     calendar: ['https://www.googleapis.com/auth/calendar'],
     tasks: ['https://www.googleapis.com/auth/tasks'],
+    notes: ['https://www.googleapis.com/auth/keep.readonly'],
     classroom: ['https://www.googleapis.com/auth/classroom.courses.readonly', 'https://www.googleapis.com/auth/classroom.coursework.me.readonly'],
     sheets: ['https://www.googleapis.com/auth/drive.file'],
     docs: ['https://www.googleapis.com/auth/drive.file'],
@@ -1744,6 +1883,51 @@
     return googleApi(`https://tasks.googleapis.com/tasks/v1/lists/${encodeURIComponent(items[0].id)}/tasks`, token, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }) });
   }
 
+  async function listGoogleNotes(token) {
+    const notes = [];
+    let pageToken = '';
+    do {
+      const params = new URLSearchParams({ pageSize: '100' });
+      if (pageToken) params.set('pageToken', pageToken);
+      const payload = await googleApi(`https://keep.googleapis.com/v1/notes?${params}`, token);
+      const pageNotes = payload.notes || [];
+      notes.push(...pageNotes.map(note => ({
+        id: note.name,
+        title: String(note.title || '').trim(),
+        text: getGoogleKeepText(note),
+        updatedAt: note.updateTime || note.createTime || '',
+        state: note.state || ''
+      })));
+      pageToken = payload.nextPageToken || '';
+    } while (pageToken);
+    return notes;
+  }
+
+  function getGoogleKeepText(note) {
+    if (note.textContent?.textSegments) {
+      return note.textContent.textSegments.map(segment => String(segment.text || '')).join('');
+    }
+    if (note.listContent?.listItems) {
+      return note.listContent.listItems.map(item => `${item.checked ? '[x]' : '[ ]'} ${item.text || ''}`).join('\n');
+    }
+    return note.title || '';
+  }
+
+  function importGoogleNotes(items, account) {
+    D.state.quickNotes ||= [];
+    let imported = 0;
+    (items || []).forEach(item => {
+      const text = `${item.title ? `${item.title}\n` : ''}${item.text || ''}`.trim();
+      if (!text) return;
+      const exists = D.state.quickNotes.some(note => note.googleNoteId === item.id && note.googleAccount === account.email);
+      if (exists) return;
+      D.state.quickNotes.push({ id: D.uid('qn'), text, ownerId: account.personId || '', createdAt: item.updatedAt || new Date().toISOString(), status: 'active', googleNoteId: item.id, googleAccount: account.email });
+      imported += 1;
+    });
+    if (imported) save(`Imported ${imported} Google note${imported === 1 ? '' : 's'} to Quick Notes`);
+    return imported;
+  }
+
   async function runGoogleWorkspaceAction(target, forcedAction = '') {
     const action = forcedAction || target.dataset.googleAction;
     const panel = target.closest('[data-google-service]');
@@ -1781,10 +1965,29 @@
         HM.workspace.cache.drive = (HM.workspace.cache.drive || []).filter(file => file.id !== target.dataset.fileId);
         toast('Drive file deleted');
       } else if (action === 'contacts-list') {
-        const params = new URLSearchParams({ personFields: 'names,emailAddresses,phoneNumbers,organizations', pageSize: '100', sortOrder: 'FIRST_NAME_ASCENDING' });
-        const payload = await googleApi(`https://people.googleapis.com/v1/people/me/connections?${params}`, token);
-        HM.workspace.cache.contacts = (payload.connections || []).map(person => ({ id: person.resourceName, name: person.names?.[0]?.displayName || 'Unnamed contact', email: person.emailAddresses?.[0]?.value || '', phone: person.phoneNumbers?.[0]?.value || '', organization: person.organizations?.[0]?.name || '' }));
-        toast(`${HM.workspace.cache.contacts.length} contacts loaded for review`);
+        const params = new URLSearchParams({ personFields: 'names,emailAddresses,phoneNumbers,organizations', pageSize: '1000', sortOrder: 'FIRST_NAME_ASCENDING' });
+        let pageToken = '';
+        const contacts = [];
+        do {
+          if (pageToken) params.set('pageToken', pageToken);
+          else params.delete('pageToken');
+          const payload = await googleApi(`https://people.googleapis.com/v1/people/me/connections?${params}`, token);
+          contacts.push(...(payload.connections || []).map(person => {
+            const item = {
+              id: person.resourceName,
+              name: person.names?.[0]?.displayName || 'Unnamed contact',
+              email: person.emailAddresses?.[0]?.value || '',
+              phone: person.phoneNumbers?.[0]?.value || '',
+              organization: person.organizations?.[0]?.name || ''
+            };
+            item.category = categorizeGoogleContact(item);
+            return item;
+          }));
+          pageToken = payload.nextPageToken || '';
+        } while (pageToken);
+        HM.workspace.cache.contacts = contacts;
+        const imported = importGoogleContacts(HM.workspace.cache.contacts);
+        toast(`${HM.workspace.cache.contacts.length} contacts loaded and ${imported} added to the Home Directory`);
       } else if (action === 'contact-import') {
         const item = (HM.workspace.cache.contacts || []).find(contact => contact.id === target.dataset.contactId);
         if (!item) throw new Error('Reload Google contacts and retry.');
@@ -1828,6 +2031,10 @@
         if (!item) throw new Error('Reload Google Tasks and retry.');
         if (!D.state.tasks.some(task => task.googleTaskId === item.id && task.googleAccount === account.email)) D.state.tasks.push({ id: D.uid('t'), context: 'home', type: 'task', title: item.title, category: item.listTitle || 'Google Tasks', assignee: D.state.people.find(person => person.id === account.personId)?.name || 'Family', dueAt: String(item.due || '').slice(0, 10), frequency: 'Once', priority: 'medium', status: item.status === 'completed' ? 'done' : 'todo', googleTaskId: item.id, googleAccount: account.email });
         save('Google task imported to Household Tasks');
+      } else if (action === 'notes-list') {
+        HM.workspace.cache.notes = await listGoogleNotes(token);
+        const imported = importGoogleNotes(HM.workspace.cache.notes, account);
+        toast(imported ? `Imported ${imported} Google note${imported === 1 ? '' : 's'} to Quick Notes` : 'No new Google notes were imported');
       } else if (action === 'classroom-list') {
         const courses = (await googleApi('https://classroom.googleapis.com/v1/courses?courseStates=ACTIVE&pageSize=30', token)).courses || [];
         const batches = await mapWithConcurrency(courses.slice(0, 20), 3, async course => {
@@ -1885,6 +2092,50 @@
     }
   }
 
+  function categorizeGoogleContact(item) {
+    const value = text => String(text || '').trim().toLowerCase();
+    const name = value(item.name);
+    const org = value(item.organization);
+    const email = value(item.email);
+    const combined = `${name} ${org} ${email}`;
+    const keywordMap = [
+      ['Healthcare', ['doctor', 'clinic', 'hospital', 'health', 'medical', 'dentist', 'pharmacy', 'therapy', 'care', 'wellness']],
+      ['Education', ['school', 'college', 'university', 'academy', 'tutor', 'learning', 'teacher', 'student', 'education']],
+      ['Finance', ['bank', 'finance', 'insurance', 'loan', 'investment', 'tax', 'credit', 'account', 'pay', 'money', 'financial']],
+      ['Government', ['gov', 'government', 'municipal', 'police', 'council', 'court', 'authority', 'department']],
+      ['Services', ['plumber', 'electrician', 'carpenter', 'repair', 'service', 'contractor', 'cleaner', 'laundry', 'agent', 'agency', 'consultant']],
+      ['Travel', ['travel', 'transport', 'taxi', 'tour', 'hotel', 'airlines', 'flight', 'rail', 'bus']],
+      ['Food', ['restaurant', 'cafe', 'bakery', 'catering', 'dining', 'food', 'meal']],
+      ['Shopping', ['market', 'store', 'shop', 'mall', 'supermarket', 'electronics', 'clothing', 'fashion', 'grocery']],
+      ['Family', ['family', 'home', 'household', 'mom', 'dad', 'father', 'mother', 'uncle', 'aunt', 'sister', 'brother', 'son', 'daughter']],
+      ['Business', ['corp', 'company', 'enterprise', 'llc', 'pvt', 'private', 'consult', 'studio', 'office', 'group', 'services']]
+    ];
+    if (org) {
+      for (const [category, terms] of keywordMap) {
+        if (terms.some(term => org.includes(term) || combined.includes(term))) return category;
+      }
+      return item.organization;
+    }
+    for (const [category, terms] of keywordMap) {
+      if (terms.some(term => combined.includes(term))) return category;
+    }
+    if (email && /@(gmail|yahoo|hotmail|outlook|icloud|protonmail|rediffmail|zoho|rediff|live|msn)\./.test(email)) return 'Personal';
+    if (item.phone) return 'Personal';
+    return 'Google contact';
+  }
+
+  function importGoogleContacts(items) {
+    let imported = 0;
+    (items || []).forEach(item => {
+      if (!D.state.contacts.some(contact => contact.name === item.name && contact.phone === item.phone && contact.email === item.email)) {
+        D.state.contacts.push({ id: D.uid('c'), scope: 'home', name: item.name, category: categorizeGoogleContact(item), phone: item.phone, email: item.email, hours: item.email || item.phone || 'Imported from Google Contacts' });
+        imported += 1;
+      }
+    });
+    if (imported) save(`Imported ${imported} Google contact${imported === 1 ? '' : 's'} to Home Directory`);
+    return imported;
+  }
+
   function toggleTheme() {
     const options = V.natureBackgrounds.map(item => item[0]);
     const current = options.indexOf(D.state.settings.appBackground);
@@ -1895,8 +2146,10 @@
   }
   function applyTheme() {
     const background = V.natureBackgrounds.some(item => item[0] === D.state.settings.appBackground) ? D.state.settings.appBackground : 'sunrise';
+    const shellStyle = V.shellStyles.some(item => item[0] === D.state.settings.shellStyle) ? D.state.settings.shellStyle : 'teal';
     document.body.classList.remove('dark');
     document.body.dataset.nature = background;
+    document.body.dataset.shell = shellStyle;
     document.body.classList.toggle('collapsed', Boolean(D.state.settings.sidebarCollapsed));
     $('#theme').title = `Next mountain background (current: ${V.natureBackgrounds.find(item => item[0] === background)[1]})`;
     document.querySelector('meta[name="theme-color"]').content = getComputedStyle(document.body).getPropertyValue('--app-bg').trim() || '#edf7f3';
@@ -1924,6 +2177,83 @@
     } catch (error) {
       toast('Import failed: ' + error.message);
     }
+  }
+
+  function exportSmsMessages() {
+    const messages = D.state.smsMessages || [];
+    const payload = messages.map(item => ({ id: item.id, sender: item.sender || '', text: item.text || '', receivedAt: item.receivedAt || '', status: item.status || 'unread' }));
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }));
+    link.download = `home-manager-sms-${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    toast(`${messages.length} SMS message${messages.length === 1 ? '' : 's'} exported`);
+  }
+
+  function parseSmsImportText(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return [];
+    const normalized = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    try {
+      const parsed = JSON.parse(normalized);
+      if (Array.isArray(parsed)) return parsed.map(item => ({ sender: String(item.sender || item.from || item.address || '').trim(), text: String(item.text || item.body || item.message || '').trim(), receivedAt: String(item.receivedAt || item.date || item.timestamp || '').trim(), status: String(item.status || 'unread').trim() }));
+      if (parsed?.messages && Array.isArray(parsed.messages)) return parsed.messages.map(item => ({ sender: String(item.sender || item.from || item.address || '').trim(), text: String(item.text || item.body || item.message || '').trim(), receivedAt: String(item.receivedAt || item.date || item.timestamp || '').trim(), status: String(item.status || 'unread').trim() }));
+    } catch (error) {
+      // not JSON, continue to raw text parsing
+    }
+    const chunks = normalized.split(/\n{2,}/).map(chunk => chunk.trim()).filter(Boolean);
+    return chunks.flatMap(chunk => {
+      const lines = chunk.split('\n').map(line => line.trim()).filter(Boolean);
+      const fields = {};
+      lines.forEach(line => {
+        const separator = line.indexOf(':');
+        if (separator > 0) {
+          const key = line.slice(0, separator).trim().toLowerCase();
+          const value = line.slice(separator + 1).trim();
+          fields[key] = value;
+        }
+      });
+      if (fields.from || fields.sender || fields.address || fields.phone) {
+        return [{
+          sender: String(fields.sender || fields.from || fields.address || fields.phone || '').trim(),
+          text: String(fields.message || fields.text || fields.body || lines.slice(1).join(' ') || '').trim(),
+          receivedAt: String(fields.receivedAt || fields.date || fields.time || fields.timestamp || '').trim(),
+          status: 'unread'
+        }];
+      }
+      const first = lines[0] || '';
+      const match = first.match(/^([^:\-–—]+)\s*[:\-–—]\s*(.+)$/);
+      if (match) {
+        return [{ sender: match[1].trim(), text: `${match[2].trim()}${lines.length > 1 ? '\n' + lines.slice(1).join('\n') : ''}`, receivedAt: '', status: 'unread' }];
+      }
+      if (lines.length === 1) {
+        return [{ sender: '', text: lines[0], receivedAt: '', status: 'unread' }];
+      }
+      return lines.map(line => {
+        const rowMatch = line.match(/^([^:\-–—]+)\s*[:\-–—]\s*(.+)$/);
+        if (rowMatch) return { sender: rowMatch[1].trim(), text: rowMatch[2].trim(), receivedAt: '', status: 'unread' };
+        return { sender: '', text: line, receivedAt: '', status: 'unread' };
+      });
+    });
+  }
+
+  function importSmsText(value) {
+    const items = parseSmsImportText(value);
+    if (!items.length) return 0;
+    D.state.smsMessages ||= [];
+    let added = 0;
+    items.forEach(item => {
+      const sender = item.sender || '';
+      const text = item.text || '';
+      const receivedAt = item.receivedAt || '';
+      if (!text) return;
+      const exists = D.state.smsMessages.some(message => message.sender === sender && message.text === text && message.receivedAt === receivedAt);
+      if (exists) return;
+      D.state.smsMessages.push({ id: D.uid('sms'), sender, text, receivedAt, status: item.status || 'unread', deleted: false });
+      added += 1;
+    });
+    if (added) save(`Imported ${added} SMS message${added === 1 ? '' : 's'}`);
+    return added;
   }
 
   function toggleTimer() {
@@ -2302,11 +2632,6 @@
     const groupTarget = event.target.closest('[data-group]');
     if (groupTarget) {
       const groupKey = groupTarget.dataset.group;
-      if (groupKey === 'today') {
-        expandedGroup = '';
-        go(V.groups.today.route);
-        return;
-      }
       expandedGroup = expandedGroup === groupKey ? '' : groupKey;
       renderNav();
       refreshIcons();
@@ -2406,6 +2731,27 @@
     }
     const deletion = event.target.closest('[data-delete]');
     if (deletion) { const [collection, id] = deletion.dataset.delete.split(':'); if (confirm('Remove this item? You can undo with Ctrl+Z.')) remove(collection, id); return; }
+    const smsImport = event.target.closest('[data-sms-import]');
+    if (smsImport) {
+      const textarea = document.querySelector('[data-sms-import-text]');
+      if (!textarea) { toast('SMS import field is missing'); return; }
+      const added = importSmsText(textarea.value);
+      if (added) {
+        textarea.value = '';
+        render();
+        return;
+      }
+      toast('No new SMS messages were imported');
+      return;
+    }
+    const smsExport = event.target.closest('[data-sms-export]');
+    if (smsExport) { exportSmsMessages(); return; }
+    const smsDelete = event.target.closest('[data-sms-delete]');
+    if (smsDelete) {
+      const message = (D.state.smsMessages || []).find(item => item.id === smsDelete.dataset.smsDelete);
+      if (message) { message.deleted = true; save('SMS message deleted'); render(); }
+      return;
+    }
     const complete = event.target.closest('[data-complete]');
     if (complete) {
       const id = complete.dataset.complete.split(':')[1];
@@ -2578,6 +2924,21 @@
   $('#collapse').onclick = () => { D.state.settings.sidebarCollapsed = !D.state.settings.sidebarCollapsed; D.save(); applyTheme(); };
   $('#bottomNav').onclick = event => { if (event.target.closest('#bottomMore')) { document.body.classList.add('menu-open'); $('#menu').setAttribute('aria-expanded', 'true'); } };
   window.addEventListener('hashchange', render);
+  document.body.addEventListener('change', event => {
+    const fileInput = event.target.closest('[data-sms-import-file]');
+    if (!fileInput) return;
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    fileInput.value = '';
+    file.text().then(text => {
+      const added = importSmsText(text);
+      if (added) {
+        render();
+      } else {
+        toast('No new SMS messages were imported from file');
+      }
+    }).catch(error => toast('SMS file import failed: ' + error.message));
+  });
   let educationResizeTimer;
   window.addEventListener('resize', () => {
     clearTimeout(educationResizeTimer);
@@ -2585,7 +2946,7 @@
   });
   window.addEventListener('hm-cloud-status', () => { if (route === 'settings/app') render(); });
   window.addEventListener('hm-cloud-state', () => {
-    activeGroup = D.state.settings.activeGroup || 'today';
+    activeGroup = ({ today: 'household', family: 'household', travel: 'leisure', web: 'leisure', entertainment: 'leisure' })[D.state.settings.activeGroup] || D.state.settings.activeGroup || 'household';
     applyTheme();
     render();
     toast('Family database updated');

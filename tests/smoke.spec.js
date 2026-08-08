@@ -42,7 +42,7 @@ test('household identity drives the shell, map link and browser title', async ({
     },
     title: getComputedStyle(document.querySelector('#pageTitle')).color
   }));
-  expect(shellSurface.body).toContain('radial-gradient');
+  expect(shellSurface.body).toContain('teal-circuit-shell.png');
   expect(shellSurface.sidebar).toBe('none');
   expect(shellSurface.header).toBe(shellSurface.body);
   expect(shellSurface.headerBlur).toBe('none');
@@ -63,7 +63,8 @@ test('household identity drives the shell, map link and browser title', async ({
   expect(breadcrumbLayout.display).toBe('flex');
   expect(breadcrumbLayout.separator).toContain('›');
   expect(breadcrumbLayout.centerDelta).toBeLessThan(2);
-  expect(await page.locator('.page-identity').evaluate(element => [...element.children].map(child => child.id || child.className))).toEqual(['persona-crumb', 'languageSwitcher', 'breadcrumb', 'pageTitle']);
+  expect(await page.locator('.page-identity').evaluate(element => [...element.children].map(child => child.id || child.className))).toEqual(['persona-crumb', 'breadcrumb', 'pageTitle']);
+  await expect(page.locator('.header-actions #languageSwitcher')).toBeVisible();
 
   await page.goto(`${app}#/settings/household`);
   await page.locator('#householdSettings [name="householdName"]').fill('Jaya Community Home');
@@ -162,18 +163,25 @@ test('Money navigation and routes are unavailable to child personas', async ({ p
 });
 
 test('parents default to Tamil and keep an independent language preference', async ({ page }) => {
+  const headerPositions = await page.evaluate(() => ({ language: document.querySelector('#languageSwitcher').getBoundingClientRect().left, title: document.querySelector('#pageTitle').getBoundingClientRect().left }));
+  expect(headerPositions.language).toBeGreaterThan(headerPositions.title);
+  await expect(page.locator('#languageSwitcher')).toBeInViewport();
   await expect(page.locator('#languageSwitcher [data-language="en"]')).toHaveAttribute('aria-pressed', 'true');
   await choosePersona(page, 'p1');
   await expect(page.locator('body')).toHaveAttribute('data-language', 'ta');
   await expect(page.locator('#languageSwitcher [data-language="ta"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#nav')).toContainText('இல்லம்');
+  await expect(page.locator('#nav .nav-parent', { hasText: 'உணவு' })).toHaveCount(1);
+  await expect(page.locator('#nav')).not.toContainText('சமையலறை');
   await expect(page.locator('#pageTitle')).toHaveText('இன்று');
   await expect(page.locator('body')).not.toContainText(/[௦-௯]/);
   await expect(page.locator('#personaName')).toHaveText('Father');
 
   await page.locator('#languageSwitcher [data-language="en"]').click();
   await expect(page.locator('body')).toHaveAttribute('data-language', 'en');
-  await expect(page.locator('#nav')).toContainText('Household');
+  await expect(page.locator('#nav')).toContainText('Home');
+  await expect(page.locator('#nav .nav-parent', { hasText: 'Food' })).toHaveCount(1);
+  await expect(page.locator('#nav .nav-parent', { hasText: 'உணவு' })).toHaveCount(0);
   await page.reload();
   await expect(page.locator('#languageSwitcher [data-language="en"]')).toHaveAttribute('aria-pressed', 'true');
   await page.goto(`${app}#/kitchen/recipes`);
@@ -256,9 +264,20 @@ test('all non-learning suites render without runtime errors', async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test('Today is the first page inside the Home menu', async ({ page }) => {
+  await page.goto(`${app}#/global/overview`);
+  await expect(page.locator('#nav .nav-parent.active')).toContainText('Home');
+  await expect(page.locator('#nav .nav-parent', { hasText: 'Today' })).toHaveCount(0);
+  await expect(page.locator('#sectionNav .section-tab')).toHaveCount(3);
+  await expect(page.locator('#sectionNav button').first()).toHaveText(/Today/);
+  await expect(page.locator('#sectionNav button').first()).toHaveAttribute('aria-current', 'page');
+  expect(await page.evaluate(() => HM.views.groups.today)).toBeUndefined();
+});
+
 test('Munnar sunrise is the default and another background choice still persists', async ({ page }) => {
   await page.goto(`${app}#/global/overview`);
   await expect(page.locator('body')).toHaveAttribute('data-nature', 'sunrise');
+  await expect(page.locator('body')).toHaveAttribute('data-shell', 'teal');
   const surfaceTokens = await page.evaluate(() => ({
     glass: getComputedStyle(document.documentElement).getPropertyValue('--glass').trim(),
     shell: getComputedStyle(document.body).getPropertyValue('--shell-bg').trim()
@@ -267,16 +286,49 @@ test('Munnar sunrise is the default and another background choice still persists
   expect(surfaceTokens.shell).toContain('.94');
 
   await page.goto(`${app}#/settings/app`);
-  await page.locator('[name="appBackground"][value="waterfall"]').check({ force: true });
+  await expect(page.locator('[name="shellStyle"]')).toHaveCount(5);
+  await expect(page.locator('[name="shellStyle"][value="teal"]')).toBeChecked();
+  await page.locator('.nature-waterfall').click();
   await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
+  await page.locator('.shell-style-teal').click();
+  await expect(page.locator('body')).toHaveAttribute('data-shell', 'teal');
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-nature', 'waterfall');
+  await expect(page.locator('body')).toHaveAttribute('data-shell', 'teal');
 });
 
-test('Family and Care expose at most seven clear child routes', async ({ page }) => {
+test('Settings content scrolls beneath the teal top bar', async ({ page }) => {
+  await page.goto(`${app}#/settings/app`);
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+  const headerLayer = await page.evaluate(() => {
+    const header = document.querySelector('.app-header');
+    const rect = header.getBoundingClientRect();
+    const topElement = document.elementFromPoint(Math.round(rect.left + rect.width / 2), Math.round(rect.top + rect.height / 2));
+    return { top: Math.round(rect.top), ownsTopPoint: header.contains(topElement) };
+  });
+  expect(headerLayer.top).toBe(0);
+  expect(headerLayer.ownsTopPoint).toBeTruthy();
+});
+
+test('Home organizes Household and Family into tabs with focused submenus', async ({ page }) => {
   await page.goto(`${app}#/home/family`);
-  expect(await page.locator('#sectionNav button').count()).toBeLessThanOrEqual(7);
+  await expect(page.locator('#nav .nav-parent.active')).toContainText('Home');
+  await expect(page.locator('#sectionNav .section-tab')).toHaveCount(3);
+  await expect(page.locator('#sectionNav .section-tab.active')).toContainText('Family');
+  await expect(page.locator('#sectionNav .section-subitem')).toHaveCount(7);
+  await expect(page.locator('#sectionNav')).toContainText('Calendar');
+  await expect(page.locator('#sectionNav')).toContainText('Protection & legacy');
+  expect(await page.evaluate(() => HM.views.groups.family)).toBeUndefined();
+
+  await page.goto(`${app}#/home/overview`);
+  await expect(page.locator('#sectionNav .section-tab.active')).toContainText('Household');
+  await expect(page.locator('#sectionNav .section-subitem')).toHaveCount(5);
+  await expect(page.locator('#sectionNav')).toContainText('Tasks & routines');
+  await expect(page.locator('#sectionNav')).toContainText('Sustainability');
+
   await page.goto(`${app}#/home/care`);
+  await expect(page.locator('#nav .nav-parent.active')).toContainText('Health');
   expect(await page.locator('#sectionNav button').count()).toBeLessThanOrEqual(7);
   await expect(page.locator('#sectionNav')).toContainText('Medicines');
   await expect(page.locator('#sectionNav')).toContainText('Elder care');
@@ -300,7 +352,7 @@ test('medicine entry stays in Medicines and remains searchable', async ({ page }
   await expect(page.locator('#searchResults')).toContainText('Vitamin D refill');
 });
 
-test('Care entry points open the correct domain-specific drawer', async ({ page }) => {
+test('Health entry points open the correct domain-specific drawer', async ({ page }) => {
   await page.goto(`${app}#/home/care`);
   await page.getByRole('button', { name: /Appointment Add to/i }).click();
   await expect(page.locator('#formTitle')).toHaveText('Add appointment');
@@ -329,7 +381,7 @@ test('four family perspectives can reach their primary answer', async ({ page })
   await expect(page.locator('#emergencyDialog')).toContainText('Home Manager does not dispatch assistance');
 });
 
-test('mobile Care page has no horizontal page overflow', async ({ page }) => {
+test('mobile Health page has no horizontal page overflow', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${app}#/home/care`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -368,28 +420,30 @@ test('Class 7 and Class 12 have separate official textbook libraries', async ({ 
   await expect(page.locator('.inline-book-frame')).toHaveAttribute('src', /assets\/textbooks\/class-7\/gecu1\/gecu1ps\.pdf/);
 });
 
-test('Travel, Web Life and Entertainment are independent complete menus', async ({ page }) => {
+test('Leisure combines Travel, Entertainment and Web Life as tabs', async ({ page }) => {
   await page.goto(`${app}#/home/travel`);
-  await expect(page.locator('#sectionNav button')).toHaveCount(7);
-  await expect(page.locator('#sectionNav')).toContainText('Transportation');
-  await expect(page.locator('#sectionNav')).toContainText('Hotels & stays');
-  await expect(page.locator('#sectionNav')).toContainText('Insurance & documents');
+  await expect(page.locator('#nav .nav-parent.active')).toContainText('Leisure');
+  await expect(page.locator('#sectionNav button')).toHaveCount(3);
+  await expect(page.locator('#sectionNav')).toContainText('Travel');
+  await expect(page.locator('#sectionNav')).toContainText('Entertainment');
+  await expect(page.locator('#sectionNav')).toContainText('Web Life');
+  await expect(page.locator('#sectionNav button.active')).toContainText('Travel');
   await expect(page.locator('#content')).toContainText('Travel command centre');
 
   await page.goto(`${app}#/home/web`);
-  await expect(page.locator('#sectionNav button')).toHaveCount(7);
-  await expect(page.locator('#sectionNav')).toContainText('Email & accounts');
-  await expect(page.locator('#sectionNav')).toContainText('AI services');
+  await expect(page.locator('#sectionNav button.active')).toContainText('Web Life');
   await expect(page.locator('#content')).toContainText('Never save passwords');
 
   await page.goto(`${app}#/home/entertainment`);
-  await expect(page.locator('#sectionNav button')).toHaveCount(7);
-  await expect(page.locator('#sectionNav')).toContainText('Watch');
-  await expect(page.locator('#sectionNav')).toContainText('Outings & events');
+  await expect(page.locator('#sectionNav button.active')).toContainText('Entertainment');
 
   const labels = await page.evaluate(() => Object.fromEntries(Object.entries(HM.views.groups).map(([key, group]) => [key, group.items.map(item => item[0])])));
+  expect(labels.leisure).toEqual(['Travel', 'Entertainment', 'Web Life']);
+  expect(labels.travel).toBeUndefined();
+  expect(labels.web).toBeUndefined();
+  expect(labels.entertainment).toBeUndefined();
   expect(labels.household).not.toContain('Vehicles');
-  expect(labels.family).not.toContain('Travel');
+  expect(labels.family).toBeUndefined();
 });
 
 test('every declared offline textbook section is a real local PDF', async ({ page }) => {
@@ -520,7 +574,13 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   await expect(cards.first().locator('.chapter-card-visual svg')).toHaveCount(1);
   await expect(cards.first().locator('.chapter-card-title h2')).toBeVisible();
   await expect(cards.first().locator('.chapter-card-metrics > *')).toHaveCount(3);
-  await expect(cards.first().locator('.chapter-subchapter-row')).toHaveCount(3);
+  await expect(cards.first().locator('.chapter-subchapter-row')).toHaveCount(4);
+  await expect(cards.first().locator('.chapter-subchapter-open b')).toHaveText([
+    'Introduction',
+    'Types of Relations',
+    'Types of Functions',
+    'Composition of Functions and Invertible Function'
+  ]);
   await expect(cards.first().locator('.chapter-card-footer')).toContainText('Next step');
   await expect(page.getByPlaceholder('Find a chapter')).toHaveCount(0);
   await expect(page.locator('.curriculum-journey-tools')).toHaveCount(0);
@@ -536,7 +596,9 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   const shellTheme = await page.locator('#sidebar').evaluate(element => ({ background: getComputedStyle(element).backgroundImage, canvas: getComputedStyle(document.body).backgroundImage, color: getComputedStyle(element).color }));
   expect(shellTheme.background).toBe('none');
   expect(shellTheme.canvas).toContain('linear-gradient');
-  expect(shellTheme.canvas).toContain('rgb(36, 29, 54)');
+  expect(shellTheme.canvas).toContain('rgb(16, 61, 59)');
+  expect(shellTheme.canvas).toContain('rgb(32, 61, 50)');
+  expect(shellTheme.canvas).toContain('teal-circuit-shell.png');
   expect(shellTheme.color).toBe('rgb(248, 250, 252)');
   const menuIconColors = await page.locator('#nav > .nav-tree-item > .nav-parent .nav-icon').evaluateAll(items => items.slice(0, 6).map(item => getComputedStyle(item).color));
   expect(new Set(menuIconColors).size).toBeGreaterThan(3);
@@ -588,7 +650,7 @@ test('curriculum chapters render as modern responsive cards', async ({ page }) =
   await page.reload();
   await expect(cards.first().locator('[data-card-mastery]')).toHaveValue('80');
   const desktopColumns = await page.locator('.curriculum-journey-list').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length);
-  expect(desktopColumns).toBe(2);
+  expect(desktopColumns).toBe(3);
   const bandColors = await cards.first().locator('.chapter-subchapter-row').evaluateAll(rows => rows.slice(0, 2).map(row => getComputedStyle(row).backgroundColor));
   expect(new Set(bandColors).size).toBe(2);
 
@@ -637,7 +699,7 @@ test('one full-screen chapter workspace connects teaching, book, practice, assig
     header: getComputedStyle(document.querySelector('.app-header')).backgroundImage,
     headerBlur: getComputedStyle(document.querySelector('.app-header')).backdropFilter
   }));
-  expect(chapterShellSurface.body).toContain('radial-gradient');
+  expect(chapterShellSurface.body).toContain('teal-circuit-shell.png');
   expect(chapterShellSurface.chapterContent).toBe(chapterShellSurface.primaryContent);
   expect(chapterShellSurface.sidebar).toBe('none');
   expect(chapterShellSurface.header).toBe(chapterShellSurface.body);
@@ -809,7 +871,9 @@ test('every configured chapter has the same trackable subchapters in Curriculum 
     return lessons.map(lesson => ({ id: lesson.id, topics: HM.views.chapterSubchapters(lesson) }));
   });
   expect(coverage.length).toBeGreaterThan(100);
-  expect(coverage.every(item => item.topics.length >= 3)).toBe(true);
+  expect(coverage.every(item => item.topics.length >= 1)).toBe(true);
+  expect(coverage.some(item => item.topics.length > 3)).toBe(true);
+  expect(Object.values(await page.evaluate(() => HM.textbookSections)).every(record => record.sections.length >= 1)).toBe(true);
   expect(coverage.every(item => new Set(item.topics.map(topic => topic.title)).size === item.topics.length)).toBe(true);
 
   const firstCard = page.locator('.curriculum-chapter-card').first();
@@ -1079,13 +1143,27 @@ test('four Google accounts authorize and sync directly without a connector', asy
   let maxGmailDetails = 0;
   let gmailFullFormat = false;
   const gmailAttempts = new Map();
+  const googleReadOrder = [];
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => {
     const email = route.request().headers().authorization.replace('Bearer token:', '');
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email }) });
   });
+  await page.route('https://people.googleapis.com/v1/people/me/connections**', route => {
+    const email = route.request().headers().authorization.replace('Bearer token:', '');
+    googleReadOrder.push(`${email}:contacts`);
+    const connections = email === 'father@example.com' ? [{ resourceName: 'people/family-doctor', names: [{ displayName: 'Dr Kavya' }], emailAddresses: [{ value: 'kavya@example.com' }], phoneNumbers: [{ value: '+91 98765 40000' }], organizations: [{ name: 'Family clinic' }] }] : [];
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connections }) });
+  });
+  await page.route('https://tasks.googleapis.com/tasks/v1/users/@me/lists**', route => {
+    const email = route.request().headers().authorization.replace('Bearer token:', '');
+    googleReadOrder.push(`${email}:tasks`);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: email === 'father@example.com' ? [{ id: 'family-list', title: 'Family' }] : [] }) });
+  });
+  await page.route('https://tasks.googleapis.com/tasks/v1/lists/family-list/tasks**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [{ id: 'google-auto-task', title: 'Renew water filter', status: 'needsAction', due: '2026-08-20T00:00:00.000Z' }] }) }));
   await page.route('https://www.googleapis.com/calendar/v3/calendars/primary/events**', route => {
     const email = route.request().headers().authorization.replace('Bearer token:', '');
+    googleReadOrder.push(`${email}:calendar`);
     const items = email === 'father@example.com' ? [{ id: 'cal-1', updated: '2026-08-05T08:00:00Z', summary: 'Family train booking', description: 'Journey departs on 12 August', start: { dateTime: '2026-08-12T09:00:00Z' }, status: 'confirmed' }] : [];
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items }) });
   });
@@ -1094,6 +1172,7 @@ test('four Google accounts authorize and sync directly without a connector', asy
     const email = request.headers().authorization.replace('Bearer token:', '');
     const url = new URL(request.url());
     if (url.pathname.endsWith('/messages')) {
+      googleReadOrder.push(`${email}:gmail`);
       const secondPage = url.searchParams.get('pageToken') === 'page-2';
       const messages = email !== 'mother@example.com' ? [] : Array.from({ length: secondPage ? 4 : 5 }, (_, index) => ({ id: `gmail-${index + (secondPage ? 6 : 1)}` }));
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ messages, nextPageToken: email === 'mother@example.com' && !secondPage ? 'page-2' : undefined }) });
@@ -1136,16 +1215,30 @@ test('four Google accounts authorize and sync directly without a connector', asy
   for (let index = 0; index < familyEmails.length; index += 1) {
     const row = page.locator(`[data-google-account="google-${index + 1}"]`);
     await row.locator('[data-google-connect]').click();
-    await expect(row).toContainText('Gmail synced this session');
+    await expect(row).toContainText('Last synced');
   }
   await expect(page.locator('#googleSyncSettings')).toContainText('4 active this session');
   await expect(page.locator('[data-google-sync]')).toContainText('Sync all accounts');
   await page.locator('[data-google-sync]').click();
+  await expect(page.locator('#googleSyncProgress')).toContainText('SYNC COMPLETE');
+  await expect(page.locator('#googleSyncProgress [data-sync-percent]')).toHaveText('100%');
+  await expect(page.locator('#googleSyncProgress [data-sync-processed]')).toHaveText('12');
+  await expect(page.locator('#googleSyncProgress [data-sync-contacts]')).toHaveText('1');
+  await expect(page.locator('#googleSyncProgress [data-sync-gmail]')).toHaveText('9');
+  await expect(page.locator('#googleSyncProgress [data-sync-calendar]')).toHaveText('1');
+  await expect(page.locator('#googleSyncProgress [data-sync-tasks]')).toHaveText('1');
+  await expect(page.locator('.google-sync-recent')).toContainText('What synced recently');
+  expect(await page.evaluate(() => HM.data.state.settings.googleSync.lastRun)).toMatchObject({ status: 'complete', accounts: 4, found: 12, contacts: 1, calendar: 1, tasks: 1, gmail: 9 });
+  expect(googleReadOrder.indexOf('father@example.com:contacts')).toBeLessThan(googleReadOrder.indexOf('father@example.com:calendar'));
+  expect(googleReadOrder.indexOf('father@example.com:calendar')).toBeLessThan(googleReadOrder.indexOf('father@example.com:tasks'));
+  expect(googleReadOrder.indexOf('father@example.com:tasks')).toBeLessThan(googleReadOrder.indexOf('father@example.com:gmail'));
+  expect(await page.evaluate(() => HM.data.state.contacts.find(item => item.sourceRef === 'father@example.com:people/family-doctor'))).toMatchObject({ name: 'Dr Kavya', source: 'Google Contacts' });
+  expect(await page.evaluate(() => HM.data.state.tasks.find(item => item.googleTaskId === 'google-auto-task'))).toMatchObject({ title: 'Renew water filter', source: 'Google Tasks' });
   await expect.poll(() => page.evaluate(() => HM.data.state.syncSuggestions.length)).toBe(10);
   await expect(page.locator('.integration-queue')).toContainText('0 pending');
   expect(maxGmailDetails).toBeLessThanOrEqual(3);
   expect(gmailFullFormat).toBe(true);
-  expect(gmailAttempts.get('gmail-1')).toBe(2);
+  expect(gmailAttempts.get('gmail-1')).toBe(3);
   await page.goto(`${app}#/global/intelligence`);
   await expect.poll(() => page.evaluate(() => HM.data.state.settings.googleSync.accounts.length)).toBe(4);
   await expect(page.locator('.inbox-history tbody tr')).toHaveCount(9);
@@ -1275,7 +1368,7 @@ test('Calendar creates a real Google event with an optional Meet conference', as
   expect(createRequest.body.conferenceData.createRequest.conferenceSolutionKey.type).toBe('hangoutsMeet');
 });
 
-test('Contacts and Tasks review Google data before importing local records', async ({ page }) => {
+test('Contacts auto-import while Tasks remain reviewable before import', async ({ page }) => {
   await page.route('https://accounts.google.com/gsi/client', route => route.fulfill({ status: 200, contentType: 'application/javascript', body: '' }));
   await page.route('https://openidconnect.googleapis.com/v1/userinfo', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: 'mother@example.com' }) }));
   await page.route('https://people.googleapis.com/v1/people/me/connections**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ connections: [{ resourceName: 'people/1', names: [{ displayName: 'School Office' }], emailAddresses: [{ value: 'office@school.test' }], phoneNumbers: [{ value: '+91 422 123 4567' }], organizations: [{ name: 'Peepal Prodigy School' }] }] }) }));
@@ -1296,8 +1389,8 @@ test('Contacts and Tasks review Google data before importing local records', asy
   await page.goto(`${app}#/home/directory`);
   await page.locator('[data-google-action="contacts-list"]').click();
   await expect(page.locator('[data-google-service="contacts"]')).toContainText('School Office');
-  await page.locator('[data-google-action="contact-import"]').click();
-  await expect(page.locator('#content')).toContainText('Peepal Prodigy School');
+  await expect(page.locator('[data-google-service="contacts"]')).toContainText('Imported');
+  await expect(page.locator('#content')).toContainText('office@school.test');
   expect(await page.evaluate(() => HM.data.state.contacts.some(contact => contact.email === 'office@school.test'))).toBe(true);
 
   await page.goto(`${app}#/home/tasks`);

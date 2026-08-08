@@ -6,6 +6,8 @@ function uid(prefix){return prefix+'-'+Date.now().toString(36)+'-'+Math.random()
 seed.people.find(person=>person.id==='p3').householdRole='Daughter';
 seed.people.find(person=>person.id==='p4').householdRole='Son';
 seed.settings.appBackground='sunrise';
+seed.settings.shellStyle='teal';
+seed.settings.shellStyleDefaultVersion=2;
 seed.settings.backgroundDefaultVersion=2;
 seed.settings.activeLearnerId='p3';
 seed.settings.googleSync={mode:'direct',clientId:'',autoSync:false,calendarSync:true,emailAnalysis:true,driveBackup:false,reviewPolicy:'trusted',lookbackDays:30,categories:['bills','travel','school','health','deliveries','home','government'],accounts:[]};
@@ -160,7 +162,8 @@ function normalizeGoogleSync(value){
     reviewPolicy:'trusted',
     lookbackDays:[7,30,90].includes(+input.lookbackDays)?+input.lookbackDays:30,
     categories:Array.isArray(input.categories)?input.categories.filter(item=>categories.includes(item)):clone(seed.settings.googleSync.categories),
-    accounts:Array.isArray(input.accounts)?input.accounts.filter(item=>item&&typeof item==='object').slice(0,4).map((item,index)=>({slotId:String(item.slotId||`google-${index+1}`),personId:String(item.personId||''),email:String(item.email||'').trim(),consent:Boolean(item.consent),status:['pending','connected','paused','error'].includes(item.status)?item.status:'pending',lastSync:typeof item.lastSync==='string'?item.lastSync:''})):[]
+    accounts:Array.isArray(input.accounts)?input.accounts.filter(item=>item&&typeof item==='object').slice(0,4).map((item,index)=>({slotId:String(item.slotId||`google-${index+1}`),personId:String(item.personId||''),email:String(item.email||'').trim(),consent:Boolean(item.consent),status:['pending','connected','paused','error'].includes(item.status)?item.status:'pending',lastSync:typeof item.lastSync==='string'?item.lastSync:''})):[],
+    lastRun:input.lastRun&&typeof input.lastRun==='object'?{startedAt:String(input.lastRun.startedAt||''),completedAt:String(input.lastRun.completedAt||''),status:['complete','failed'].includes(input.lastRun.status)?input.lastRun.status:'complete',accounts:Math.max(0,+input.lastRun.accounts||0),found:Math.max(0,+input.lastRun.found||0),added:Math.max(0,+input.lastRun.added||0),applied:Math.max(0,+input.lastRun.applied||0),contacts:Math.max(0,+input.lastRun.contacts||0),calendar:Math.max(0,+input.lastRun.calendar||0),tasks:Math.max(0,+input.lastRun.tasks||0),gmail:Math.max(0,+input.lastRun.gmail||0),backups:Math.max(0,+input.lastRun.backups||0),error:String(input.lastRun.error||'').slice(0,240)}:null
   };
 }
 function normalizePhoneSms(value){
@@ -173,12 +176,16 @@ function normalize(value){
   const next=clone(seed);
   const inputSettings=value.settings&&typeof value.settings==='object'?value.settings:{};
   const validBackgrounds=['waterfall','river','fern','meadow','lotus','monsoon','sunrise','glacier','bamboo','sky','grove','wildflower'];
+  const validShellStyles=['ember','terracotta','mulberry','indigo','teal'];
+  const migrateShellStyle=!inputSettings.shellStyleDefaultVersion&&(!inputSettings.shellStyle||inputSettings.shellStyle==='ember');
   const migrateLegacyBackground=!inputSettings.backgroundDefaultVersion&&(!inputSettings.appBackground||inputSettings.appBackground==='waterfall');
   next.settings={
     ...next.settings,
     ...clone(inputSettings),
     theme:'light',
     appBackground:migrateLegacyBackground?'sunrise':validBackgrounds.includes(inputSettings.appBackground)?inputSettings.appBackground:'sunrise',
+    shellStyle:migrateShellStyle?'teal':validShellStyles.includes(inputSettings.shellStyle)?inputSettings.shellStyle:'teal',
+    shellStyleDefaultVersion:2,
     backgroundDefaultVersion:2,
     locale:typeof inputSettings.locale==='string'?inputSettings.locale:'en',
     activeWorkspace:['home','community','study'].includes(inputSettings.activeWorkspace)?inputSettings.activeWorkspace:'home',

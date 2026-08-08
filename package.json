@@ -6,7 +6,8 @@
     "deploy": "firebase deploy --only hosting"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": "^1.62.1",
+    "pdfjs-dist": "^5.4.149"
   },
   "dependencies": {
     "firebase-tools": "^15.25.1"

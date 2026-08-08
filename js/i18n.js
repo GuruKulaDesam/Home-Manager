@@ -4,8 +4,8 @@
   const ta = {
     'Family': 'குடும்பம்', 'Shared household': 'குடும்பப் பொது பார்வை', 'Family member': 'குடும்ப உறுப்பினர்', 'Daily & weekly': 'தினசரி · வாராந்திரம்',
     'Mother': 'அம்மா', 'Father': 'அப்பா', 'Daughter': 'மகள்', 'Son': 'மகன்',
-    'Today': 'இன்று', 'Household': 'இல்லம்', 'Kitchen': 'சமையலறை', 'Family Calendar': 'குடும்ப நாட்காட்டி', 'Food': 'உணவு', 'More': 'மேலும்',
-    'Money': 'பணம்', 'Care': 'நலன்', 'Travel': 'பயணம்', 'Web Life': 'இணைய வாழ்க்கை',
+    'Today': 'இன்று', 'Home': 'இல்லம்', 'Household': 'இல்லம்', 'Kitchen': 'உணவு', 'Family Calendar': 'குடும்ப நாட்காட்டி', 'Food': 'உணவு', 'More': 'மேலும்',
+    'Money': 'பணம்', 'Care': 'நலன்', 'Leisure': 'ஓய்வுநேரம்', 'Travel': 'பயணம்', 'Web Life': 'இணைய வாழ்க்கை',
     'Entertainment': 'பொழுதுபோக்கு', 'Education': 'கல்வி', 'Community': 'சமூகம்',
     'Overview': 'முகப்பு', 'Inbox intelligence': 'மின்னஞ்சல் சுருக்கம்', 'Inbox Intelligence': 'மின்னஞ்சல் சுருக்கம்',
     'Help & Guide': 'உதவி & வழிகாட்டி', 'Settings': 'அமைப்புகள்', 'Tasks & routines': 'பணிகள் & வழக்கங்கள்',
