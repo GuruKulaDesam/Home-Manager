@@ -872,13 +872,22 @@ test('every configured chapter has the same trackable subchapters in Curriculum 
   await page.goto(`${app}#/study/curriculum`);
   const coverage = await page.evaluate(() => {
     const lessons = [...(HM.data.state.syllabusItems || []), ...(HM.genius.jeeSyllabus || [])];
-    return lessons.map(lesson => ({ id: lesson.id, topics: HM.views.chapterSubchapters(lesson) }));
+    return lessons.map(lesson => { const topics = HM.views.chapterSubchapters(lesson); return { id: lesson.id, topics, invalid: topics.filter(topic => !HM.views.validSubchapterTitle(topic.title)).map(topic => topic.title) }; });
   });
   expect(coverage.length).toBeGreaterThan(100);
   expect(coverage.every(item => item.topics.length >= 1)).toBe(true);
   expect(coverage.some(item => item.topics.length > 3)).toBe(true);
   expect(Object.values(await page.evaluate(() => HM.textbookSections)).every(record => record.sections.length >= 1)).toBe(true);
   expect(coverage.every(item => new Set(item.topics.map(topic => topic.title)).size === item.topics.length)).toBe(true);
+  const invalidTopics = coverage.flatMap(item => item.invalid.map(title => `${item.id}: ${title}`));
+  expect(invalidTopics).toEqual([]);
+  const physicsTopics = await page.evaluate(() => Object.fromEntries(['Electric Charges and Fields', 'Electrostatic Potential and Capacitance', 'Current Electricity'].map(title => {
+    const lesson = HM.data.state.syllabusItems.find(item => item.subject === 'Physics' && item.title === title);
+    return [title, HM.views.chapterSubchapters(lesson).map(topic => topic.title)];
+  })));
+  expect(physicsTopics['Electric Charges and Fields']).toContain('Additivity of Charges');
+  expect(physicsTopics['Electrostatic Potential and Capacitance']).toContain('Capacitors in Parallel');
+  expect(physicsTopics['Current Electricity']).toEqual(expect.arrayContaining(['Drift Current', 'Resistance', 'Kirchhoff Laws']));
 
   const firstCard = page.locator('.curriculum-chapter-card').first();
   const curriculumTopics = await firstCard.locator('.chapter-subchapter-open b').allTextContents();

@@ -62,6 +62,13 @@ function usefulHeading(line, chapterTitle) {
   if (keyOf(text) === chapterKey || chapterKey.startsWith(keyOf(text)) || chapterKey.endsWith(keyOf(text)) || /^(chapter|unit)\s*\d+/i.test(text)) return false;
   if ((text.match(/\s+/g) || []).length > 12 || /[.!?]$/.test(text)) return false;
   if (!/[\p{L}]/u.test(text)) return false;
+  const words = text.match(/[\p{L}\p{N}]+/gu) || [];
+  const latinLetters = text.replace(/[^A-Za-z]/g, '');
+  if (/[=∑∫]/u.test(text)) return false;
+  if (!words.some(word => (word.match(/\p{L}/gu) || []).length >= 4)) return false;
+  if (words.length > 1 && words.every(word => word.length <= 3)) return false;
+  if (words.length > 1 && latinLetters.length && latinLetters.length < 18 && latinLetters === latinLetters.toUpperCase()) return false;
+  if (/\b(?:a|an|and|at|by|for|from|in|of|on|or|the|to|with|infinitely|uniformly)$/i.test(text)) return false;
   return true;
 }
 
@@ -81,7 +88,7 @@ async function extract(file, meta) {
       const normalizedLine = line.text.replace(/\s*\.\s*/g, '.');
       const normalizedLarge = line.largeText.replace(/\s*\.\s*/g, '.');
       const match = normalizedLarge.match(numbered) || normalizedLine.match(numbered);
-      if (match && line.size >= 11.8 && !/exercise|example|activity|question/i.test(match[2])) {
+      if (match && line.size >= 11.8 && !/exercise|example|activity|question/i.test(match[2]) && usefulHeading({ ...line, text: match[2] }, meta.title)) {
         const titleLines = [match[2]];
         for (let next = index + 1; next < lines.length; next += 1) {
           const continuation = lines[next];

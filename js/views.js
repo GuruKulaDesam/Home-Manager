@@ -977,6 +977,20 @@
     return String(value || '').split(/\s+/).map((word, index) => index && minor.has(word.toLowerCase()) ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
+  function validSubchapterTitle(value) {
+    const title = String(value || '').replace(/\s+/g, ' ').trim();
+    const words = title.match(/[\p{L}\p{N}]+/gu) || [];
+    const letters = (title.match(/\p{L}/gu) || []).length;
+    const latinLetters = title.replace(/[^A-Za-z]/g, '');
+    if (/[=∑∫]/u.test(title)) return false;
+    if (letters < 5 || !words.some(word => (word.match(/\p{L}/gu) || []).length >= 4)) return false;
+    if (words.length > 1 && words.every(word => word.length <= 3)) return false;
+    if (words.length > 1 && latinLetters.length && latinLetters.length < 18 && latinLetters === latinLetters.toUpperCase()) return false;
+    if (/^[A-Z](?:\s*['’,.&/-]?\s*[A-Z]){1,8}$/u.test(title)) return false;
+    if (/\b(?:a|an|and|at|by|for|from|in|of|on|or|the|to|with|infinitely|uniformly)$/i.test(title)) return false;
+    return true;
+  }
+
   function chapterSubchapters(lesson) {
     const notes = HM.genius.teacherNotes(lesson);
     const richConcepts = (notes.rich?.concepts || []).map(concept => ({
@@ -990,14 +1004,15 @@
       const words = lead.split(/\s+/).slice(0, 7).join(' ');
       return { title: words || `Chapter Idea ${index + 1}`, explanation: text, connection: '' };
     });
-    const candidates = [...richConcepts, ...supportingIdeas].filter(item => item.title && item.explanation);
+    const candidates = [...richConcepts, ...supportingIdeas].filter(item => item.title && item.explanation && validSubchapterTitle(item.title));
     const normalize = value => String(value || '').toLocaleLowerCase('en').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
     const slug = value => normalize(value).replace(/\s+/g, '-');
     const textbook = !String(lesson.id).includes('jee')
       ? Object.values(HM.textbookSections || {}).find(record => record.subject === lesson.subject && normalize(record.title) === normalize(lesson.title))
       : null;
-    if (textbook?.sections?.length) {
-      return textbook.sections.map((section, index) => {
+    const textbookSections = (textbook?.sections || []).filter(section => validSubchapterTitle(section.title));
+    if (textbookSections.length >= 2) {
+      return textbookSections.map((section, index) => {
         const sectionWords = new Set(normalize(section.title).split(' ').filter(word => word.length > 3));
         const related = candidates.map(item => ({ item, score: normalize(item.title).split(' ').filter(word => sectionWords.has(word)).length })).sort((a, b) => b.score - a.score)[0];
         return {
@@ -1024,7 +1039,7 @@
         connection: item.connection
       });
     });
-    return unique;
+    return unique.length ? unique : [{ id: `${lesson.id}--topic-1`, title: chapterTitleCase(lesson.title), explanation: notes.bigIdea || `This chapter develops the central ideas of ${lesson.title}.`, connection: '' }];
   }
 
   function chapterSubchapterTracking(context, lesson) {
@@ -1639,6 +1654,7 @@
     chapterWorkspace,
     chapterWorkspaceNavigation,
     chapterSubchapters,
+    validSubchapterTitle,
     lessonById: lessonId => curriculumLessonById(academicContext(), lessonId),
     defaultLessonId: () => { const c = academicContext(); const jeeMode = +c.profile.grade === 12 && D.state.settings.activeLearningTrack?.[c.activeId] === 'jee'; return curriculumLessons(c, jeeMode)[0]?.id || ''; },
     titles,
